@@ -349,8 +349,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
         <div class="metric-pills" id="bio-metric-pills">
           <div class="mpill active" data-bio="hrv" style="--active-color:var(--hrv)">HRV</div>
           <div class="mpill active" data-bio="rhr" style="--active-color:var(--rhr)">Resting HR</div>
-          <div class="mpill active" data-bio="sleepScore" style="--active-color:var(--sleep)">Sleep Score</div>
-          <div class="mpill" data-bio="spo2" style="--active-color:var(--spo2)">SpO₂</div>
+          <div class="mpill active" data-bio="spo2" style="--active-color:var(--spo2)">SpO₂</div>
+          <div class="mpill" data-bio="sleepScore" style="--active-color:var(--sleep)">Sleep Score</div>
           <div class="mpill" data-bio="sleepHours" style="--active-color:var(--muted)">Sleep hrs</div>
         </div>
       </div>
@@ -586,7 +586,7 @@ let _sessions = [], _sleepMap = {};
 let _activeYearMonthly = null, _activeCumulMetric = 'ep';
 let _bioDays = 30;
 let _bioSmooth = 7;
-let _activeBioMetrics = new Set(['hrv','rhr','sleepScore']);
+let _activeBioMetrics = new Set(['hrv','rhr','spo2']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const YEAR_COLORS = { '2024':'#8a9ba5','2025':'#97a682','2026':'#c0987e' };
 
