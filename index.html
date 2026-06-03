@@ -77,7 +77,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .mpill.active { border-color: var(--text); color: var(--text); background: #2e2e2e; }
 
 /* LAYOUTS */
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-2x2 .chart-card canvas { height: 220px !important; }
 #cumul-chart { height: 280px !important; }
@@ -86,15 +86,16 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
 .bio-stat { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; }
-.bio-stat .bs-icon { font-size: 18px; margin-bottom: 6px; }
+.bio-stat .bs-icon  { font-size: 18px; margin-bottom: 6px; }
 .bio-stat .bs-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
 .bio-stat .bs-value { font-size: 22px; font-weight: 700; }
-.bio-stat .bs-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.bio-stat .bs-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* LOAD TABLE */
-.load-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-.load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.load-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 540px; }
+.load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; white-space: nowrap; }
 .load-table tr:hover td { background: #1f1f1f; }
 
 /* EMPTY */
@@ -102,16 +103,65 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .empty p { margin-top: 8px; font-size: 12px; }
 
 /* RANGE PILLS */
-.range-pills { display: flex; gap: 6px; }
-.rpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
+.range-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.rpill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; touch-action: manipulation; }
 .rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(192,132,252,0.1); }
 
+/* PILL TOUCH TARGETS */
+.pill, .mpill, .rpill { min-height: 32px; display: inline-flex; align-items: center; }
+
+/* ── TABLET (≤ 900px) ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  main { padding: 14px 16px; gap: 14px; }
+  nav  { padding: 12px 16px; }
+  .summary-grid  { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .two-col, .grid-2x2 { grid-template-columns: 1fr; }
   .bio-stat-grid { grid-template-columns: repeat(2, 1fr); }
-  .config-grid { grid-template-columns: 1fr; }
-  .config-cols { grid-template-columns: repeat(2, 1fr); }
+  .config-grid   { grid-template-columns: 1fr; }
+  .config-cols   { grid-template-columns: repeat(2, 1fr); }
+  .grid-2x2 .chart-card canvas { height: 200px !important; }
+  #cumul-chart { height: 240px !important; }
+  #bio-chart   { height: 240px !important; }
+}
+
+/* ── PHONE (≤ 600px) ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  body { font-size: 12px; }
+  main { padding: 10px 12px; gap: 12px; }
+
+  /* Nav — hide subtitle on small screens */
+  nav { padding: 10px 14px; }
+  .nav-title span:last-child { display: none; }
+  #status-msg { display: none; }
+  button.btn { padding: 7px 11px; font-size: 12px; }
+
+  /* Summary cards — 1 column on very small phones */
+  .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .s-card { padding: 12px 14px; }
+  .s-card .value { font-size: 22px; }
+
+  /* Charts shorter on phones */
+  .chart-card { padding: 14px; }
+  .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .grid-2x2 .chart-card canvas { height: 180px !important; }
+  #cumul-chart { height: 200px !important; }
+  #bio-chart   { height: 220px !important; }
+
+  /* Bio stat — 2 columns */
+  .bio-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .bio-stat { padding: 10px; }
+  .bio-stat .bs-value { font-size: 18px; }
+
+  /* Config — single column, smaller padding */
+  #config-panel { padding: 14px; }
+  .config-cols  { grid-template-columns: 1fr 1fr; }
+
+  /* Pills wrap & larger tap targets */
+  .metric-pills, .year-pills, .range-pills { gap: 5px; }
+  .pill, .mpill, .rpill { font-size: 11px; padding: 5px 10px; }
+
+  /* Section titles */
+  .section-title { font-size: 10px; }
 }
 </style>
 </head>
@@ -269,8 +319,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
       <div class="chart-header">
         <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
       </div>
-      <div id="load-table-wrap" style="overflow-y:auto;max-height:260px">
-        <div class="empty">No data loaded.</div>
+      <div class="table-scroll" style="max-height:260px;overflow-y:auto;">
+        <div id="load-table-wrap"><div class="empty">No data loaded.</div></div>
       </div>
     </div>
 
