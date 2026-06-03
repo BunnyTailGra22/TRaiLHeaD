@@ -315,9 +315,14 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 const STORAGE_KEY = 'trailhead_cfg_v2';
 let cfg = {};
 
+// ── HARDCODED DEFAULTS — no config entry needed ───────────────────────────────
+const DEFAULT_SHEET_ID = '1dWK_5XBGpEXaLl3xgsm7uXi-q5hdvEE49nRZKQyS_gg';
+const DEFAULT_API_KEY  = 'AIzaSyC4lLHO0_kuqxlVGlP7TRRDZTVrJMdO37U';   // ← paste your Google Sheets API key
+
 function defaultCfg() {
   return {
-    sheetId: '', apiKey: '',
+    sheetId:    DEFAULT_SHEET_ID,
+    apiKey:     DEFAULT_API_KEY,
     actRange:   'Activities!A1:L5000',
     sleepRange: 'Sleep!A1:V5000',
     colDate:      'Start Time',
@@ -337,9 +342,18 @@ function defaultCfg() {
 function loadConfig() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) { cfg = { ...defaultCfg(), ...JSON.parse(stored) }; applyConfigToUI(); return; }
-  } catch {}
-  cfg = defaultCfg();
+    if (stored) {
+      const saved = JSON.parse(stored);
+      cfg = { ...defaultCfg(), ...saved };
+    } else {
+      cfg = defaultCfg();
+    }
+  } catch {
+    cfg = defaultCfg();
+  }
+  // Hardcoded values always override anything stored
+  cfg.sheetId = DEFAULT_SHEET_ID;
+  cfg.apiKey  = DEFAULT_API_KEY;
   applyConfigToUI();
 }
 
