@@ -871,35 +871,21 @@ function renderBioChart(entries) {
     });
   });
 
+  // Start from the shared chartOpts so legend/fonts/x-axis match every other chart,
+  // then replace the single y-axis with the dual y1/y2 setup this chart needs.
+  const phone = isPhone();
+  const opts = chartOpts({ yLabel: 'bpm / ms' });
+  delete opts.scales.y;
+  opts.scales.y1 = darkScale({ position:'left',
+    ticks:{ color:'#9d9488', font:{ size: phone ? 10 : 11 } },
+    title: phone ? undefined : { display:true, text:'bpm / ms', color:'#9d9488', font:{ size:11 } } });
+  opts.scales.y2 = darkScale({ position:'right', grid:{ drawOnChartArea:false },
+    ticks:{ color:'#9d9488', font:{ size: phone ? 10 : 11 } },
+    title: phone ? undefined : { display:true, text:'score / %', color:'#9d9488', font:{ size:11 } } });
+
   const ctx = document.getElementById('bio-chart').getContext('2d');
   if (_bioChart) _bioChart.destroy();
-  _bioChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      animation: { duration: 300 },
-      plugins: {
-        legend: {
-          position: isPhone() ? 'bottom' : 'top',
-          labels: {
-            color:'#6b6358',
-            font:{ size: isPhone() ? 10 : 11 },
-            usePointStyle:true, pointStyle:'circle',
-            boxWidth: 6, boxHeight: 6,
-            padding: isPhone() ? 10 : 16,
-          },
-        },
-        tooltip: { backgroundColor:'#f5f1ea', borderColor:'#dcd4c8', borderWidth:1, titleColor:'#4f483f', bodyColor:'#9d9488' },
-      },
-      scales: {
-        x: darkScale({ ticks:{ color:'#9d9488', font:{size:10}, maxRotation: isPhone()?45:0, autoSkip:true, maxTicksLimit: isPhone()?6:12 } }),
-        y1: { ...darkScale(), position:'left',  title:{display:!isPhone(),text:'bpm / ms',color:'#9d9488',font:{size:11}} },
-        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:!isPhone(),text:'score / %',color:'#9d9488',font:{size:11}} },
-      },
-      interaction: { mode:'index', intersect:false },
-    },
-  });
+  _bioChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
 // Bio range pills (scoped to their own group)
