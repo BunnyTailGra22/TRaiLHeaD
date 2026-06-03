@@ -342,6 +342,10 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
           <div class="rpill" data-days="180">180d</div>
           <div class="rpill" data-days="0">All</div>
         </div>
+        <div class="range-pills" id="bio-smooth-pills">
+          <div class="rpill" data-smooth="1">Daily</div>
+          <div class="rpill active" data-smooth="7">7d avg</div>
+        </div>
         <div class="metric-pills" id="bio-metric-pills">
           <div class="mpill active" data-bio="hrv" style="--active-color:var(--hrv)">HRV</div>
           <div class="mpill active" data-bio="rhr" style="--active-color:var(--rhr)">Resting HR</div>
@@ -581,6 +585,7 @@ function isoWeek(d) {
 let _sessions = [], _sleepMap = {};
 let _activeYearMonthly = null, _activeCumulMetric = 'ep';
 let _bioDays = 30;
+let _bioSmooth = 7;
 let _activeBioMetrics = new Set(['hrv','rhr','sleepScore']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const YEAR_COLORS = { '2024':'#8a9ba5','2025':'#97a682','2026':'#c0987e' };
@@ -826,24 +831,40 @@ function renderBioSection(sleepMap) {
   renderBioChart(entries);
 }
 
+// Centered rolling average — smooths spiky daily values, ignores null gaps
+function rollingAvg(values, window) {
+  if (window <= 1) return values.slice();
+  const half = Math.floor(window / 2);
+  return values.map((_, i) => {
+    let sum = 0, n = 0;
+    for (let j = i - half; j <= i + half; j++) {
+      if (j >= 0 && j < values.length && values[j] != null) { sum += values[j]; n++; }
+    }
+    return n ? +(sum / n).toFixed(1) : null;
+  });
+}
+
 function renderBioChart(entries) {
   const cutoff = _bioDays > 0 ? new Date(Date.now() - _bioDays * 86400000) : new Date(0);
   const filtered = entries.filter(e => e.date >= cutoff);
   const labels = filtered.map(e => e.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const smoothing = _bioSmooth > 1;
 
   const datasets = [];
   _activeBioMetrics.forEach(k => {
     const bc = BIO_CFG[k];
     if (!bc) return;
+    const raw = filtered.map(e => e[k] ?? null);
+    const data = smoothing ? rollingAvg(raw, _bioSmooth) : raw;
     datasets.push({
-      label: bc.label,
-      data: filtered.map(e => e[k] ?? null),
+      label: bc.label + (smoothing ? ` (${_bioSmooth}d)` : ''),
+      data,
       borderColor: bc.color,
       backgroundColor: bc.color + '22',
       borderWidth: 2,
-      pointRadius: 2,
+      pointRadius: smoothing ? 0 : 2,
       pointHoverRadius: 5,
-      tension: 0.3,
+      tension: 0.4,
       fill: false,
       spanGaps: true,
       yAxisID: bc.yAxis,
@@ -872,12 +893,22 @@ function renderBioChart(entries) {
   });
 }
 
-// Bio range pills
-document.querySelectorAll('.rpill').forEach(p => {
+// Bio range pills (scoped to their own group)
+document.querySelectorAll('#bio-range-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('.rpill').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('#bio-range-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
     _bioDays = parseInt(p.dataset.days);
+    if (_sleepMap) renderBioSection(_sleepMap);
+  });
+});
+
+// Bio smoothing pills
+document.querySelectorAll('#bio-smooth-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#bio-smooth-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _bioSmooth = parseInt(p.dataset.smooth);
     if (_sleepMap) renderBioSection(_sleepMap);
   });
 });
