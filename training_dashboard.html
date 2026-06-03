@@ -100,8 +100,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
 .load-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 480px; }
 .load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
-.load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; white-space: nowrap; }
-.load-table tr:hover td { background: #1f1f1f; }
+.load-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.load-table tr:hover td { background: var(--card2); }
 
 /* EMPTY */
 .empty { text-align: center; padding: 40px; color: var(--muted); }
@@ -110,7 +110,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 /* RANGE PILLS */
 .range-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .rpill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; touch-action: manipulation; }
-.rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(192,132,252,0.1); }
+.rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(170,147,162,0.16); }
 
 /* PILL TOUCH TARGETS */
 .pill, .mpill, .rpill { min-height: 32px; display: inline-flex; align-items: center; }
