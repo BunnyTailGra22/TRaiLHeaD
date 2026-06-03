@@ -857,7 +857,7 @@ function renderBioChart(entries) {
     const raw = filtered.map(e => e[k] ?? null);
     const data = smoothing ? rollingAvg(raw, _bioSmooth) : raw;
     datasets.push({
-      label: bc.label + (smoothing ? ` (${_bioSmooth}d)` : ''),
+      label: bc.label,
       data,
       borderColor: bc.color,
       backgroundColor: bc.color + '22',
@@ -880,13 +880,22 @@ function renderBioChart(entries) {
       responsive: true, maintainAspectRatio: false,
       animation: { duration: 300 },
       plugins: {
-        legend: { labels: { color:'#6b6358', font:{size:11}, usePointStyle:true, pointStyleWidth:10 } },
+        legend: {
+          position: isPhone() ? 'bottom' : 'top',
+          labels: {
+            color:'#6b6358',
+            font:{ size: isPhone() ? 10 : 11 },
+            usePointStyle:true, pointStyle:'circle',
+            boxWidth: 6, boxHeight: 6,
+            padding: isPhone() ? 10 : 16,
+          },
+        },
         tooltip: { backgroundColor:'#f5f1ea', borderColor:'#dcd4c8', borderWidth:1, titleColor:'#4f483f', bodyColor:'#9d9488' },
       },
       scales: {
-        x: darkScale(),
-        y1: { ...darkScale(), position:'left',  title:{display:true,text:'bpm / ms',color:'#9d9488',font:{size:11}} },
-        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'score / %',color:'#9d9488',font:{size:11}} },
+        x: darkScale({ ticks:{ color:'#9d9488', font:{size:10}, maxRotation: isPhone()?45:0, autoSkip:true, maxTicksLimit: isPhone()?6:12 } }),
+        y1: { ...darkScale(), position:'left',  title:{display:!isPhone(),text:'bpm / ms',color:'#9d9488',font:{size:11}} },
+        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:!isPhone(),text:'score / %',color:'#9d9488',font:{size:11}} },
       },
       interaction: { mode:'index', intersect:false },
     },
@@ -925,20 +934,30 @@ document.querySelectorAll('.mpill[data-bio]').forEach(p => {
 });
 
 // ── CHART DEFAULTS (Morandi light theme) ──────────────────────────────────────
+function isPhone() { return window.innerWidth <= 600; }
+
 function darkScale(extra) {
   return { grid:{color:'rgba(79,72,63,0.08)'}, ticks:{color:'#9d9488',font:{size:11}}, border:{color:'transparent'}, ...extra };
 }
 function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
+  const phone = isPhone();
   return {
     responsive:true, maintainAspectRatio:false, animation:{duration:400},
     plugins: {
-      legend: { labels:{color:'#6b6358',font:{size:11},usePointStyle:true,pointStyleWidth:10} },
+      legend: {
+        position: phone ? 'bottom' : 'top',
+        labels: {
+          color:'#6b6358', font:{ size: phone ? 10 : 11 },
+          usePointStyle:true, pointStyle:'circle',
+          boxWidth: 6, boxHeight: 6, padding: phone ? 10 : 16,
+        },
+      },
       tooltip: { backgroundColor:'#f5f1ea',borderColor:'#dcd4c8',borderWidth:1,titleColor:'#4f483f',bodyColor:'#9d9488' },
     },
     scales: {
-      x: darkScale(),
-      y: darkScale({ stacked, ticks:{color:'#9d9488',font:{size:11},...(yStep?{stepSize:yStep}:{})},
-        title: yLabel ? {display:true,text:yLabel,color:'#9d9488',font:{size:11}} : undefined }),
+      x: darkScale({ ticks:{ color:'#9d9488', font:{size: phone?10:11}, maxRotation: phone?45:0, autoSkip:true, maxTicksLimit: phone?7:12 } }),
+      y: darkScale({ stacked, ticks:{color:'#9d9488',font:{size: phone?10:11},...(yStep?{stepSize:yStep}:{})},
+        title: (yLabel && !phone) ? {display:true,text:yLabel,color:'#9d9488',font:{size:11}} : undefined }),
     },
     interaction: { mode:'index', intersect:false },
   };
@@ -981,6 +1000,20 @@ function loadSampleData() {
 
 // ── AUTO-SAVE ─────────────────────────────────────────────────────────────────
 document.querySelectorAll('#config-panel input').forEach(el => el.addEventListener('input', saveConfig));
+
+// ── RE-RENDER ON RESIZE / ORIENTATION (debounced) ─────────────────────────────
+let _resizeTimer = null;
+let _lastPhone = isPhone();
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    // Only fully re-render when crossing the phone/desktop breakpoint
+    if (isPhone() !== _lastPhone) {
+      _lastPhone = isPhone();
+      if (_sessions.length) renderAll(_sessions, _sleepMap);
+    }
+  }, 250);
+});
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 // ── PASSWORD GATE ─────────────────────────────────────────────────────────────
