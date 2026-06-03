@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TRaiLHEAD · Training Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #111; --card: #1c1c1c; --card2: #222; --border: #2e2e2e;
+  --text: #e8e8e8; --muted: #777;
+  --road: #4db8ff; --trail: #6fcf44;
+  --y2024: #4db8ff; --y2025: #6fcf44; --y2026: #ff7043;
+  --hrv: #c084fc; --sleep: #38bdf8; --weight: #fb923c; --spo2: #34d399;
+  --rhr: #f87171; --bb: #fbbf24;
+  --red: #f87171; --yellow: #fbbf24; --green: #4ade80;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; font-size: 13px; min-height: 100vh; }
+
+/* NAV */
+nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--card); position: sticky; top: 0; z-index: 100; }
+.nav-title { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; }
+.nav-title span { color: var(--trail); }
+.nav-right { display: flex; gap: 8px; align-items: center; }
+#status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 4px; }
+#status-msg { color: var(--muted); font-size: 12px; }
+button.btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card2); color: var(--text); cursor: pointer; font-size: 12px; }
+button.btn:hover { border-color: #555; background: #2a2a2a; }
+button.btn.primary { background: var(--road); border-color: var(--road); color: #000; font-weight: 600; }
+
+/* CONFIG */
+#config-panel { background: var(--card); border-bottom: 1px solid var(--border); padding: 20px 24px; display: none; }
+#config-panel.open { display: block; }
+.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 900px; }
+.config-section-title { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; grid-column: 1 / -1; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label { font-size: 11px; color: var(--muted); }
+.field input { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); padding: 7px 10px; font-size: 12px; width: 100%; }
+.field input:focus { outline: none; border-color: var(--road); }
+.config-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; grid-column: 1 / -1; }
+.config-note { grid-column: 1 / -1; font-size: 11px; color: var(--muted); line-height: 1.6; background: #1a1a1a; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+.config-note code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-family: monospace; color: #a8d8ff; }
+.config-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 4px; }
+
+/* MAIN */
+main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+
+/* SUMMARY CARDS */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.s-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.s-card .label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.s-card .value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.s-card .sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.s-card .bar-bg { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+.s-card .bar-fill { height: 100%; border-radius: 2px; display: flex; }
+.s-card .tag { font-size: 11px; color: var(--muted); }
+.s-card .tag.up { color: var(--green); }
+.s-card .tag.down { color: var(--red); }
+
+/* SECTION TITLE */
+.section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+
+/* CHART CARD */
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
+.chart-card canvas { display: block; }
+
+/* PILLS */
+.year-pills { display: flex; gap: 6px; }
+.pill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; user-select: none; }
+.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(77,184,255,0.1); }
+.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(111,207,68,0.1); }
+.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(255,112,67,0.1); }
+.metric-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.mpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
+.mpill.active { border-color: var(--text); color: var(--text); background: #2e2e2e; }
+
+/* LAYOUTS */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-2x2 .chart-card canvas { height: 220px !important; }
+#cumul-chart { height: 280px !important; }
+#bio-chart   { height: 260px !important; }
+
+/* BIO STAT CARDS */
+.bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+.bio-stat { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; }
+.bio-stat .bs-icon { font-size: 18px; margin-bottom: 6px; }
+.bio-stat .bs-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
+.bio-stat .bs-value { font-size: 22px; font-weight: 700; }
+.bio-stat .bs-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* LOAD TABLE */
+.load-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+.load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; }
+.load-table tr:hover td { background: #1f1f1f; }
+
+/* EMPTY */
+.empty { text-align: center; padding: 40px; color: var(--muted); }
+.empty p { margin-top: 8px; font-size: 12px; }
+
+/* RANGE PILLS */
+.range-pills { display: flex; gap: 6px; }
+.rpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
+.rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(192,132,252,0.1); }
+
+@media (max-width: 900px) {
+  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  .two-col, .grid-2x2 { grid-template-columns: 1fr; }
+  .bio-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .config-grid { grid-template-columns: 1fr; }
+  .config-cols { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-title">TRai<span>L</span>HEAD <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;">Training Dashboard</span></div>
+  <div class="nav-right">
+    <span id="status-dot"></span><span id="status-msg">Not connected</span>
+    <button class="btn" onclick="toggleConfig()">⚙ Config</button>
+    <button class="btn primary" onclick="loadData()">↻ Refresh</button>
+  </div>
+</nav>
+
+<!-- CONFIG -->
+<div id="config-panel">
+  <div class="config-grid">
+    <div class="config-section-title">Google Sheets Connection</div>
+
+    <div class="field">
+      <label>Spreadsheet ID</label>
+      <input id="cfg-sheet-id" type="text" placeholder="1dWK_5XBGpEXaLl3xgsm7uXi-q5hdvEE49nRZKQyS_gg" />
+    </div>
+    <div class="field">
+      <label>API Key</label>
+      <input id="cfg-api-key" type="text" placeholder="AIzaSy…" />
+    </div>
+
+    <div class="config-note">
+      <strong style="color:var(--text)">Setup:</strong> Google Cloud Console → APIs → enable <code>Sheets API</code> → Credentials → Create API Key → restrict to Sheets API.
+      Share your sheet as <em>Anyone with link → Viewer</em>. The Spreadsheet ID is the string between <code>/d/</code> and <code>/edit</code> in the URL.
+    </div>
+
+    <div class="config-section-title">Tab Ranges</div>
+    <div class="field">
+      <label>Activities tab range</label>
+      <input id="cfg-act-range" value="Activities!A1:L5000" />
+    </div>
+    <div class="field">
+      <label>Sleep tab range</label>
+      <input id="cfg-sleep-range" value="Sleep!A1:V5000" />
+    </div>
+
+    <div class="config-section-title">Activities Column Mapping</div>
+    <div class="config-cols">
+      <div class="field"><label>Date / Start Time</label><input id="col-date" value="Start Time" /></div>
+      <div class="field"><label>Distance (km)</label><input id="col-dist" value="Distance (km)" /></div>
+      <div class="field"><label>Elevation Gain (m)</label><input id="col-elev" value="Elevation Gain (m)" /></div>
+      <div class="field"><label>Duration (min)</label><input id="col-time" value="Duration (min)" /></div>
+      <div class="field"><label>Activity Type</label><input id="col-type" value="Type" /></div>
+    </div>
+
+    <div class="config-section-title">Sleep / Biometric Column Mapping</div>
+    <div class="config-cols">
+      <div class="field"><label>Sleep Date</label><input id="col-sleep-date" value="Date" /></div>
+      <div class="field"><label>Resting HR (bpm)</label><input id="col-rhr" value="Resting HR (bpm)" /></div>
+      <div class="field"><label>Overnight HRV (ms)</label><input id="col-hrv" value="Overnight HRV (ms)" /></div>
+      <div class="field"><label>Total Sleep (min)</label><input id="col-sleep" value="Total (min)" /></div>
+      <div class="field"><label>Sleep Score</label><input id="col-sleepq" value="Sleep Score" /></div>
+      <div class="field"><label>Avg SpO₂ (%)</label><input id="col-spo2" value="Avg SpO₂" /></div>
+    </div>
+
+    <div class="config-actions">
+      <button class="btn primary" onclick="saveConfig(); loadData();">Save & Load</button>
+      <button class="btn" onclick="loadSampleData()">Load Sample Data</button>
+      <button class="btn" onclick="toggleConfig()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<main>
+
+  <!-- SUMMARY CARDS -->
+  <div>
+    <div class="section-title">Year-over-Year Summary</div>
+    <div class="summary-grid" id="summary-cards">
+      <div class="s-card"><div class="label">No data loaded</div><div class="value" style="font-size:16px;color:var(--muted)">—</div><div class="sub">Open ⚙ Config to connect your Garmin sync sheet</div></div>
+    </div>
+  </div>
+
+  <!-- CUMULATIVE EP YoY -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Cumulative EP — Year-over-Year</div>
+      <div class="metric-pills" id="cumul-metric-pills">
+        <div class="mpill active" data-metric="ep">Total EP</div>
+        <div class="mpill" data-metric="dist">Distance km</div>
+        <div class="mpill" data-metric="elev">Elevation m</div>
+        <div class="mpill" data-metric="sessions">Sessions</div>
+      </div>
+    </div>
+    <canvas id="cumul-chart"></canvas>
+  </div>
+
+  <!-- 2×2 GRID -->
+  <div class="grid-2x2">
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">Monthly EP — Road vs Trail</div>
+        <div class="year-pills" id="monthly-year-pills"></div>
+      </div>
+      <canvas id="monthly-chart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">13-Week Rolling EP</div>
+      </div>
+      <canvas id="rolling-chart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">EP vs EPH Scatter — Each dot = one week</div>
+        <div style="font-size:11px;color:var(--muted)">X = 13-wk rolling EP · Y = EP per Hour</div>
+      </div>
+      <canvas id="scatter-chart"></canvas>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
+      </div>
+      <div id="load-table-wrap" style="overflow-y:auto;max-height:260px">
+        <div class="empty">No data loaded.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- BIOMETRIC & RECOVERY -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Biometric &amp; Recovery Trends</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="range-pills" id="bio-range-pills">
+          <div class="rpill active" data-days="30">30d</div>
+          <div class="rpill" data-days="90">90d</div>
+          <div class="rpill" data-days="180">180d</div>
+          <div class="rpill" data-days="0">All</div>
+        </div>
+        <div class="metric-pills" id="bio-metric-pills">
+          <div class="mpill active" data-bio="hrv" style="--active-color:var(--hrv)">HRV</div>
+          <div class="mpill active" data-bio="rhr" style="--active-color:var(--rhr)">Resting HR</div>
+          <div class="mpill active" data-bio="sleepScore" style="--active-color:var(--sleep)">Sleep Score</div>
+          <div class="mpill" data-bio="spo2" style="--active-color:var(--spo2)">SpO₂</div>
+          <div class="mpill" data-bio="sleepHours" style="--active-color:var(--muted)">Sleep hrs</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Latest value cards -->
+    <div class="bio-stat-grid" id="bio-stat-cards">
+      <div class="bio-stat"><div class="bs-icon">〰️</div><div class="bs-label">Overnight HRV</div><div class="bs-value" id="bsv-hrv" style="color:var(--hrv)">—</div><div class="bs-sub" id="bss-hrv">ms</div></div>
+      <div class="bio-stat"><div class="bs-icon">❤️</div><div class="bs-label">Resting HR</div><div class="bs-value" id="bsv-rhr" style="color:var(--rhr)">—</div><div class="bs-sub" id="bss-rhr">bpm</div></div>
+      <div class="bio-stat"><div class="bs-icon">🌙</div><div class="bs-label">Sleep Score</div><div class="bs-value" id="bsv-sleep" style="color:var(--sleep)">—</div><div class="bs-sub" id="bss-sleep">/ 100</div></div>
+      <div class="bio-stat"><div class="bs-icon">🫧</div><div class="bs-label">Avg SpO₂</div><div class="bs-value" id="bsv-spo2" style="color:var(--spo2)">—</div><div class="bs-sub" id="bss-spo2">%</div></div>
+    </div>
+
+    <canvas id="bio-chart"></canvas>
+  </div>
+
+</main>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'trailhead_cfg_v2';
+let cfg = {};
+
+function defaultCfg() {
+  return {
+    sheetId: '', apiKey: '',
+    actRange:   'Activities!A1:L5000',
+    sleepRange: 'Sleep!A1:V5000',
+    colDate:      'Start Time',
+    colDist:      'Distance (km)',
+    colElev:      'Elevation Gain (m)',
+    colTime:      'Duration (min)',
+    colType:      'Type',
+    colSleepDate: 'Date',
+    colRhr:       'Resting HR (bpm)',
+    colHrv:       'Overnight HRV (ms)',
+    colSleep:     'Total (min)',
+    colSleepq:    'Sleep Score',
+    colSpo2:      'Avg SpO₂',
+  };
+}
+
+function loadConfig() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) { cfg = { ...defaultCfg(), ...JSON.parse(stored) }; applyConfigToUI(); return; }
+  } catch {}
+  cfg = defaultCfg();
+  applyConfigToUI();
+}
+
+function applyConfigToUI() {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('cfg-sheet-id',    cfg.sheetId);
+  set('cfg-api-key',     cfg.apiKey);
+  set('cfg-act-range',   cfg.actRange);
+  set('cfg-sleep-range', cfg.sleepRange);
+  set('col-date',        cfg.colDate);
+  set('col-dist',        cfg.colDist);
+  set('col-elev',        cfg.colElev);
+  set('col-time',        cfg.colTime);
+  set('col-type',        cfg.colType);
+  set('col-sleep-date',  cfg.colSleepDate);
+  set('col-rhr',         cfg.colRhr);
+  set('col-hrv',         cfg.colHrv);
+  set('col-sleep',       cfg.colSleep);
+  set('col-sleepq',      cfg.colSleepq);
+  set('col-spo2',        cfg.colSpo2);
+}
+
+function saveConfig() {
+  const get = id => document.getElementById(id)?.value.trim() || '';
+  cfg = {
+    sheetId:      get('cfg-sheet-id'),
+    apiKey:       get('cfg-api-key'),
+    actRange:     get('cfg-act-range')   || 'Activities!A1:L5000',
+    sleepRange:   get('cfg-sleep-range') || 'Sleep!A1:V5000',
+    colDate:      get('col-date'),
+    colDist:      get('col-dist'),
+    colElev:      get('col-elev'),
+    colTime:      get('col-time'),
+    colType:      get('col-type'),
+    colSleepDate: get('col-sleep-date'),
+    colRhr:       get('col-rhr'),
+    colHrv:       get('col-hrv'),
+    colSleep:     get('col-sleep'),
+    colSleepq:    get('col-sleepq'),
+    colSpo2:      get('col-spo2'),
+  };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); } catch {}
+}
+
+function toggleConfig() { document.getElementById('config-panel').classList.toggle('open'); }
+
+function setStatus(color, msg) {
+  document.getElementById('status-dot').style.background = color;
+  document.getElementById('status-msg').textContent = msg;
+}
+
+// ── FETCH ─────────────────────────────────────────────────────────────────────
+async function fetchRange(range) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${cfg.sheetId}/values/${encodeURIComponent(range)}?key=${cfg.apiKey}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${range}`);
+  const json = await res.json();
+  return json.values || [];
+}
+
+async function loadData() {
+  if (!cfg.sheetId || !cfg.apiKey) { setStatus('#f87171', 'Config missing — open ⚙'); return; }
+  setStatus('#fbbf24', 'Loading…');
+  try {
+    const [actRows, sleepRows] = await Promise.all([
+      fetchRange(cfg.actRange),
+      fetchRange(cfg.sleepRange).catch(() => []),
+    ]);
+    if (actRows.length < 2) throw new Error('Activities tab appears empty');
+    const sleepMap = parseSleepRows(sleepRows);
+    processSessions(actRows, sleepMap);
+    setStatus('#4ade80', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep records`);
+  } catch (e) {
+    setStatus('#f87171', 'Error: ' + e.message);
+  }
+}
+
+// ── PARSE SLEEP ───────────────────────────────────────────────────────────────
+function parseSleepRows(rows) {
+  const map = {};
+  if (!rows.length) return map;
+  const h       = rows[0];
+  const iDate   = ci(h, cfg.colSleepDate || 'Date');
+  const iRhr    = ci(h, cfg.colRhr);
+  const iHrv    = ci(h, cfg.colHrv);
+  const iSleep  = ci(h, cfg.colSleep);
+  const iSleepq = ci(h, cfg.colSleepq);
+  const iSpo2   = ci(h, cfg.colSpo2);
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const d = toDateKey(r[iDate]);
+    if (!d) continue;
+    map[d] = {
+      rhr:        num(r[iRhr]),
+      hrv:        num(r[iHrv]),
+      sleepMins:  num(r[iSleep]),
+      sleepScore: num(r[iSleepq]),
+      spo2:       num(r[iSpo2]),
+    };
+  }
+  return map;
+}
+
+function toDateKey(v) {
+  if (!v) return null;
+  const s = String(v).trim().slice(0, 10); // "2026-05-29" from "2026-05-29 06:30:00"
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
+}
+
+function ci(headers, name) {
+  if (!name) return -1;
+  return headers.findIndex(h => h.trim().toLowerCase() === name.trim().toLowerCase());
+}
+
+function num(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseFloat(String(v).replace(',', '.'));
+  return isNaN(n) ? null : n;
+}
+
+// ── PARSE ACTIVITIES ──────────────────────────────────────────────────────────
+function processSessions(rows, sleepMap) {
+  const h     = rows[0];
+  const iDate = ci(h, cfg.colDate  || 'Start Time');
+  const iDist = ci(h, cfg.colDist  || 'Distance (km)');
+  const iElev = ci(h, cfg.colElev  || 'Elevation Gain (m)');
+  const iTime = ci(h, cfg.colTime  || 'Duration (min)');
+  const iType = ci(h, cfg.colType  || 'Type');
+
+  const sessions = [];
+  for (let r = 1; r < rows.length; r++) {
+    const row  = rows[r];
+    const date = parseDate(row[iDate]);
+    if (!date) continue;
+    const dist    = num(row[iDist]) || 0;
+    const elev    = num(row[iElev]) || 0;
+    const hrs     = (num(row[iTime]) || 0) / 60;   // minutes → hours
+    const rawType = (row[iType] || '').toLowerCase();
+    if (!rawType.includes('run')) continue;
+    const type    = rawType.includes('trail') ? 'trail' : 'road';
+    const ep      = dist + elev / 100;
+    const dayKey  = toDateKey(row[iDate]);
+    const sleep   = sleepMap[dayKey] || {};
+    sessions.push({
+      date, dist, elev, hrs, type, ep,
+      year: date.getFullYear(), month: date.getMonth(), week: isoWeek(date),
+      rhr:        sleep.rhr        ?? null,
+      hrv:        sleep.hrv        ?? null,
+      sleepMins:  sleep.sleepMins  ?? null,
+      sleepScore: sleep.sleepScore ?? null,
+      spo2:       sleep.spo2       ?? null,
+    });
+  }
+  sessions.sort((a, b) => a.date - b.date);
+  renderAll(sessions, sleepMap);
+}
+
+function parseDate(v) {
+  if (!v) return null;
+  const d = new Date(String(v).trim());
+  return isNaN(d) ? null : d;
+}
+
+function isoWeek(d) {
+  const jan4 = new Date(d.getFullYear(), 0, 4);
+  return `${d.getFullYear()}-W${String(Math.floor((d - jan4) / 604800000) + 1).padStart(2,'0')}`;
+}
+
+// ── RENDER ALL ────────────────────────────────────────────────────────────────
+let _sessions = [], _sleepMap = {};
+let _activeYearMonthly = null, _activeCumulMetric = 'ep';
+let _bioDays = 30;
+let _activeBioMetrics = new Set(['hrv','rhr','sleepScore']);
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEAR_COLORS = { '2024':'#4db8ff','2025':'#6fcf44','2026':'#ff7043' };
+
+function renderAll(sessions, sleepMap) {
+  _sessions = sessions; _sleepMap = sleepMap;
+  renderSummaryCards(sessions);
+  buildMonthlyYearPills(sessions);
+  renderRollingChart(sessions);
+  buildCumulChart(sessions, _activeCumulMetric);
+  renderScatterChart(sessions);
+  renderLoadTable(sessions);
+  renderBioSection(sleepMap);
+}
+
+// ── SUMMARY CARDS ─────────────────────────────────────────────────────────────
+function renderSummaryCards(sessions) {
+  const byYear = {};
+  sessions.forEach(s => {
+    const y = s.year;
+    if (!byYear[y]) byYear[y] = { ep:0,dist:0,elev:0,sessions:0,road:0,trail:0 };
+    byYear[y].ep       += s.ep;
+    byYear[y].dist     += s.dist;
+    byYear[y].elev     += s.elev;
+    byYear[y].sessions += 1;
+    byYear[y][s.type]  += s.ep;
+  });
+  const years = Object.keys(byYear).sort();
+  const grid  = document.getElementById('summary-cards');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${Math.min(years.length + 1, 4)}, 1fr)`;
+  years.forEach(y => {
+    const d = byYear[y];
+    const roadPct  = d.ep > 0 ? d.road  / d.ep * 100 : 0;
+    const trailPct = d.ep > 0 ? d.trail / d.ep * 100 : 0;
+    const prevY = byYear[String(Number(y)-1)];
+    let growthTag = '';
+    if (prevY) {
+      const g = ((d.ep - prevY.ep) / prevY.ep * 100).toFixed(0);
+      growthTag = `<span class="tag ${g>=0?'up':'down'}">${g>=0?'+':''}${g}% YoY EP</span>`;
+    }
+    const c = YEAR_COLORS[y] || '#aaa';
+    const card = document.createElement('div');
+    card.className = 's-card';
+    card.innerHTML = `
+      <div class="label" style="color:${c}">${y} Total EP</div>
+      <div class="value" style="color:${c}">${d.ep.toFixed(1)}</div>
+      <div class="sub">${d.dist.toFixed(0)} km · ${(d.elev/1000).toFixed(1)}k m↑ · ${d.sessions} sessions</div>
+      <div class="bar-bg"><div class="bar-fill">
+        <div style="width:${roadPct}%;background:var(--road);height:4px"></div>
+        <div style="width:${trailPct}%;background:var(--trail);height:4px"></div>
+      </div></div>
+      <div style="margin-top:6px;display:flex;justify-content:space-between">
+        <span class="tag">Road ${roadPct.toFixed(0)}% · Trail ${trailPct.toFixed(0)}%</span>
+        ${growthTag}
+      </div>`;
+    grid.appendChild(card);
+  });
+  const rolling = compute13wkRolling(_sessions);
+  const latest  = rolling[rolling.length - 1];
+  if (latest) {
+    const card = document.createElement('div');
+    card.className = 's-card';
+    card.innerHTML = `
+      <div class="label">Current 13-wk EP</div>
+      <div class="value">${latest.ep13.toFixed(1)}</div>
+      <div class="sub">${latest.week}</div>
+      <div style="margin-top:8px;font-size:11px;color:var(--muted)">EPH this week: <strong style="color:var(--text)">${latest.eph !== null ? latest.eph.toFixed(1) : '—'}</strong></div>`;
+    grid.appendChild(card);
+  }
+}
+
+// ── MONTHLY STACKED BAR ───────────────────────────────────────────────────────
+let _monthlyChart = null;
+function buildMonthlyYearPills(sessions) {
+  const years = [...new Set(sessions.map(s => s.year))].sort();
+  if (!_activeYearMonthly || !years.includes(_activeYearMonthly)) _activeYearMonthly = years[years.length-1];
+  const wrap = document.getElementById('monthly-year-pills');
+  wrap.innerHTML = '';
+  years.forEach(y => {
+    const p = document.createElement('div');
+    p.className = `pill ${y===_activeYearMonthly?`active-${y}`:''}`;
+    p.textContent = y;
+    p.onclick = () => { _activeYearMonthly = y; buildMonthlyYearPills(sessions); renderMonthlyChart(sessions, y); };
+    wrap.appendChild(p);
+  });
+  renderMonthlyChart(sessions, _activeYearMonthly);
+}
+function renderMonthlyChart(sessions, year) {
+  const roadEP = new Array(12).fill(0), trailEP = new Array(12).fill(0);
+  sessions.filter(s => s.year === year).forEach(s => {
+    if (s.type === 'trail') trailEP[s.month] += s.ep; else roadEP[s.month] += s.ep;
+  });
+  const ctx = document.getElementById('monthly-chart').getContext('2d');
+  if (_monthlyChart) _monthlyChart.destroy();
+  _monthlyChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: MONTHS, datasets: [
+      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(77,184,255,0.85)', borderRadius:3, stack:'ep' },
+      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(111,207,68,0.85)', borderRadius:3, stack:'ep' },
+    ]},
+    options: chartOpts({ stacked:true, yLabel:'EP', yStep:50 })
+  });
+}
+
+// ── 13-WEEK ROLLING ───────────────────────────────────────────────────────────
+function compute13wkRolling(sessions) {
+  const weekly = {};
+  sessions.forEach(s => {
+    if (!weekly[s.week]) weekly[s.week] = { ep:0,hrs:0,date:s.date };
+    weekly[s.week].ep  += s.ep;
+    weekly[s.week].hrs += s.hrs;
+  });
+  const weeks = Object.keys(weekly).sort();
+  return weeks.map((w, i) => {
+    const ep13 = weeks.slice(Math.max(0,i-12), i+1).reduce((sum,ww) => sum + weekly[ww].ep, 0);
+    const eph  = weekly[w].hrs > 0 ? weekly[w].ep / weekly[w].hrs : null;
+    return { week:w, date:weekly[w].date, ep13, eph, epW:weekly[w].ep };
+  });
+}
+let _rollingChart = null;
+function renderRollingChart(sessions) {
+  const rolling = compute13wkRolling(sessions);
+  const years   = [...new Set(rolling.map(r => r.date.getFullYear()))].sort();
+  const labels  = rolling.map(r => r.date.toLocaleDateString('en-US',{month:'short',year:'2-digit'}));
+  const datasets = years.map(y => ({
+    label: String(y), borderColor: YEAR_COLORS[y]||'#aaa', borderWidth:2,
+    data: rolling.map(r => r.date.getFullYear()===y ? r.ep13 : null),
+    pointRadius:0, pointHoverRadius:4, tension:0.3, fill:false, spanGaps:false,
+  }));
+  const ctx = document.getElementById('rolling-chart').getContext('2d');
+  if (_rollingChart) _rollingChart.destroy();
+  _rollingChart = new Chart(ctx, { type:'line', data:{labels,datasets}, options:chartOpts({yLabel:'EP'}) });
+}
+
+// ── CUMULATIVE YoY ────────────────────────────────────────────────────────────
+let _cumulChart = null;
+function buildCumulChart(sessions, metric) {
+  _activeCumulMetric = metric;
+  document.querySelectorAll('.mpill[data-metric]').forEach(p => p.classList.toggle('active', p.dataset.metric===metric));
+  const byYear = {};
+  sessions.forEach(s => {
+    if (!byYear[s.year]) byYear[s.year] = new Array(12).fill(0);
+    byYear[s.year][s.month] += metric==='ep'?s.ep:metric==='dist'?s.dist:metric==='elev'?s.elev:1;
+  });
+  const years = Object.keys(byYear).sort();
+  const datasets = years.map(y => {
+    let sum = 0;
+    const cumul = Array.from({length:12}, (_,m) => { sum += byYear[y][m]; return sum > 0 || m===0 ? sum : null; });
+    return {
+      label:String(y), data:cumul, borderColor:YEAR_COLORS[y]||'#aaa', borderWidth:2,
+      borderDash: y===String(new Date().getFullYear())?[4,4]:[],
+      pointRadius:4, pointHoverRadius:6, tension:0.3, fill:false,
+    };
+  });
+  const ctx = document.getElementById('cumul-chart').getContext('2d');
+  if (_cumulChart) _cumulChart.destroy();
+  _cumulChart = new Chart(ctx, { type:'line', data:{labels:MONTHS,datasets}, options:chartOpts({yLabel:metric.toUpperCase()}) });
+}
+document.querySelectorAll('.mpill[data-metric]').forEach(p => p.addEventListener('click', () => buildCumulChart(_sessions, p.dataset.metric)));
+
+// ── SCATTER ───────────────────────────────────────────────────────────────────
+let _scatterChart = null;
+function renderScatterChart(sessions) {
+  const rolling = compute13wkRolling(sessions);
+  const years   = [...new Set(rolling.map(r => r.date.getFullYear()))].sort();
+  const datasets = years.map(y => ({
+    label:String(y), backgroundColor:(YEAR_COLORS[y]||'#aaa')+'cc', pointRadius:6, pointHoverRadius:8,
+    data: rolling.filter(r => r.date.getFullYear()===y && r.eph!==null).map(r => ({x:r.ep13,y:r.eph})),
+  }));
+  const ctx = document.getElementById('scatter-chart').getContext('2d');
+  if (_scatterChart) _scatterChart.destroy();
+  _scatterChart = new Chart(ctx, {
+    type:'scatter', data:{datasets},
+    options:{...chartOpts({yLabel:'EPH'}), scales:{
+      x:{...darkScale(),min:0,title:{display:true,text:'13-wk EP',color:'#777',font:{size:11}}},
+      y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#777',font:{size:11}}},
+    }},
+  });
+}
+
+// ── LOAD TABLE ────────────────────────────────────────────────────────────────
+function renderLoadTable(sessions) {
+  const weekly = {};
+  sessions.forEach(s => {
+    if (!weekly[s.week]) weekly[s.week] = {ep:0,dist:0,elev:0,hrs:0,sessions:0,road:0,trail:0,date:s.date};
+    weekly[s.week].ep       += s.ep;
+    weekly[s.week].dist     += s.dist;
+    weekly[s.week].elev     += s.elev;
+    weekly[s.week].hrs      += s.hrs;
+    weekly[s.week].sessions += 1;
+    weekly[s.week][s.type]  += s.ep;
+  });
+  const weeks = Object.keys(weekly).sort().slice(-8);
+  if (!weeks.length) return;
+  const wrap = document.getElementById('load-table-wrap');
+  let html = `<table class="load-table"><thead><tr>
+    <th>Week</th><th>EP</th><th>Distance</th><th>Elevation</th><th>Hours</th><th>Sessions</th><th>EPH</th><th>Road / Trail</th>
+  </tr></thead><tbody>`;
+  [...weeks].reverse().forEach(w => {
+    const d   = weekly[w];
+    const eph = d.hrs > 0 ? (d.ep/d.hrs).toFixed(1) : '—';
+    const rp  = d.ep > 0 ? (d.road /d.ep*100).toFixed(0) : 0;
+    const tp  = d.ep > 0 ? (d.trail/d.ep*100).toFixed(0) : 0;
+    html += `<tr>
+      <td>${w} <span style="color:var(--muted);font-size:11px">(${d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})})</span></td>
+      <td><strong>${d.ep.toFixed(1)}</strong></td>
+      <td>${d.dist.toFixed(1)} km</td><td>${d.elev.toFixed(0)} m</td>
+      <td>${d.hrs.toFixed(1)} h</td><td>${d.sessions}</td><td>${eph}</td>
+      <td><span style="color:var(--road)">${rp}%</span> / <span style="color:var(--trail)">${tp}%</span></td>
+    </tr>`;
+  });
+  wrap.innerHTML = html + '</tbody></table>';
+}
+
+// ── BIOMETRIC SECTION ─────────────────────────────────────────────────────────
+let _bioChart = null;
+
+const BIO_CFG = {
+  hrv:        { label:'Overnight HRV', color:'#c084fc', unit:'ms',   yAxis:'y1' },
+  rhr:        { label:'Resting HR',    color:'#f87171', unit:'bpm',  yAxis:'y1' },
+  sleepScore: { label:'Sleep Score',   color:'#38bdf8', unit:'/100', yAxis:'y2' },
+  spo2:       { label:'SpO₂',          color:'#34d399', unit:'%',    yAxis:'y2' },
+  sleepHours: { label:'Sleep hrs',     color:'#888888', unit:'h',    yAxis:'y2' },
+};
+
+function renderBioSection(sleepMap) {
+  const entries = Object.entries(sleepMap)
+    .map(([date, v]) => ({ date: new Date(date), ...v, sleepHours: v.sleepMins != null ? +(v.sleepMins/60).toFixed(1) : null }))
+    .sort((a,b) => a.date - b.date);
+
+  // Update stat cards with latest non-null values
+  const latest = [...entries].reverse();
+  const lv = k => latest.find(e => e[k] != null)?.[k];
+  const ldate = k => latest.find(e => e[k] != null)?.date;
+  const fmt = (k, suffix) => {
+    const v = lv(k); const d = ldate(k);
+    document.getElementById(`bsv-${k==='sleepScore'?'sleep':k==='sleepHours'?'sleep':k}`).textContent = v != null ? (k==='sleepHours'?v.toFixed(1):Math.round(v)) : '—';
+    if (d) document.getElementById(`bss-${k==='sleepScore'?'sleep':k==='sleepHours'?'sleep':k}`).textContent = `${suffix} · ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+  };
+  fmt('hrv', 'ms'); fmt('rhr', 'bpm'); fmt('sleepScore', '/ 100'); fmt('spo2', '%');
+
+  renderBioChart(entries);
+}
+
+function renderBioChart(entries) {
+  const cutoff = _bioDays > 0 ? new Date(Date.now() - _bioDays * 86400000) : new Date(0);
+  const filtered = entries.filter(e => e.date >= cutoff);
+  const labels = filtered.map(e => e.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+
+  const datasets = [];
+  _activeBioMetrics.forEach(k => {
+    const bc = BIO_CFG[k];
+    if (!bc) return;
+    datasets.push({
+      label: bc.label,
+      data: filtered.map(e => e[k] ?? null),
+      borderColor: bc.color,
+      backgroundColor: bc.color + '22',
+      borderWidth: 2,
+      pointRadius: 2,
+      pointHoverRadius: 5,
+      tension: 0.3,
+      fill: false,
+      spanGaps: true,
+      yAxisID: bc.yAxis,
+    });
+  });
+
+  const ctx = document.getElementById('bio-chart').getContext('2d');
+  if (_bioChart) _bioChart.destroy();
+  _bioChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: {
+        legend: { labels: { color:'#aaa', font:{size:11}, usePointStyle:true, pointStyleWidth:10 } },
+        tooltip: { backgroundColor:'#1c1c1c', borderColor:'#333', borderWidth:1, titleColor:'#ccc', bodyColor:'#888' },
+      },
+      scales: {
+        x: darkScale(),
+        y1: { ...darkScale(), position:'left',  title:{display:true,text:'bpm / ms',color:'#555',font:{size:11}} },
+        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'score / %',color:'#555',font:{size:11}} },
+      },
+      interaction: { mode:'index', intersect:false },
+    },
+  });
+}
+
+// Bio range pills
+document.querySelectorAll('.rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('.rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _bioDays = parseInt(p.dataset.days);
+    if (_sleepMap) renderBioSection(_sleepMap);
+  });
+});
+
+// Bio metric pills
+document.querySelectorAll('.mpill[data-bio]').forEach(p => {
+  p.addEventListener('click', () => {
+    const k = p.dataset.bio;
+    if (_activeBioMetrics.has(k)) { if (_activeBioMetrics.size > 1) _activeBioMetrics.delete(k); }
+    else _activeBioMetrics.add(k);
+    p.classList.toggle('active', _activeBioMetrics.has(k));
+    if (_sleepMap) renderBioSection(_sleepMap);
+  });
+});
+
+// ── CHART DEFAULTS ────────────────────────────────────────────────────────────
+function darkScale(extra) {
+  return { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#666',font:{size:11}}, border:{color:'transparent'}, ...extra };
+}
+function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
+  return {
+    responsive:true, maintainAspectRatio:false, animation:{duration:400},
+    plugins: {
+      legend: { labels:{color:'#aaa',font:{size:11},usePointStyle:true,pointStyleWidth:10} },
+      tooltip: { backgroundColor:'#1c1c1c',borderColor:'#333',borderWidth:1,titleColor:'#ccc',bodyColor:'#888' },
+    },
+    scales: {
+      x: darkScale(),
+      y: darkScale({ stacked, ticks:{color:'#666',font:{size:11},...(yStep?{stepSize:yStep}:{})},
+        title: yLabel ? {display:true,text:yLabel,color:'#555',font:{size:11}} : undefined }),
+    },
+    interaction: { mode:'index', intersect:false },
+  };
+}
+
+// ── SAMPLE DATA ───────────────────────────────────────────────────────────────
+function loadSampleData() {
+  setStatus('#fbbf24', 'Loading sample data…');
+  const sessions = [], sleepMap = {};
+  const types = ['road','road','road','road','trail'];
+  const rnd = (a,b) => a + Math.random()*(b-a);
+  [[2024,52,1.0],[2025,52,1.3],[2026,22,1.5]].forEach(([yr,wks,scale]) => {
+    for (let w = 0; w < wks; w++) {
+      const n = Math.floor(rnd(1,4));
+      for (let i = 0; i < n; i++) {
+        const date = new Date(yr,0,1+w*7+Math.floor(rnd(0,7)));
+        if (date > new Date()) continue;
+        const type = types[Math.floor(rnd(0,types.length))];
+        const dist = (type==='trail'?rnd(8,25):rnd(6,20))*scale;
+        const elev = (type==='trail'?rnd(200,800):rnd(20,150))*scale;
+        const hrs  = dist/rnd(8,14);
+        sessions.push({date,dist,elev,hrs,type,ep:dist+elev/100,
+          year:date.getFullYear(),month:date.getMonth(),week:isoWeek(date),
+          rhr:null,hrv:null,sleepMins:null,sleepScore:null,spo2:null});
+        const dk = date.toISOString().slice(0,10);
+        sleepMap[dk] = {
+          rhr:        Math.round(rnd(48,62)),
+          hrv:        Math.round(rnd(30,75)),
+          sleepMins:  Math.round(rnd(300,520)),
+          sleepScore: Math.round(rnd(45,90)),
+          spo2:       Math.round(rnd(93,99)*10)/10,
+        };
+      }
+    }
+  });
+  sessions.sort((a,b)=>a.date-b.date);
+  renderAll(sessions, sleepMap);
+  setStatus('#4ade80', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
+}
+
+// ── AUTO-SAVE ─────────────────────────────────────────────────────────────────
+document.querySelectorAll('#config-panel input').forEach(el => el.addEventListener('input', saveConfig));
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+loadConfig();
+if (cfg.sheetId && cfg.apiKey) loadData();
+</script>
+</body>
+</html>
