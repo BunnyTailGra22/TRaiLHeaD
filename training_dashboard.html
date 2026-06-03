@@ -3,19 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#e9e4dc">
 <title>TRaiLHEAD · Training Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg: #111; --card: #1c1c1c; --card2: #222; --border: #2e2e2e;
-  --text: #e8e8e8; --muted: #777;
-  --road: #4db8ff; --trail: #6fcf44;
-  --y2024: #4db8ff; --y2025: #6fcf44; --y2026: #ff7043;
-  --hrv: #c084fc; --sleep: #38bdf8; --weight: #fb923c; --spo2: #34d399;
-  --rhr: #f87171; --bb: #fbbf24;
-  --red: #f87171; --yellow: #fbbf24; --green: #4ade80;
+  /* Morandi · light minimalist */
+  --bg: #e9e4dc; --card: #f5f1ea; --card2: #ece6dd; --border: #dcd4c8;
+  --text: #4f483f; --muted: #9d9488;
+  --road: #8a9ba5; --trail: #97a682;
+  --y2024: #8a9ba5; --y2025: #97a682; --y2026: #c0987e;
+  --hrv: #aa93a2; --sleep: #93a8b2; --weight: #bfa676; --spo2: #9aae93;
+  --rhr: #be8984; --bb: #c4a86f;
+  --red: #bb7d77; --yellow: #c4a86f; --green: #93a77f;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { max-width: 100%; overflow-x: hidden; }
 body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; font-size: 13px; min-height: 100vh; }
 
 /* NAV */
@@ -26,8 +29,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 #status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 4px; }
 #status-msg { color: var(--muted); font-size: 12px; }
 button.btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card2); color: var(--text); cursor: pointer; font-size: 12px; }
-button.btn:hover { border-color: #555; background: #2a2a2a; }
-button.btn.primary { background: var(--road); border-color: var(--road); color: #000; font-weight: 600; }
+button.btn:hover { border-color: var(--muted); background: var(--card); }
+button.btn.primary { background: var(--road); border-color: var(--road); color: #fff; font-weight: 600; }
 
 /* CONFIG */
 #config-panel { background: var(--card); border-bottom: 1px solid var(--border); padding: 20px 24px; display: none; }
@@ -39,8 +42,8 @@ button.btn.primary { background: var(--road); border-color: var(--road); color: 
 .field input { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); padding: 7px 10px; font-size: 12px; width: 100%; }
 .field input:focus { outline: none; border-color: var(--road); }
 .config-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; grid-column: 1 / -1; }
-.config-note { grid-column: 1 / -1; font-size: 11px; color: var(--muted); line-height: 1.6; background: #1a1a1a; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
-.config-note code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-family: monospace; color: #a8d8ff; }
+.config-note { grid-column: 1 / -1; font-size: 11px; color: var(--muted); line-height: 1.6; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+.config-note code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-family: monospace; color: var(--road); }
 .config-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 4px; }
 
 /* MAIN */
@@ -48,9 +51,9 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
 /* SUMMARY CARDS */
 .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.s-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.s-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
 .s-card .label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-.s-card .value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.s-card .value { font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 4px; letter-spacing: -0.01em; }
 .s-card .sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
 .s-card .bar-bg { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
 .s-card .bar-fill { height: 100%; border-radius: 2px; display: flex; }
@@ -62,39 +65,42 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
 
 /* CHART CARD */
-.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
 .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
 .chart-card canvas { display: block; }
 
 /* PILLS */
 .year-pills { display: flex; gap: 6px; }
 .pill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; user-select: none; }
-.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(77,184,255,0.1); }
-.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(111,207,68,0.1); }
-.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(255,112,67,0.1); }
+.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(138,155,165,0.16); }
+.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(151,166,130,0.16); }
+.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(192,152,126,0.16); }
 .metric-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .mpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
-.mpill.active { border-color: var(--text); color: var(--text); background: #2e2e2e; }
+.mpill.active { border-color: var(--text); color: var(--text); background: var(--card2); }
 
 /* LAYOUTS */
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+/* min-width:0 stops wide children (tables/canvas) from blowing out grid columns */
+.grid-2x2 > .chart-card, .two-col > * , .summary-grid > * , .bio-stat-grid > * { min-width: 0; }
 .grid-2x2 .chart-card canvas { height: 220px !important; }
 #cumul-chart { height: 280px !important; }
 #bio-chart   { height: 260px !important; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-.bio-stat { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; }
-.bio-stat .bs-icon { font-size: 18px; margin-bottom: 6px; }
+.bio-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+.bio-stat .bs-icon  { font-size: 18px; margin-bottom: 6px; }
 .bio-stat .bs-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
 .bio-stat .bs-value { font-size: 22px; font-weight: 700; }
-.bio-stat .bs-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.bio-stat .bs-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* LOAD TABLE */
-.load-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
-.load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
+.load-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 480px; }
+.load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; white-space: nowrap; }
 .load-table tr:hover td { background: #1f1f1f; }
 
 /* EMPTY */
@@ -102,20 +108,100 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .empty p { margin-top: 8px; font-size: 12px; }
 
 /* RANGE PILLS */
-.range-pills { display: flex; gap: 6px; }
-.rpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
+.range-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.rpill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; touch-action: manipulation; }
 .rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(192,132,252,0.1); }
 
+/* PILL TOUCH TARGETS */
+.pill, .mpill, .rpill { min-height: 32px; display: inline-flex; align-items: center; }
+
+/* ── TABLET (≤ 900px) ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  main { padding: 14px 16px; gap: 14px; }
+  nav  { padding: 12px 16px; }
+  .summary-grid  { grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .two-col, .grid-2x2 { grid-template-columns: 1fr; }
   .bio-stat-grid { grid-template-columns: repeat(2, 1fr); }
-  .config-grid { grid-template-columns: 1fr; }
-  .config-cols { grid-template-columns: repeat(2, 1fr); }
+  .config-grid   { grid-template-columns: 1fr; }
+  .config-cols   { grid-template-columns: repeat(2, 1fr); }
+  .grid-2x2 .chart-card canvas { height: 200px !important; }
+  #cumul-chart { height: 240px !important; }
+  #bio-chart   { height: 240px !important; }
+}
+
+/* ── PHONE (≤ 600px) ───────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  body { font-size: 12px; }
+  main { padding: 10px 12px; gap: 12px; }
+
+  /* Nav — hide subtitle on small screens */
+  nav { padding: 10px 14px; }
+  .nav-title span:last-child { display: none; }
+  #status-msg { display: none; }
+  button.btn { padding: 7px 11px; font-size: 12px; }
+
+  /* Summary cards — 1 column on very small phones */
+  .summary-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .s-card { padding: 12px 14px; }
+  .s-card .value { font-size: 22px; }
+
+  /* Charts shorter on phones */
+  .chart-card { padding: 14px; }
+  .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .grid-2x2 .chart-card canvas { height: 180px !important; }
+  #cumul-chart { height: 200px !important; }
+  #bio-chart   { height: 220px !important; }
+
+  /* Bio stat — 2 columns */
+  .bio-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .bio-stat { padding: 10px; }
+  .bio-stat .bs-value { font-size: 18px; }
+
+  /* Config — single column, smaller padding */
+  #config-panel { padding: 14px; }
+  .config-cols  { grid-template-columns: 1fr 1fr; }
+
+  /* Pills wrap & larger tap targets */
+  .metric-pills, .year-pills, .range-pills { gap: 5px; }
+  .pill, .mpill, .rpill { font-size: 11px; padding: 5px 10px; }
+
+  /* Section titles */
+  .section-title { font-size: 10px; }
 }
 </style>
 </head>
 <body>
+
+<!-- PASSWORD GATE -->
+<div id="gate" style="
+  display:none; position:fixed; inset:0; z-index:9999;
+  background:var(--bg); align-items:center; justify-content:center;">
+  <div style="
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:40px 48px; text-align:center; max-width:360px; width:90%;">
+    <div style="font-size:28px; margin-bottom:12px;">🏔️</div>
+    <div style="font-size:16px; font-weight:700; letter-spacing:0.04em; margin-bottom:4px; color:var(--text);">
+      TRai<span style="color:var(--trail)">L</span>HEAD
+    </div>
+    <div style="font-size:12px; color:var(--muted); margin-bottom:28px;">Training Dashboard</div>
+    <input id="gate-input" type="password" placeholder="Enter password"
+      style="
+        width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+        color:var(--text); padding:10px 14px; font-size:14px; text-align:center;
+        outline:none; margin-bottom:12px; letter-spacing:0.1em;"
+      onkeydown="if(event.key==='Enter') checkPassword()" />
+    <button onclick="checkPassword()" style="
+      width:100%; padding:10px; border-radius:8px; border:none;
+      background:var(--road); color:#fff; font-weight:700; font-size:13px;
+      cursor:pointer; margin-bottom:16px;">
+      Unlock
+    </button>
+    <div id="gate-error" style="font-size:12px; color:var(--red); min-height:16px;"></div>
+    <div style="margin-top:20px; font-size:11px; color:var(--muted); opacity:0.6;">
+      Secured · TRaiLHEAD
+    </div>
+  </div>
+</div>
 
 <!-- NAV -->
 <nav>
@@ -238,8 +324,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
       <div class="chart-header">
         <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
       </div>
-      <div id="load-table-wrap" style="overflow-y:auto;max-height:260px">
-        <div class="empty">No data loaded.</div>
+      <div class="table-scroll" style="max-height:260px;overflow-y:auto;">
+        <div id="load-table-wrap"><div class="empty">No data loaded.</div></div>
       </div>
     </div>
 
@@ -284,9 +370,14 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 const STORAGE_KEY = 'trailhead_cfg_v2';
 let cfg = {};
 
+// ── HARDCODED DEFAULTS — no config entry needed ───────────────────────────────
+const DEFAULT_SHEET_ID = '1dWK_5XBGpEXaLl3xgsm7uXi-q5hdvEE49nRZKQyS_gg';
+const DEFAULT_API_KEY  = 'AIzaSyC4lLHO0_kuqxlVGlP7TRRDZTVrJMdO37U';   // ← paste your Google Sheets API key
+
 function defaultCfg() {
   return {
-    sheetId: '', apiKey: '',
+    sheetId:    DEFAULT_SHEET_ID,
+    apiKey:     DEFAULT_API_KEY,
     actRange:   'Activities!A1:L5000',
     sleepRange: 'Sleep!A1:V5000',
     colDate:      'Start Time',
@@ -306,9 +397,18 @@ function defaultCfg() {
 function loadConfig() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) { cfg = { ...defaultCfg(), ...JSON.parse(stored) }; applyConfigToUI(); return; }
-  } catch {}
-  cfg = defaultCfg();
+    if (stored) {
+      const saved = JSON.parse(stored);
+      cfg = { ...defaultCfg(), ...saved };
+    } else {
+      cfg = defaultCfg();
+    }
+  } catch {
+    cfg = defaultCfg();
+  }
+  // Hardcoded values always override anything stored
+  cfg.sheetId = DEFAULT_SHEET_ID;
+  cfg.apiKey  = DEFAULT_API_KEY;
   applyConfigToUI();
 }
 
@@ -370,8 +470,8 @@ async function fetchRange(range) {
 }
 
 async function loadData() {
-  if (!cfg.sheetId || !cfg.apiKey) { setStatus('#f87171', 'Config missing — open ⚙'); return; }
-  setStatus('#fbbf24', 'Loading…');
+  if (!cfg.sheetId || !cfg.apiKey) { setStatus('#bb7d77', 'Config missing — open ⚙'); return; }
+  setStatus('#c4a86f', 'Loading…');
   try {
     const [actRows, sleepRows] = await Promise.all([
       fetchRange(cfg.actRange),
@@ -380,9 +480,9 @@ async function loadData() {
     if (actRows.length < 2) throw new Error('Activities tab appears empty');
     const sleepMap = parseSleepRows(sleepRows);
     processSessions(actRows, sleepMap);
-    setStatus('#4ade80', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep records`);
+    setStatus('#93a77f', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep records`);
   } catch (e) {
-    setStatus('#f87171', 'Error: ' + e.message);
+    setStatus('#bb7d77', 'Error: ' + e.message);
   }
 }
 
@@ -483,7 +583,7 @@ let _activeYearMonthly = null, _activeCumulMetric = 'ep';
 let _bioDays = 30;
 let _activeBioMetrics = new Set(['hrv','rhr','sleepScore']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const YEAR_COLORS = { '2024':'#4db8ff','2025':'#6fcf44','2026':'#ff7043' };
+const YEAR_COLORS = { '2024':'#8a9ba5','2025':'#97a682','2026':'#c0987e' };
 
 function renderAll(sessions, sleepMap) {
   _sessions = sessions; _sleepMap = sleepMap;
@@ -579,8 +679,8 @@ function renderMonthlyChart(sessions, year) {
   _monthlyChart = new Chart(ctx, {
     type: 'bar',
     data: { labels: MONTHS, datasets: [
-      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(77,184,255,0.85)', borderRadius:3, stack:'ep' },
-      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(111,207,68,0.85)', borderRadius:3, stack:'ep' },
+      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(138,155,165,0.9)', borderRadius:3, stack:'ep' },
+      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(151,166,130,0.9)', borderRadius:3, stack:'ep' },
     ]},
     options: chartOpts({ stacked:true, yLabel:'EP', yStep:50 })
   });
@@ -700,11 +800,11 @@ function renderLoadTable(sessions) {
 let _bioChart = null;
 
 const BIO_CFG = {
-  hrv:        { label:'Overnight HRV', color:'#c084fc', unit:'ms',   yAxis:'y1' },
-  rhr:        { label:'Resting HR',    color:'#f87171', unit:'bpm',  yAxis:'y1' },
-  sleepScore: { label:'Sleep Score',   color:'#38bdf8', unit:'/100', yAxis:'y2' },
-  spo2:       { label:'SpO₂',          color:'#34d399', unit:'%',    yAxis:'y2' },
-  sleepHours: { label:'Sleep hrs',     color:'#888888', unit:'h',    yAxis:'y2' },
+  hrv:        { label:'Overnight HRV', color:'#aa93a2', unit:'ms',   yAxis:'y1' },
+  rhr:        { label:'Resting HR',    color:'#be8984', unit:'bpm',  yAxis:'y1' },
+  sleepScore: { label:'Sleep Score',   color:'#93a8b2', unit:'/100', yAxis:'y2' },
+  spo2:       { label:'SpO₂',          color:'#9aae93', unit:'%',    yAxis:'y2' },
+  sleepHours: { label:'Sleep hrs',     color:'#9d9488', unit:'h',    yAxis:'y2' },
 };
 
 function renderBioSection(sleepMap) {
@@ -759,13 +859,13 @@ function renderBioChart(entries) {
       responsive: true, maintainAspectRatio: false,
       animation: { duration: 300 },
       plugins: {
-        legend: { labels: { color:'#aaa', font:{size:11}, usePointStyle:true, pointStyleWidth:10 } },
-        tooltip: { backgroundColor:'#1c1c1c', borderColor:'#333', borderWidth:1, titleColor:'#ccc', bodyColor:'#888' },
+        legend: { labels: { color:'#6b6358', font:{size:11}, usePointStyle:true, pointStyleWidth:10 } },
+        tooltip: { backgroundColor:'#f5f1ea', borderColor:'#dcd4c8', borderWidth:1, titleColor:'#4f483f', bodyColor:'#9d9488' },
       },
       scales: {
         x: darkScale(),
-        y1: { ...darkScale(), position:'left',  title:{display:true,text:'bpm / ms',color:'#555',font:{size:11}} },
-        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'score / %',color:'#555',font:{size:11}} },
+        y1: { ...darkScale(), position:'left',  title:{display:true,text:'bpm / ms',color:'#9d9488',font:{size:11}} },
+        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'score / %',color:'#9d9488',font:{size:11}} },
       },
       interaction: { mode:'index', intersect:false },
     },
@@ -793,21 +893,21 @@ document.querySelectorAll('.mpill[data-bio]').forEach(p => {
   });
 });
 
-// ── CHART DEFAULTS ────────────────────────────────────────────────────────────
+// ── CHART DEFAULTS (Morandi light theme) ──────────────────────────────────────
 function darkScale(extra) {
-  return { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#666',font:{size:11}}, border:{color:'transparent'}, ...extra };
+  return { grid:{color:'rgba(79,72,63,0.08)'}, ticks:{color:'#9d9488',font:{size:11}}, border:{color:'transparent'}, ...extra };
 }
 function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
   return {
     responsive:true, maintainAspectRatio:false, animation:{duration:400},
     plugins: {
-      legend: { labels:{color:'#aaa',font:{size:11},usePointStyle:true,pointStyleWidth:10} },
-      tooltip: { backgroundColor:'#1c1c1c',borderColor:'#333',borderWidth:1,titleColor:'#ccc',bodyColor:'#888' },
+      legend: { labels:{color:'#6b6358',font:{size:11},usePointStyle:true,pointStyleWidth:10} },
+      tooltip: { backgroundColor:'#f5f1ea',borderColor:'#dcd4c8',borderWidth:1,titleColor:'#4f483f',bodyColor:'#9d9488' },
     },
     scales: {
       x: darkScale(),
-      y: darkScale({ stacked, ticks:{color:'#666',font:{size:11},...(yStep?{stepSize:yStep}:{})},
-        title: yLabel ? {display:true,text:yLabel,color:'#555',font:{size:11}} : undefined }),
+      y: darkScale({ stacked, ticks:{color:'#9d9488',font:{size:11},...(yStep?{stepSize:yStep}:{})},
+        title: yLabel ? {display:true,text:yLabel,color:'#9d9488',font:{size:11}} : undefined }),
     },
     interaction: { mode:'index', intersect:false },
   };
@@ -815,7 +915,7 @@ function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
 
 // ── SAMPLE DATA ───────────────────────────────────────────────────────────────
 function loadSampleData() {
-  setStatus('#fbbf24', 'Loading sample data…');
+  setStatus('#c4a86f', 'Loading sample data…');
   const sessions = [], sleepMap = {};
   const types = ['road','road','road','road','trail'];
   const rnd = (a,b) => a + Math.random()*(b-a);
@@ -845,15 +945,85 @@ function loadSampleData() {
   });
   sessions.sort((a,b)=>a.date-b.date);
   renderAll(sessions, sleepMap);
-  setStatus('#4ade80', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
+  setStatus('#93a77f', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
 }
 
 // ── AUTO-SAVE ─────────────────────────────────────────────────────────────────
 document.querySelectorAll('#config-panel input').forEach(el => el.addEventListener('input', saveConfig));
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
-loadConfig();
-if (cfg.sheetId && cfg.apiKey) loadData();
+// ── PASSWORD GATE ─────────────────────────────────────────────────────────────
+const PASS_KEY  = 'trailhead_auth';
+const PASS_HASH = 'b6d767d2f8ed5d21a44b0e5886680cb9'; // MD5 of password
+
+function md5(s) {
+  // Lightweight MD5 — sufficient for client-side gating
+  function safeAdd(x,y){const l=(x&0xFFFF)+(y&0xFFFF);return(((x>>16)+(y>>16)+(l>>16))<<16)|(l&0xFFFF);}
+  function bitRotate(n,c){return(n<<c)|(n>>>(32-c));}
+  function md5cmn(q,a,b,x,s,t){return safeAdd(bitRotate(safeAdd(safeAdd(a,q),safeAdd(x,t)),s),b);}
+  function md5ff(a,b,c,d,x,s,t){return md5cmn((b&c)|((~b)&d),a,b,x,s,t);}
+  function md5gg(a,b,c,d,x,s,t){return md5cmn((b&d)|(c&(~d)),a,b,x,s,t);}
+  function md5hh(a,b,c,d,x,s,t){return md5cmn(b^c^d,a,b,x,s,t);}
+  function md5ii(a,b,c,d,x,s,t){return md5cmn(c^(b|(~d)),a,b,x,s,t);}
+  function calc(x,l){
+    x[l>>5]|=0x80<<(l%32);x[(((l+64)>>>9)<<4)+14]=l;
+    let a=1732584193,b=-271733879,c=-1732584194,d=271733878;
+    for(let i=0;i<x.length;i+=16){
+      const [A,B,C,D]=[a,b,c,d];
+      a=md5ff(a,b,c,d,x[i],7,-680876936);d=md5ff(d,a,b,c,x[i+1],12,-389564586);c=md5ff(c,d,a,b,x[i+2],17,606105819);b=md5ff(b,c,d,a,x[i+3],22,-1044525330);
+      a=md5ff(a,b,c,d,x[i+4],7,-176418897);d=md5ff(d,a,b,c,x[i+5],12,1200080426);c=md5ff(c,d,a,b,x[i+6],17,-1473231341);b=md5ff(b,c,d,a,x[i+7],22,-45705983);
+      a=md5ff(a,b,c,d,x[i+8],7,1770035416);d=md5ff(d,a,b,c,x[i+9],12,-1958414417);c=md5ff(c,d,a,b,x[i+10],17,-42063);b=md5ff(b,c,d,a,x[i+11],22,-1990404162);
+      a=md5ff(a,b,c,d,x[i+12],7,1804603682);d=md5ff(d,a,b,c,x[i+13],12,-40341101);c=md5ff(c,d,a,b,x[i+14],17,-1502002290);b=md5ff(b,c,d,a,x[i+15],22,1236535329);
+      a=md5gg(a,b,c,d,x[i+1],5,-165796510);d=md5gg(d,a,b,c,x[i+6],9,-1069501632);c=md5gg(c,d,a,b,x[i+11],14,643717713);b=md5gg(b,c,d,a,x[i],20,-373897302);
+      a=md5gg(a,b,c,d,x[i+5],5,-701558691);d=md5gg(d,a,b,c,x[i+10],9,38016083);c=md5gg(c,d,a,b,x[i+15],14,-660478335);b=md5gg(b,c,d,a,x[i+4],20,-405537848);
+      a=md5gg(a,b,c,d,x[i+9],5,568446438);d=md5gg(d,a,b,c,x[i+14],9,-1019803690);c=md5gg(c,d,a,b,x[i+3],14,-187363961);b=md5gg(b,c,d,a,x[i+8],20,1163531501);
+      a=md5gg(a,b,c,d,x[i+13],5,-1444681467);d=md5gg(d,a,b,c,x[i+2],9,-51403784);c=md5gg(c,d,a,b,x[i+7],14,1735328473);b=md5gg(b,c,d,a,x[i+12],20,-1926607734);
+      a=md5hh(a,b,c,d,x[i+5],4,-378558);d=md5hh(d,a,b,c,x[i+8],11,-2022574463);c=md5hh(c,d,a,b,x[i+11],16,1839030562);b=md5hh(b,c,d,a,x[i+14],23,-35309556);
+      a=md5hh(a,b,c,d,x[i+1],4,-1530992060);d=md5hh(d,a,b,c,x[i+4],11,1272893353);c=md5hh(c,d,a,b,x[i+7],16,-155497632);b=md5hh(b,c,d,a,x[i+10],23,-1094730640);
+      a=md5hh(a,b,c,d,x[i+13],4,681279174);d=md5hh(d,a,b,c,x[i],11,-358537222);c=md5hh(c,d,a,b,x[i+3],16,-722521979);b=md5hh(b,c,d,a,x[i+6],23,76029189);
+      a=md5hh(a,b,c,d,x[i+9],4,-640364487);d=md5hh(d,a,b,c,x[i+12],11,-421815835);c=md5hh(c,d,a,b,x[i+15],16,530742520);b=md5hh(b,c,d,a,x[i+2],23,-995338651);
+      a=md5ii(a,b,c,d,x[i],6,-198630844);d=md5ii(d,a,b,c,x[i+7],10,1126891415);c=md5ii(c,d,a,b,x[i+14],15,-1416354905);b=md5ii(b,c,d,a,x[i+5],21,-57434055);
+      a=md5ii(a,b,c,d,x[i+12],6,1700485571);d=md5ii(d,a,b,c,x[i+3],10,-1894986606);c=md5ii(c,d,a,b,x[i+10],15,-1051523);b=md5ii(b,c,d,a,x[i+1],21,-2054922799);
+      a=md5ii(a,b,c,d,x[i+8],6,1873313359);d=md5ii(d,a,b,c,x[i+15],10,-30611744);c=md5ii(c,d,a,b,x[i+6],15,-1560198380);b=md5ii(b,c,d,a,x[i+13],21,1309151649);
+      a=md5ii(a,b,c,d,x[i+4],6,-145523070);d=md5ii(d,a,b,c,x[i+11],10,-1120210379);c=md5ii(c,d,a,b,x[i+2],15,718787259);b=md5ii(b,c,d,a,x[i+9],21,-343485551);
+      a=safeAdd(a,A);b=safeAdd(b,B);c=safeAdd(c,C);d=safeAdd(d,D);
+    }
+    return[a,b,c,d];
+  }
+  function str2binl(s){const r=[];for(let i=0;i<s.length*8;i+=8)r[i>>5]|=(s.charCodeAt(i/8)&0xFF)<<(i%32);return r;}
+  function binl2hex(a){let h='';const k='0123456789abcdef';for(let i=0;i<a.length*4;i++)h+=k[(a[i>>2]>>((i%4)*8+4))&0xF]+k[(a[i>>2]>>((i%4)*8))&0xF];return h;}
+  return binl2hex(calc(str2binl(s),s.length*8));
+}
+
+function checkPassword() {
+  const input = document.getElementById('gate-input').value;
+  if (md5(input) === PASS_HASH) {
+    localStorage.setItem(PASS_KEY, PASS_HASH);
+    document.getElementById('gate').style.display = 'none';
+    loadConfig();
+    if (cfg.sheetId && cfg.apiKey) loadData();
+  } else {
+    document.getElementById('gate-error').textContent = 'Incorrect password';
+    document.getElementById('gate-input').value = '';
+    document.getElementById('gate-input').focus();
+    setTimeout(() => document.getElementById('gate-error').textContent = '', 2000);
+  }
+}
+
+function initGate() {
+  const saved = localStorage.getItem(PASS_KEY);
+  if (saved === PASS_HASH) {
+    // Already authenticated on this device
+    loadConfig();
+    if (cfg.sheetId && cfg.apiKey) loadData();
+  } else {
+    const gate = document.getElementById('gate');
+    gate.style.display = 'flex';
+    document.getElementById('gate-input').focus();
+  }
+}
+
+initGate();
 </script>
 </body>
 </html>

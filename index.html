@@ -3,17 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#e9e4dc">
 <title>TRaiLHEAD · Training Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
-  --bg: #111; --card: #1c1c1c; --card2: #222; --border: #2e2e2e;
-  --text: #e8e8e8; --muted: #777;
-  --road: #4db8ff; --trail: #6fcf44;
-  --y2024: #4db8ff; --y2025: #6fcf44; --y2026: #ff7043;
-  --hrv: #c084fc; --sleep: #38bdf8; --weight: #fb923c; --spo2: #34d399;
-  --rhr: #f87171; --bb: #fbbf24;
-  --red: #f87171; --yellow: #fbbf24; --green: #4ade80;
+  /* Morandi · light minimalist */
+  --bg: #e9e4dc; --card: #f5f1ea; --card2: #ece6dd; --border: #dcd4c8;
+  --text: #4f483f; --muted: #9d9488;
+  --road: #8a9ba5; --trail: #97a682;
+  --y2024: #8a9ba5; --y2025: #97a682; --y2026: #c0987e;
+  --hrv: #aa93a2; --sleep: #93a8b2; --weight: #bfa676; --spo2: #9aae93;
+  --rhr: #be8984; --bb: #c4a86f;
+  --red: #bb7d77; --yellow: #c4a86f; --green: #93a77f;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { max-width: 100%; overflow-x: hidden; }
@@ -27,8 +29,8 @@ nav { display: flex; align-items: center; justify-content: space-between; paddin
 #status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 4px; }
 #status-msg { color: var(--muted); font-size: 12px; }
 button.btn { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--card2); color: var(--text); cursor: pointer; font-size: 12px; }
-button.btn:hover { border-color: #555; background: #2a2a2a; }
-button.btn.primary { background: var(--road); border-color: var(--road); color: #000; font-weight: 600; }
+button.btn:hover { border-color: var(--muted); background: var(--card); }
+button.btn.primary { background: var(--road); border-color: var(--road); color: #fff; font-weight: 600; }
 
 /* CONFIG */
 #config-panel { background: var(--card); border-bottom: 1px solid var(--border); padding: 20px 24px; display: none; }
@@ -40,8 +42,8 @@ button.btn.primary { background: var(--road); border-color: var(--road); color: 
 .field input { background: var(--bg); border: 1px solid var(--border); border-radius: 5px; color: var(--text); padding: 7px 10px; font-size: 12px; width: 100%; }
 .field input:focus { outline: none; border-color: var(--road); }
 .config-cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; grid-column: 1 / -1; }
-.config-note { grid-column: 1 / -1; font-size: 11px; color: var(--muted); line-height: 1.6; background: #1a1a1a; border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
-.config-note code { background: #2a2a2a; padding: 1px 5px; border-radius: 3px; font-family: monospace; color: #a8d8ff; }
+.config-note { grid-column: 1 / -1; font-size: 11px; color: var(--muted); line-height: 1.6; background: var(--card2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 14px; }
+.config-note code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-family: monospace; color: var(--road); }
 .config-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 4px; }
 
 /* MAIN */
@@ -49,9 +51,9 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
 /* SUMMARY CARDS */
 .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.s-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+.s-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
 .s-card .label { font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-.s-card .value { font-size: 28px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.s-card .value { font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 4px; letter-spacing: -0.01em; }
 .s-card .sub { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
 .s-card .bar-bg { height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
 .s-card .bar-fill { height: 100%; border-radius: 2px; display: flex; }
@@ -63,19 +65,19 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
 
 /* CHART CARD */
-.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; }
+.chart-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
 .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px; }
 .chart-card canvas { display: block; }
 
 /* PILLS */
 .year-pills { display: flex; gap: 6px; }
 .pill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; user-select: none; }
-.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(77,184,255,0.1); }
-.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(111,207,68,0.1); }
-.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(255,112,67,0.1); }
+.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(138,155,165,0.16); }
+.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(151,166,130,0.16); }
+.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(192,152,126,0.16); }
 .metric-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .mpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
-.mpill.active { border-color: var(--text); color: var(--text); background: #2e2e2e; }
+.mpill.active { border-color: var(--text); color: var(--text); background: var(--card2); }
 
 /* LAYOUTS */
 .two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -88,7 +90,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
-.bio-stat { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px; }
+.bio-stat { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
 .bio-stat .bs-icon  { font-size: 18px; margin-bottom: 6px; }
 .bio-stat .bs-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 4px; }
 .bio-stat .bs-value { font-size: 22px; font-weight: 700; }
@@ -173,29 +175,29 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 <!-- PASSWORD GATE -->
 <div id="gate" style="
   display:none; position:fixed; inset:0; z-index:9999;
-  background:#111; align-items:center; justify-content:center;">
+  background:var(--bg); align-items:center; justify-content:center;">
   <div style="
-    background:#1c1c1c; border:1px solid #2e2e2e; border-radius:14px;
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
     padding:40px 48px; text-align:center; max-width:360px; width:90%;">
     <div style="font-size:28px; margin-bottom:12px;">🏔️</div>
-    <div style="font-size:16px; font-weight:700; letter-spacing:0.04em; margin-bottom:4px;">
-      TRai<span style="color:#6fcf44">L</span>HEAD
+    <div style="font-size:16px; font-weight:700; letter-spacing:0.04em; margin-bottom:4px; color:var(--text);">
+      TRai<span style="color:var(--trail)">L</span>HEAD
     </div>
-    <div style="font-size:12px; color:#555; margin-bottom:28px;">Training Dashboard</div>
+    <div style="font-size:12px; color:var(--muted); margin-bottom:28px;">Training Dashboard</div>
     <input id="gate-input" type="password" placeholder="Enter password"
       style="
-        width:100%; background:#111; border:1px solid #2e2e2e; border-radius:8px;
-        color:#e8e8e8; padding:10px 14px; font-size:14px; text-align:center;
+        width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;
+        color:var(--text); padding:10px 14px; font-size:14px; text-align:center;
         outline:none; margin-bottom:12px; letter-spacing:0.1em;"
       onkeydown="if(event.key==='Enter') checkPassword()" />
     <button onclick="checkPassword()" style="
       width:100%; padding:10px; border-radius:8px; border:none;
-      background:#4db8ff; color:#000; font-weight:700; font-size:13px;
+      background:var(--road); color:#fff; font-weight:700; font-size:13px;
       cursor:pointer; margin-bottom:16px;">
       Unlock
     </button>
-    <div id="gate-error" style="font-size:12px; color:#f87171; min-height:16px;"></div>
-    <div style="margin-top:20px; font-size:11px; color:#333;">
+    <div id="gate-error" style="font-size:12px; color:var(--red); min-height:16px;"></div>
+    <div style="margin-top:20px; font-size:11px; color:var(--muted); opacity:0.6;">
       Secured · TRaiLHEAD
     </div>
   </div>
@@ -468,8 +470,8 @@ async function fetchRange(range) {
 }
 
 async function loadData() {
-  if (!cfg.sheetId || !cfg.apiKey) { setStatus('#f87171', 'Config missing — open ⚙'); return; }
-  setStatus('#fbbf24', 'Loading…');
+  if (!cfg.sheetId || !cfg.apiKey) { setStatus('#bb7d77', 'Config missing — open ⚙'); return; }
+  setStatus('#c4a86f', 'Loading…');
   try {
     const [actRows, sleepRows] = await Promise.all([
       fetchRange(cfg.actRange),
@@ -478,9 +480,9 @@ async function loadData() {
     if (actRows.length < 2) throw new Error('Activities tab appears empty');
     const sleepMap = parseSleepRows(sleepRows);
     processSessions(actRows, sleepMap);
-    setStatus('#4ade80', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep records`);
+    setStatus('#93a77f', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep records`);
   } catch (e) {
-    setStatus('#f87171', 'Error: ' + e.message);
+    setStatus('#bb7d77', 'Error: ' + e.message);
   }
 }
 
@@ -581,7 +583,7 @@ let _activeYearMonthly = null, _activeCumulMetric = 'ep';
 let _bioDays = 30;
 let _activeBioMetrics = new Set(['hrv','rhr','sleepScore']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const YEAR_COLORS = { '2024':'#4db8ff','2025':'#6fcf44','2026':'#ff7043' };
+const YEAR_COLORS = { '2024':'#8a9ba5','2025':'#97a682','2026':'#c0987e' };
 
 function renderAll(sessions, sleepMap) {
   _sessions = sessions; _sleepMap = sleepMap;
@@ -677,8 +679,8 @@ function renderMonthlyChart(sessions, year) {
   _monthlyChart = new Chart(ctx, {
     type: 'bar',
     data: { labels: MONTHS, datasets: [
-      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(77,184,255,0.85)', borderRadius:3, stack:'ep' },
-      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(111,207,68,0.85)', borderRadius:3, stack:'ep' },
+      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(138,155,165,0.9)', borderRadius:3, stack:'ep' },
+      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(151,166,130,0.9)', borderRadius:3, stack:'ep' },
     ]},
     options: chartOpts({ stacked:true, yLabel:'EP', yStep:50 })
   });
@@ -798,11 +800,11 @@ function renderLoadTable(sessions) {
 let _bioChart = null;
 
 const BIO_CFG = {
-  hrv:        { label:'Overnight HRV', color:'#c084fc', unit:'ms',   yAxis:'y1' },
-  rhr:        { label:'Resting HR',    color:'#f87171', unit:'bpm',  yAxis:'y1' },
-  sleepScore: { label:'Sleep Score',   color:'#38bdf8', unit:'/100', yAxis:'y2' },
-  spo2:       { label:'SpO₂',          color:'#34d399', unit:'%',    yAxis:'y2' },
-  sleepHours: { label:'Sleep hrs',     color:'#888888', unit:'h',    yAxis:'y2' },
+  hrv:        { label:'Overnight HRV', color:'#aa93a2', unit:'ms',   yAxis:'y1' },
+  rhr:        { label:'Resting HR',    color:'#be8984', unit:'bpm',  yAxis:'y1' },
+  sleepScore: { label:'Sleep Score',   color:'#93a8b2', unit:'/100', yAxis:'y2' },
+  spo2:       { label:'SpO₂',          color:'#9aae93', unit:'%',    yAxis:'y2' },
+  sleepHours: { label:'Sleep hrs',     color:'#9d9488', unit:'h',    yAxis:'y2' },
 };
 
 function renderBioSection(sleepMap) {
@@ -857,13 +859,13 @@ function renderBioChart(entries) {
       responsive: true, maintainAspectRatio: false,
       animation: { duration: 300 },
       plugins: {
-        legend: { labels: { color:'#aaa', font:{size:11}, usePointStyle:true, pointStyleWidth:10 } },
-        tooltip: { backgroundColor:'#1c1c1c', borderColor:'#333', borderWidth:1, titleColor:'#ccc', bodyColor:'#888' },
+        legend: { labels: { color:'#6b6358', font:{size:11}, usePointStyle:true, pointStyleWidth:10 } },
+        tooltip: { backgroundColor:'#f5f1ea', borderColor:'#dcd4c8', borderWidth:1, titleColor:'#4f483f', bodyColor:'#9d9488' },
       },
       scales: {
         x: darkScale(),
-        y1: { ...darkScale(), position:'left',  title:{display:true,text:'bpm / ms',color:'#555',font:{size:11}} },
-        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'score / %',color:'#555',font:{size:11}} },
+        y1: { ...darkScale(), position:'left',  title:{display:true,text:'bpm / ms',color:'#9d9488',font:{size:11}} },
+        y2: { ...darkScale(), position:'right', grid:{drawOnChartArea:false}, title:{display:true,text:'score / %',color:'#9d9488',font:{size:11}} },
       },
       interaction: { mode:'index', intersect:false },
     },
@@ -891,21 +893,21 @@ document.querySelectorAll('.mpill[data-bio]').forEach(p => {
   });
 });
 
-// ── CHART DEFAULTS ────────────────────────────────────────────────────────────
+// ── CHART DEFAULTS (Morandi light theme) ──────────────────────────────────────
 function darkScale(extra) {
-  return { grid:{color:'rgba(255,255,255,0.05)'}, ticks:{color:'#666',font:{size:11}}, border:{color:'transparent'}, ...extra };
+  return { grid:{color:'rgba(79,72,63,0.08)'}, ticks:{color:'#9d9488',font:{size:11}}, border:{color:'transparent'}, ...extra };
 }
 function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
   return {
     responsive:true, maintainAspectRatio:false, animation:{duration:400},
     plugins: {
-      legend: { labels:{color:'#aaa',font:{size:11},usePointStyle:true,pointStyleWidth:10} },
-      tooltip: { backgroundColor:'#1c1c1c',borderColor:'#333',borderWidth:1,titleColor:'#ccc',bodyColor:'#888' },
+      legend: { labels:{color:'#6b6358',font:{size:11},usePointStyle:true,pointStyleWidth:10} },
+      tooltip: { backgroundColor:'#f5f1ea',borderColor:'#dcd4c8',borderWidth:1,titleColor:'#4f483f',bodyColor:'#9d9488' },
     },
     scales: {
       x: darkScale(),
-      y: darkScale({ stacked, ticks:{color:'#666',font:{size:11},...(yStep?{stepSize:yStep}:{})},
-        title: yLabel ? {display:true,text:yLabel,color:'#555',font:{size:11}} : undefined }),
+      y: darkScale({ stacked, ticks:{color:'#9d9488',font:{size:11},...(yStep?{stepSize:yStep}:{})},
+        title: yLabel ? {display:true,text:yLabel,color:'#9d9488',font:{size:11}} : undefined }),
     },
     interaction: { mode:'index', intersect:false },
   };
@@ -913,7 +915,7 @@ function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
 
 // ── SAMPLE DATA ───────────────────────────────────────────────────────────────
 function loadSampleData() {
-  setStatus('#fbbf24', 'Loading sample data…');
+  setStatus('#c4a86f', 'Loading sample data…');
   const sessions = [], sleepMap = {};
   const types = ['road','road','road','road','trail'];
   const rnd = (a,b) => a + Math.random()*(b-a);
@@ -943,7 +945,7 @@ function loadSampleData() {
   });
   sessions.sort((a,b)=>a.date-b.date);
   renderAll(sessions, sleepMap);
-  setStatus('#4ade80', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
+  setStatus('#93a77f', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
 }
 
 // ── AUTO-SAVE ─────────────────────────────────────────────────────────────────
