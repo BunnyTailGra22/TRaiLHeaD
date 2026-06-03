@@ -16,6 +16,7 @@
   --red: #f87171; --yellow: #fbbf24; --green: #4ade80;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { max-width: 100%; overflow-x: hidden; }
 body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; font-size: 13px; min-height: 100vh; }
 
 /* NAV */
@@ -79,6 +80,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 /* LAYOUTS */
 .two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+/* min-width:0 stops wide children (tables/canvas) from blowing out grid columns */
+.grid-2x2 > .chart-card, .two-col > * , .summary-grid > * , .bio-stat-grid > * { min-width: 0; }
 .grid-2x2 .chart-card canvas { height: 220px !important; }
 #cumul-chart { height: 280px !important; }
 #bio-chart   { height: 260px !important; }
@@ -92,8 +95,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .bio-stat .bs-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* LOAD TABLE */
-.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.load-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 540px; }
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
+.load-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 480px; }
 .load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .load-table td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; white-space: nowrap; }
 .load-table tr:hover td { background: #1f1f1f; }
