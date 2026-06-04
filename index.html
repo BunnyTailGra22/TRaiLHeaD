@@ -84,9 +84,14 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 /* min-width:0 stops wide children (tables/canvas) from blowing out grid columns */
 .grid-2x2 > .chart-card, .two-col > * , .summary-grid > * , .bio-stat-grid > * { min-width: 0; }
-.grid-2x2 .chart-card canvas { height: 220px !important; }
-#cumul-chart { height: 280px !important; }
-#bio-chart   { height: 260px !important; }
+
+/* Chart sizing: the WRAPPER owns the height (single source of truth).
+   The canvas just fills it, so Chart.js controls the bitmap + DPR cleanly. */
+.chart-box { position: relative; width: 100%; }
+.chart-box > canvas { width: 100% !important; height: 100% !important; display: block; }
+.grid-2x2 .chart-box { height: 220px; }
+#cumul-box { height: 280px; }
+#bio-box   { height: 260px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -124,9 +129,9 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
   .bio-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .config-grid   { grid-template-columns: 1fr; }
   .config-cols   { grid-template-columns: repeat(2, 1fr); }
-  .grid-2x2 .chart-card canvas { height: 200px !important; }
-  #cumul-chart { height: 240px !important; }
-  #bio-chart   { height: 240px !important; }
+  .grid-2x2 .chart-box { height: 200px; }
+  #cumul-box { height: 240px; }
+  #bio-box   { height: 240px; }
 }
 
 /* ── PHONE (≤ 600px) ───────────────────────────────────────────────────── */
@@ -148,9 +153,9 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
   /* Charts shorter on phones */
   .chart-card { padding: 14px; }
   .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
-  .grid-2x2 .chart-card canvas { height: 180px !important; }
-  #cumul-chart { height: 200px !important; }
-  #bio-chart   { height: 220px !important; }
+  .grid-2x2 .chart-box { height: 180px; }
+  #cumul-box { height: 200px; }
+  #bio-box   { height: 220px; }
 
   /* Bio stat — 2 columns */
   .bio-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -291,7 +296,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
         <div class="mpill" data-metric="sessions">Sessions</div>
       </div>
     </div>
-    <canvas id="cumul-chart"></canvas>
+    <div class="chart-box" id="cumul-box"><canvas id="cumul-chart"></canvas></div>
   </div>
 
   <!-- 2×2 GRID -->
@@ -302,14 +307,14 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
         <div class="section-title" style="margin:0">Monthly EP — Road vs Trail</div>
         <div class="year-pills" id="monthly-year-pills"></div>
       </div>
-      <canvas id="monthly-chart"></canvas>
+      <div class="chart-box"><canvas id="monthly-chart"></canvas></div>
     </div>
 
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">13-Week Rolling EP</div>
       </div>
-      <canvas id="rolling-chart"></canvas>
+      <div class="chart-box"><canvas id="rolling-chart"></canvas></div>
     </div>
 
     <div class="chart-card">
@@ -317,7 +322,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
         <div class="section-title" style="margin:0">EP vs EPH Scatter — Each dot = one week</div>
         <div style="font-size:11px;color:var(--muted)">X = 13-wk rolling EP · Y = EP per Hour</div>
       </div>
-      <canvas id="scatter-chart"></canvas>
+      <div class="chart-box"><canvas id="scatter-chart"></canvas></div>
     </div>
 
     <div class="chart-card">
@@ -364,12 +369,20 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
       <div class="bio-stat"><div class="bs-icon">🫧</div><div class="bs-label">Avg SpO₂</div><div class="bs-value" id="bsv-spo2" style="color:var(--spo2)">—</div><div class="bs-sub" id="bss-spo2">%</div></div>
     </div>
 
-    <canvas id="bio-chart"></canvas>
+    <div class="chart-box" id="bio-box"><canvas id="bio-chart"></canvas></div>
   </div>
 
 </main>
 
 <script>
+// ── CHART.JS GLOBAL DEFAULTS ──────────────────────────────────────────────────
+// Match chart text to the page's system font (Chart.js defaults to Helvetica/Arial)
+if (window.Chart) {
+  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#6b6358';
+}
+
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'trailhead_cfg_v2';
 let cfg = {};
