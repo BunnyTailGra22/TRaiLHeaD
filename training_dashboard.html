@@ -348,8 +348,8 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
           <div class="rpill" data-days="0">All</div>
         </div>
         <div class="range-pills" id="bio-smooth-pills">
-          <div class="rpill" data-smooth="1">Daily</div>
-          <div class="rpill active" data-smooth="7">7d avg</div>
+          <div class="rpill active" data-smooth="1">Daily</div>
+          <div class="rpill" data-smooth="7">7d avg</div>
         </div>
         <div class="metric-pills" id="bio-metric-pills">
           <div class="mpill active" data-bio="hrv" style="--active-color:var(--hrv)">HRV</div>
@@ -598,7 +598,7 @@ function isoWeek(d) {
 let _sessions = [], _sleepMap = {};
 let _activeYearMonthly = null, _activeCumulMetric = 'ep';
 let _bioDays = 30;
-let _bioSmooth = 7;
+let _bioSmooth = 1;
 let _activeBioMetrics = new Set(['hrv','rhr','spo2']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const YEAR_COLORS = { '2024':'#8a9ba5','2025':'#97a682','2026':'#c0987e' };
@@ -873,11 +873,12 @@ function renderBioChart(entries) {
       label: bc.label,
       data,
       borderColor: bc.color,
-      backgroundColor: bc.color + '22',
+      backgroundColor: bc.color,
       borderWidth: 2,
-      pointRadius: smoothing ? 0 : 2,
+      pointRadius: 3,
       pointHoverRadius: 5,
-      tension: 0.4,
+      pointBackgroundColor: bc.color,
+      tension: 0,            // straight segments — no smoothing
       fill: false,
       spanGaps: true,
       yAxisID: bc.yAxis,
