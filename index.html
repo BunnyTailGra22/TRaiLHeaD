@@ -765,7 +765,11 @@ function renderScatterChart(sessions) {
   const rolling = compute13wkRolling(sessions);
   const years   = [...new Set(rolling.map(r => r.date.getFullYear()))].sort();
   const datasets = years.map(y => ({
-    label:String(y), backgroundColor:(YEAR_COLORS[y]||'#aaa')+'cc', pointRadius:6, pointHoverRadius:8,
+    label:String(y),
+    backgroundColor:(YEAR_COLORS[y]||'#aaa')+'cc',
+    borderColor:(YEAR_COLORS[y]||'#aaa'),
+    borderWidth:1,
+    pointRadius:3.5, pointHoverRadius:6,
     data: rolling.filter(r => r.date.getFullYear()===y && r.eph!==null)
                  .map(r => ({ x:r.epW, y:r.eph, d:r.date })),
   }));
