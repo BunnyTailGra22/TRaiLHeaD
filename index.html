@@ -320,7 +320,6 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">EP vs EPH Scatter — Each dot = one week</div>
-        <div style="font-size:11px;color:var(--muted)">X = that week's EP · Y = EP per Hour · races = high EP at high intensity (upper-right)</div>
       </div>
       <div class="chart-box"><canvas id="scatter-chart"></canvas></div>
     </div>
@@ -767,17 +766,27 @@ function renderScatterChart(sessions) {
   const years   = [...new Set(rolling.map(r => r.date.getFullYear()))].sort();
   const datasets = years.map(y => ({
     label:String(y), backgroundColor:(YEAR_COLORS[y]||'#aaa')+'cc', pointRadius:6, pointHoverRadius:8,
-    data: rolling.filter(r => r.date.getFullYear()===y && r.eph!==null).map(r => ({x:r.epW,y:r.eph})),
+    data: rolling.filter(r => r.date.getFullYear()===y && r.eph!==null)
+                 .map(r => ({ x:r.epW, y:r.eph, d:r.date })),
   }));
+  const opts = chartOpts({ yLabel:'EPH' });
+  opts.scales = {
+    x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#777',font:{size:11}}},
+    y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#777',font:{size:11}}},
+  };
+  opts.plugins.tooltip.callbacks = {
+    title: (items) => {
+      const d = items[0].raw.d;
+      return 'Week of ' + d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+    },
+    label: (item) => [
+      'EP:  ' + item.raw.x.toFixed(1),
+      'EPH: ' + item.raw.y.toFixed(1),
+    ],
+  };
   const ctx = document.getElementById('scatter-chart').getContext('2d');
   if (_scatterChart) _scatterChart.destroy();
-  _scatterChart = new Chart(ctx, {
-    type:'scatter', data:{datasets},
-    options:{...chartOpts({yLabel:'EPH'}), scales:{
-      x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#777',font:{size:11}}},
-      y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#777',font:{size:11}}},
-    }},
-  });
+  _scatterChart = new Chart(ctx, { type:'scatter', data:{datasets}, options: opts });
 }
 
 // ── LOAD TABLE ────────────────────────────────────────────────────────────────
