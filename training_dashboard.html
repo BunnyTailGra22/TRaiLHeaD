@@ -774,6 +774,8 @@ function renderScatterChart(sessions) {
     x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#777',font:{size:11}}},
     y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#777',font:{size:11}}},
   };
+  // Scatter: show ONLY the single dot under the cursor (not index-matched across years)
+  opts.interaction = { mode: 'nearest', intersect: true };
   opts.plugins.tooltip.callbacks = {
     title: (items) => {
       const d = items[0].raw.d;
