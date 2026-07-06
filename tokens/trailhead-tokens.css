@@ -1,0 +1,65 @@
+/* ============================================================================
+   TRaiLHEAD Design Tokens — Morandi · Modern Minimalist
+   Reusable CSS custom properties. Import or paste into :root.
+   ============================================================================ */
+
+:root {
+  /* ── Base / neutrals ───────────────────────────────────────────────── */
+  --bg:      #e9e4dc;  /* page background — warm greige      */
+  --card:    #f5f1ea;  /* cards, nav, panels — soft ivory    */
+  --card2:   #ece6dd;  /* secondary fills, pills, bio-stats  */
+  --border:  #dcd4c8;  /* hairline borders                  */
+  --text:    #4f483f;  /* primary text — muted charcoal     */
+  --muted:   #9d9488;  /* labels, ticks — dusty taupe       */
+
+  /* ── Accent · activity / years ─────────────────────────────────────── */
+  --road:    #8a9ba5;  /* road runs · dusty blue (primary)  */
+  --trail:   #97a682;  /* trail runs · sage green           */
+  --y2024:   #8a9ba5;  /* 2024 · dusty blue                 */
+  --y2025:   #97a682;  /* 2025 · sage green                 */
+  --y2026:   #c0987e;  /* 2026 · clay / terracotta          */
+
+  /* ── Accent · biometrics ───────────────────────────────────────────── */
+  --hrv:     #aa93a2;  /* HRV · mauve                       */
+  --sleep:   #93a8b2;  /* sleep · powder blue               */
+  --spo2:    #9aae93;  /* SpO2 · muted sage                 */
+  --rhr:     #be8984;  /* resting HR · dusty rose           */
+  --weight:  #bfa676;  /* weight · ochre                    */
+  --bb:      #c4a86f;  /* body battery · muted gold         */
+
+  /* ── Status / semantic ─────────────────────────────────────────────── */
+  --green:   #93a77f;  /* success / positive                */
+  --yellow:  #c4a86f;  /* loading / warning                 */
+  --red:     #bb7d77;  /* error / negative                  */
+
+  /* ── Typography ────────────────────────────────────────────────────── */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --font-size-base:    13px;
+  --font-size-label:   10px;   /* uppercase labels          */
+  --font-size-small:   11px;
+  --font-size-value:   28px;   /* summary card figures      */
+  --font-size-value-sm:22px;   /* bio-stat figures          */
+
+  /* ── Radius ────────────────────────────────────────────────────────── */
+  --radius-card:  14px;
+  --radius-stat:  8px;
+  --radius-pill:  20px;
+  --radius-input: 5px;
+
+  /* ── Borders & elevation ───────────────────────────────────────────── */
+  --border-width: 1px;
+  --border-hairline: 1px solid var(--border);
+
+  /* ── Chart theming ─────────────────────────────────────────────────── */
+  --chart-grid:        rgba(79, 72, 63, 0.08);  /* faint warm gray gridlines */
+  --chart-tick:        #9d9488;
+  --chart-legend:      #6b6358;
+  --chart-tooltip-bg:  #f5f1ea;
+  --chart-tooltip-border: #dcd4c8;
+
+  /* ── Pill active tints (16% of accent) ─────────────────────────────── */
+  --tint-2024: rgba(138, 155, 165, 0.16);
+  --tint-2025: rgba(151, 166, 130, 0.16);
+  --tint-2026: rgba(192, 152, 126, 0.16);
+  --tint-hrv:  rgba(170, 147, 162, 0.16);
+}
