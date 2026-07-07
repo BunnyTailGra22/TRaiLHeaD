@@ -843,16 +843,26 @@ function renderScatterChart(sessions) {
       : '';
   }
 
+  // Latest week gets a hollow ring so the current week stands out
+  const pts = shown.filter(r => r.eph !== null);
+  const latestTime = pts.length ? Math.max(...pts.map(r => r.date.getTime())) : null;
+
   const years   = [...new Set(shown.map(r => r.date.getFullYear()))].sort();
-  const datasets = years.map(y => ({
-    label:String(y),
-    backgroundColor:(YEAR_COLORS[y]||'#aaa')+'cc',
-    borderColor:(YEAR_COLORS[y]||'#aaa'),
-    borderWidth:1,
-    pointRadius:3.5, pointHoverRadius:6,
-    data: shown.filter(r => r.date.getFullYear()===y && r.eph!==null)
-               .map(r => ({ x:r.epW, y:r.eph, d:r.date })),
-  }));
+  const datasets = years.map(y => {
+    const yc  = YEAR_COLORS[y] || '#aaa';
+    const rows = shown.filter(r => r.date.getFullYear() === y && r.eph !== null);
+    const isLatest = rows.map(r => r.date.getTime() === latestTime);
+    return {
+      label: String(y),
+      borderColor: yc, borderWidth: 1,
+      pointRadius:      isLatest.map(L => L ? 6.5 : 3.5),
+      pointHoverRadius: isLatest.map(L => L ? 8   : 6),
+      pointBackgroundColor: isLatest.map(L => L ? 'transparent' : yc + 'cc'),  // hollow if latest
+      pointBorderColor:     isLatest.map(() => yc),
+      pointBorderWidth:     isLatest.map(L => L ? 2.5 : 1),
+      data: rows.map(r => ({ x:r.epW, y:r.eph, d:r.date })),
+    };
+  });
   const opts = chartOpts({ yLabel:'EPH' });
   opts.scales = {
     x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#6f675c',font:{size:11}}},
@@ -863,7 +873,8 @@ function renderScatterChart(sessions) {
   opts.plugins.tooltip.callbacks = {
     title: (items) => {
       const d = items[0].raw.d;
-      return 'Week of ' + d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      const tag = d.getTime() === latestTime ? '  ○ latest' : '';
+      return 'Week of ' + d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) + tag;
     },
     label: (item) => [
       'EP:  ' + item.raw.x.toFixed(1),
