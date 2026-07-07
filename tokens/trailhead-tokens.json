@@ -8,7 +8,7 @@
   "color": {
     "base": {
       "bg":     { "value": "#e9e4dc", "description": "Page background — warm greige" },
-      "card":   { "value": "#ffffff", "description": "Cards, nav, panels — white for max clarity" },
+      "card":   { "value": "#f9f6f1", "description": "Cards, nav, panels — soft warm off-white" },
       "card2":  { "value": "#ece6dd", "description": "Secondary fills, pills, tints" },
       "border": { "value": "#dcd4c8", "description": "Hairline borders" },
       "text":   { "value": "#453f37", "description": "Primary text — ~10:1 contrast on white" },

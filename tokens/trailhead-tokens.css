@@ -6,7 +6,7 @@
 :root {
   /* ── Base / neutrals ───────────────────────────────────────────────── */
   --bg:      #e9e4dc;  /* page background — warm greige                   */
-  --card:    #ffffff;  /* cards, nav, panels — white (max clarity)        */
+  --card:    #f9f6f1;  /* cards, nav, panels — soft warm off-white         */
   --card2:   #ece6dd;  /* secondary fills, pills, tints                   */
   --border:  #dcd4c8;  /* hairline borders                               */
   --text:    #453f37;  /* primary text — ~10:1 on white                  */
