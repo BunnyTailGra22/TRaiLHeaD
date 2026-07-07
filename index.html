@@ -325,6 +325,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">EP vs EPH Scatter — Each dot = one week</div>
+        <div id="scatter-note" style="font-size:11px;color:var(--muted)"></div>
       </div>
       <div class="chart-box"><canvas id="scatter-chart"></canvas></div>
     </div>
@@ -390,6 +391,12 @@ if (window.Chart) {
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'trailhead_cfg_v2';
 let cfg = {};
+
+// Weeks to exclude from the EP-vs-EPH scatter (outliers), keyed by week-start date.
+// The remark is shown as a caption so the data isn't silently dropped.
+const SCATTER_EXCLUDE = {
+  '2025-10-04': 'Multi-day trekking — Central Mountain Ridge (south, section 3)',
+};
 
 // ── HARDCODED DEFAULTS — no config entry needed ───────────────────────────────
 const DEFAULT_SHEET_ID = '1dWK_5XBGpEXaLl3xgsm7uXi-q5hdvEE49nRZKQyS_gg';
@@ -816,15 +823,35 @@ document.querySelectorAll('.mpill[data-metric]').forEach(p => p.addEventListener
 let _scatterChart = null;
 function renderScatterChart(sessions) {
   const rolling = compute13wkRolling(sessions);
-  const years   = [...new Set(rolling.map(r => r.date.getFullYear()))].sort();
+
+  // Map each excluded remark to its ISO week, then filter those weeks out
+  const weekNote = {};   // isoWeek -> remark
+  Object.entries(SCATTER_EXCLUDE).forEach(([s, note]) => {
+    const [y, m, d] = s.split('-').map(Number);
+    weekNote[isoWeek(new Date(y, m - 1, d))] = note;
+  });
+  const shown = rolling.filter(r => !(r.week in weekNote));
+
+  // Caption: list any excluded weeks that actually exist in the loaded data
+  const noteEl = document.getElementById('scatter-note');
+  if (noteEl) {
+    const present = rolling.filter(r => r.week in weekNote);
+    noteEl.textContent = present.length
+      ? present.map(r => '⌇ excl. wk of ' +
+          r.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) +
+          ' — ' + weekNote[r.week]).join('    ')
+      : '';
+  }
+
+  const years   = [...new Set(shown.map(r => r.date.getFullYear()))].sort();
   const datasets = years.map(y => ({
     label:String(y),
     backgroundColor:(YEAR_COLORS[y]||'#aaa')+'cc',
     borderColor:(YEAR_COLORS[y]||'#aaa'),
     borderWidth:1,
     pointRadius:3.5, pointHoverRadius:6,
-    data: rolling.filter(r => r.date.getFullYear()===y && r.eph!==null)
-                 .map(r => ({ x:r.epW, y:r.eph, d:r.date })),
+    data: shown.filter(r => r.date.getFullYear()===y && r.eph!==null)
+               .map(r => ({ x:r.epW, y:r.eph, d:r.date })),
   }));
   const opts = chartOpts({ yLabel:'EPH' });
   opts.scales = {
