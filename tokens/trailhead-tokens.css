@@ -1,36 +1,36 @@
 /* ============================================================================
-   TRaiLHEAD Design Tokens — Morandi · Modern Minimalist
-   Reusable CSS custom properties. Import or paste into :root.
+   TRaiLHEAD Design Tokens — Morandi · Modern Minimalist (visibility-tuned)
+   Two-tier logic: soft tones for surfaces, deepened tones for marks/text.
    ============================================================================ */
 
 :root {
   /* ── Base / neutrals ───────────────────────────────────────────────── */
-  --bg:      #e9e4dc;  /* page background — warm greige      */
-  --card:    #f5f1ea;  /* cards, nav, panels — soft ivory    */
-  --card2:   #ece6dd;  /* secondary fills, pills, bio-stats  */
-  --border:  #dcd4c8;  /* hairline borders                  */
-  --text:    #4f483f;  /* primary text — muted charcoal     */
-  --muted:   #9d9488;  /* labels, ticks — dusty taupe       */
+  --bg:      #e9e4dc;  /* page background — warm greige                   */
+  --card:    #ffffff;  /* cards, nav, panels — white (max clarity)        */
+  --card2:   #ece6dd;  /* secondary fills, pills, tints                   */
+  --border:  #dcd4c8;  /* hairline borders                               */
+  --text:    #453f37;  /* primary text — ~10:1 on white                  */
+  --muted:   #6f675c;  /* labels, ticks — ~5.6:1 on white (AA-legible)    */
 
-  /* ── Accent · activity / years ─────────────────────────────────────── */
-  --road:    #8a9ba5;  /* road runs · dusty blue (primary)  */
-  --trail:   #97a682;  /* trail runs · sage green           */
-  --y2024:   #8a9ba5;  /* 2024 · dusty blue                 */
-  --y2025:   #97a682;  /* 2025 · sage green                 */
-  --y2026:   #c0987e;  /* 2026 · clay / terracotta          */
+  /* ── Accent · activity / years (deepened, spread on lightness+hue) ─── */
+  --road:    #5f7d8c;  /* road runs · deep teal-blue (primary accent)     */
+  --trail:   #8a9a5b;  /* trail runs · olive-sage                         */
+  --y2024:   #5f7d8c;  /* 2024 · teal-blue    (grayscale L≈120)           */
+  --y2025:   #8a9a5b;  /* 2025 · olive-sage   (grayscale L≈146)           */
+  --y2026:   #a5602a;  /* 2026 · burnt clay   (grayscale L≈107)           */
 
-  /* ── Accent · biometrics ───────────────────────────────────────────── */
-  --hrv:     #aa93a2;  /* HRV · mauve                       */
-  --sleep:   #93a8b2;  /* sleep · powder blue               */
-  --spo2:    #9aae93;  /* SpO2 · muted sage                 */
-  --rhr:     #be8984;  /* resting HR · dusty rose           */
-  --weight:  #bfa676;  /* weight · ochre                    */
-  --bb:      #c4a86f;  /* body battery · muted gold         */
+  /* ── Accent · biometrics (deepened) ────────────────────────────────── */
+  --hrv:     #9c8196;  /* HRV · mauve                                     */
+  --sleep:   #6f97a6;  /* sleep · powder blue                             */
+  --spo2:    #7f9d78;  /* SpO2 · sage                                     */
+  --rhr:     #b3746e;  /* resting HR · dusty rose                         */
+  --weight:  #b39555;  /* weight · ochre                                  */
+  --bb:      #bd9a4f;  /* body battery · gold                             */
 
   /* ── Status / semantic ─────────────────────────────────────────────── */
-  --green:   #93a77f;  /* success / positive                */
-  --yellow:  #c4a86f;  /* loading / warning                 */
-  --red:     #bb7d77;  /* error / negative                  */
+  --green:   #7f9d78;  /* success / positive                             */
+  --yellow:  #bd9a4f;  /* loading / warning                              */
+  --red:     #b3746e;  /* error / negative                               */
 
   /* ── Typography ────────────────────────────────────────────────────── */
   --font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
@@ -46,20 +46,20 @@
   --radius-pill:  20px;
   --radius-input: 5px;
 
-  /* ── Borders & elevation ───────────────────────────────────────────── */
+  /* ── Borders ───────────────────────────────────────────────────────── */
   --border-width: 1px;
   --border-hairline: 1px solid var(--border);
 
   /* ── Chart theming ─────────────────────────────────────────────────── */
-  --chart-grid:        rgba(79, 72, 63, 0.08);  /* faint warm gray gridlines */
-  --chart-tick:        #9d9488;
+  --chart-grid:        rgba(79, 72, 63, 0.08);  /* faint warm gridlines */
+  --chart-tick:        #6f675c;
   --chart-legend:      #6b6358;
-  --chart-tooltip-bg:  #f5f1ea;
+  --chart-tooltip-bg:  #ffffff;
   --chart-tooltip-border: #dcd4c8;
 
-  /* ── Pill active tints (16% of accent) ─────────────────────────────── */
-  --tint-2024: rgba(138, 155, 165, 0.16);
-  --tint-2025: rgba(151, 166, 130, 0.16);
-  --tint-2026: rgba(192, 152, 126, 0.16);
-  --tint-hrv:  rgba(170, 147, 162, 0.16);
+  /* ── Pill active tints (15% of accent) ─────────────────────────────── */
+  --tint-2024: rgba(95, 125, 140, 0.15);
+  --tint-2025: rgba(138, 154, 91, 0.15);
+  --tint-2026: rgba(165, 96, 42, 0.15);
+  --tint-hrv:  rgba(156, 129, 150, 0.15);
 }

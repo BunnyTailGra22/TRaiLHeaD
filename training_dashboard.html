@@ -10,12 +10,12 @@
 :root {
   /* Morandi · light minimalist */
   --bg: #e9e4dc; --card: #ffffff; --card2: #ece6dd; --border: #dcd4c8;
-  --text: #4f483f; --muted: #9d9488;
-  --road: #8a9ba5; --trail: #97a682;
-  --y2024: #8a9ba5; --y2025: #97a682; --y2026: #c0987e;
-  --hrv: #aa93a2; --sleep: #93a8b2; --weight: #bfa676; --spo2: #9aae93;
-  --rhr: #be8984; --bb: #c4a86f;
-  --red: #bb7d77; --yellow: #c4a86f; --green: #93a77f;
+  --text: #453f37; --muted: #6f675c;   /* muted darkened for AA-legible labels */
+  --road: #5f7d8c; --trail: #8a9a5b;   /* deepened for contrast on white */
+  --y2024: #5f7d8c; --y2025: #8a9a5b; --y2026: #a5602a;  /* spread on lightness+hue */
+  --hrv: #9c8196; --sleep: #6f97a6; --weight: #b39555; --spo2: #7f9d78;
+  --rhr: #b3746e; --bb: #bd9a4f;
+  --red: #b3746e; --yellow: #bd9a4f; --green: #7f9d78;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { max-width: 100%; overflow-x: hidden; }
@@ -72,9 +72,9 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 /* PILLS */
 .year-pills { display: flex; gap: 6px; }
 .pill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 600; user-select: none; }
-.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(138,155,165,0.16); }
-.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(151,166,130,0.16); }
-.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(192,152,126,0.16); }
+.pill.active-2024 { border-color: var(--y2024); color: var(--y2024); background: rgba(95,125,140,0.15); }
+.pill.active-2025 { border-color: var(--y2025); color: var(--y2025); background: rgba(138,154,91,0.15); }
+.pill.active-2026 { border-color: var(--y2026); color: var(--y2026); background: rgba(165,96,42,0.15); }
 .metric-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .mpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
 .mpill.active { border-color: var(--text); color: var(--text); background: var(--card2); }
@@ -115,7 +115,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 /* RANGE PILLS */
 .range-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .rpill { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; touch-action: manipulation; }
-.rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(170,147,162,0.16); }
+.rpill.active { border-color: var(--hrv); color: var(--hrv); background: rgba(156,129,150,0.15); }
 
 /* PILL TOUCH TARGETS */
 .pill, .mpill, .rpill { min-height: 32px; display: inline-flex; align-items: center; }
@@ -605,7 +605,7 @@ let _bioDays = 30;
 let _bioSmooth = 1;
 let _activeBioMetrics = new Set(['hrv','rhr','spo2']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const YEAR_COLORS = { '2024':'#8a9ba5','2025':'#97a682','2026':'#c0987e' };
+const YEAR_COLORS = { '2024':'#5f7d8c','2025':'#8a9a5b','2026':'#a5602a' };
 
 function renderAll(sessions, sleepMap) {
   _sessions = sessions; _sleepMap = sleepMap;
@@ -701,8 +701,8 @@ function renderMonthlyChart(sessions, year) {
   _monthlyChart = new Chart(ctx, {
     type: 'bar',
     data: { labels: MONTHS, datasets: [
-      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(138,155,165,0.9)', borderRadius:3, stack:'ep' },
-      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(151,166,130,0.9)', borderRadius:3, stack:'ep' },
+      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(95,125,140,0.92)', borderRadius:3, stack:'ep' },
+      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(138,154,91,0.92)', borderRadius:3, stack:'ep' },
     ]},
     options: chartOpts({ stacked:true, yLabel:'EP', yStep:50 })
   });
@@ -750,14 +750,14 @@ function renderRollingChart(sessions) {
   const labels  = rolling.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
   // Colour each actual dot by where it sits vs the band
-  const IN = '#4f483f', HI = '#bb7d77', LO = '#c4a86f';   // text / red / yellow
+  const IN = '#453f37', HI = '#b3746e', LO = '#bd9a4f';   // text / red / yellow
   const dotColors = wk.map((v, i) => v > upper[i] ? HI : (v < lower[i] ? LO : IN));
 
   const datasets = [
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
       fill: false, tension: 0.35, order: 3 },
     { label: 'Optimal Range', data: lower, borderColor: 'transparent',
-      backgroundColor: 'rgba(151,166,130,0.45)', pointRadius: 0,
+      backgroundColor: 'rgba(138,154,91,0.40)', pointRadius: 0,
       fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
     { label: 'Weekly EP', data: wk, borderColor: IN, borderWidth: 2,
       pointRadius: 3, pointHoverRadius: 5,
@@ -828,8 +828,8 @@ function renderScatterChart(sessions) {
   }));
   const opts = chartOpts({ yLabel:'EPH' });
   opts.scales = {
-    x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#777',font:{size:11}}},
-    y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#777',font:{size:11}}},
+    x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#6f675c',font:{size:11}}},
+    y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#6f675c',font:{size:11}}},
   };
   // Scatter: show ONLY the single dot under the cursor (not index-matched across years)
   opts.interaction = { mode: 'nearest', intersect: true };
@@ -890,7 +890,7 @@ const BIO_CFG = {
   rhr:        { label:'Resting HR',    color:'#be8984', unit:'bpm',  yAxis:'y1' },
   sleepScore: { label:'Sleep Score',   color:'#93a8b2', unit:'/100', yAxis:'y2' },
   spo2:       { label:'SpO₂',          color:'#9aae93', unit:'%',    yAxis:'y2' },
-  sleepHours: { label:'Sleep hrs',     color:'#9d9488', unit:'h',    yAxis:'y2' },
+  sleepHours: { label:'Sleep hrs',     color:'#6f675c', unit:'h',    yAxis:'y2' },
 };
 
 function renderBioSection(sleepMap) {
@@ -959,11 +959,11 @@ function renderBioChart(entries) {
   const opts = chartOpts({ yLabel: 'bpm / ms' });
   delete opts.scales.y;
   opts.scales.y1 = darkScale({ position:'left',
-    ticks:{ color:'#9d9488', font:{ size: phone ? 10 : 11 } },
-    title: phone ? undefined : { display:true, text:'bpm / ms', color:'#9d9488', font:{ size:11 } } });
+    ticks:{ color:'#6f675c', font:{ size: phone ? 10 : 11 } },
+    title: phone ? undefined : { display:true, text:'bpm / ms', color:'#6f675c', font:{ size:11 } } });
   opts.scales.y2 = darkScale({ position:'right', grid:{ drawOnChartArea:false },
-    ticks:{ color:'#9d9488', font:{ size: phone ? 10 : 11 } },
-    title: phone ? undefined : { display:true, text:'score / %', color:'#9d9488', font:{ size:11 } } });
+    ticks:{ color:'#6f675c', font:{ size: phone ? 10 : 11 } },
+    title: phone ? undefined : { display:true, text:'score / %', color:'#6f675c', font:{ size:11 } } });
 
   const ctx = document.getElementById('bio-chart').getContext('2d');
   if (_bioChart) _bioChart.destroy();
@@ -1015,7 +1015,7 @@ document.querySelectorAll('.mpill[data-bio]').forEach(p => {
 function isPhone() { return window.innerWidth <= 600; }
 
 function darkScale(extra) {
-  return { grid:{color:'rgba(79,72,63,0.08)'}, ticks:{color:'#9d9488',font:{size:11}}, border:{color:'transparent'}, ...extra };
+  return { grid:{color:'rgba(79,72,63,0.08)'}, ticks:{color:'#6f675c',font:{size:11}}, border:{color:'transparent'}, ...extra };
 }
 function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
   const phone = isPhone();
@@ -1030,12 +1030,12 @@ function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
           boxWidth: 6, boxHeight: 6, padding: phone ? 10 : 16,
         },
       },
-      tooltip: { backgroundColor:'#f5f1ea',borderColor:'#dcd4c8',borderWidth:1,titleColor:'#4f483f',bodyColor:'#9d9488' },
+      tooltip: { backgroundColor:'#f5f1ea',borderColor:'#dcd4c8',borderWidth:1,titleColor:'#4f483f',bodyColor:'#6f675c' },
     },
     scales: {
-      x: darkScale({ ticks:{ color:'#9d9488', font:{size: phone?10:11}, maxRotation: phone?45:0, autoSkip:true, maxTicksLimit: phone?7:12 } }),
-      y: darkScale({ stacked, ticks:{color:'#9d9488',font:{size: phone?10:11},...(yStep?{stepSize:yStep}:{})},
-        title: (yLabel && !phone) ? {display:true,text:yLabel,color:'#9d9488',font:{size:11}} : undefined }),
+      x: darkScale({ ticks:{ color:'#6f675c', font:{size: phone?10:11}, maxRotation: phone?45:0, autoSkip:true, maxTicksLimit: phone?7:12 } }),
+      y: darkScale({ stacked, ticks:{color:'#6f675c',font:{size: phone?10:11},...(yStep?{stepSize:yStep}:{})},
+        title: (yLabel && !phone) ? {display:true,text:yLabel,color:'#6f675c',font:{size:11}} : undefined }),
     },
     interaction: { mode:'index', intersect:false },
   };

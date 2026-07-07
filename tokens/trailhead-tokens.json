@@ -1,69 +1,69 @@
 {
   "$meta": {
     "name": "TRaiLHEAD Design Tokens",
-    "theme": "Morandi · Modern Minimalist",
-    "version": "1.0.0",
-    "description": "Muted, dusty, low-saturation palette on a warm light base."
+    "theme": "Morandi · Modern Minimalist (visibility-tuned)",
+    "version": "1.1.0",
+    "description": "Muted Morandi surfaces with deepened, AA-legible marks and grayscale-separated categories."
   },
   "color": {
     "base": {
       "bg":     { "value": "#e9e4dc", "description": "Page background — warm greige" },
-      "card":   { "value": "#f5f1ea", "description": "Cards, nav, panels — soft ivory" },
-      "card2":  { "value": "#ece6dd", "description": "Secondary fills, pills, bio-stat cards" },
+      "card":   { "value": "#ffffff", "description": "Cards, nav, panels — white for max clarity" },
+      "card2":  { "value": "#ece6dd", "description": "Secondary fills, pills, tints" },
       "border": { "value": "#dcd4c8", "description": "Hairline borders" },
-      "text":   { "value": "#4f483f", "description": "Primary text — muted charcoal-brown" },
-      "muted":  { "value": "#9d9488", "description": "Labels, axis ticks — dusty taupe" }
+      "text":   { "value": "#453f37", "description": "Primary text — ~10:1 contrast on white" },
+      "muted":  { "value": "#6f675c", "description": "Labels, ticks — ~5.6:1 on white (WCAG AA)" }
     },
     "activity": {
-      "road":  { "value": "#8a9ba5", "description": "Road runs — dusty blue (primary accent)" },
-      "trail": { "value": "#97a682", "description": "Trail runs — sage green" },
-      "y2024": { "value": "#8a9ba5", "description": "2024 — dusty blue" },
-      "y2025": { "value": "#97a682", "description": "2025 — sage green" },
-      "y2026": { "value": "#c0987e", "description": "2026 — clay / terracotta" }
+      "road":  { "value": "#5f7d8c", "description": "Road runs — deep teal-blue (primary accent)" },
+      "trail": { "value": "#8a9a5b", "description": "Trail runs — olive-sage" },
+      "y2024": { "value": "#5f7d8c", "description": "2024 — teal-blue (grayscale L~120)" },
+      "y2025": { "value": "#8a9a5b", "description": "2025 — olive-sage (grayscale L~146)" },
+      "y2026": { "value": "#a5602a", "description": "2026 — burnt clay (grayscale L~107)" }
     },
     "biometric": {
-      "hrv":    { "value": "#aa93a2", "description": "HRV — mauve" },
-      "sleep":  { "value": "#93a8b2", "description": "Sleep — powder blue" },
-      "spo2":   { "value": "#9aae93", "description": "SpO2 — muted sage" },
-      "rhr":    { "value": "#be8984", "description": "Resting HR — dusty rose" },
-      "weight": { "value": "#bfa676", "description": "Weight — ochre" },
-      "bb":     { "value": "#c4a86f", "description": "Body Battery — muted gold" }
+      "hrv":    { "value": "#9c8196", "description": "HRV — mauve" },
+      "sleep":  { "value": "#6f97a6", "description": "Sleep — powder blue" },
+      "spo2":   { "value": "#7f9d78", "description": "SpO2 — sage" },
+      "rhr":    { "value": "#b3746e", "description": "Resting HR — dusty rose" },
+      "weight": { "value": "#b39555", "description": "Weight — ochre" },
+      "bb":     { "value": "#bd9a4f", "description": "Body Battery — gold" }
     },
     "status": {
-      "green":  { "value": "#93a77f", "description": "Success / positive" },
-      "yellow": { "value": "#c4a86f", "description": "Loading / warning" },
-      "red":    { "value": "#bb7d77", "description": "Error / negative" }
+      "green":  { "value": "#7f9d78", "description": "Success / positive" },
+      "yellow": { "value": "#bd9a4f", "description": "Loading / warning" },
+      "red":    { "value": "#b3746e", "description": "Error / negative" }
     },
     "chart": {
-      "grid":         { "value": "rgba(79,72,63,0.08)", "description": "Faint warm gray gridlines" },
-      "tick":         { "value": "#9d9488" },
+      "grid":         { "value": "rgba(79,72,63,0.08)", "description": "Faint warm gridlines" },
+      "tick":         { "value": "#6f675c" },
       "legend":       { "value": "#6b6358" },
-      "tooltipBg":    { "value": "#f5f1ea" },
+      "tooltipBg":    { "value": "#ffffff" },
       "tooltipBorder":{ "value": "#dcd4c8" }
     },
     "tint": {
-      "2024": { "value": "rgba(138,155,165,0.16)", "description": "2024 pill active tint" },
-      "2025": { "value": "rgba(151,166,130,0.16)", "description": "2025 pill active tint" },
-      "2026": { "value": "rgba(192,152,126,0.16)", "description": "2026 pill active tint" },
-      "hrv":  { "value": "rgba(170,147,162,0.16)", "description": "HRV / range-pill active tint" }
+      "2024": { "value": "rgba(95,125,140,0.15)",  "description": "2024 pill active tint" },
+      "2025": { "value": "rgba(138,154,91,0.15)",  "description": "2025 pill active tint" },
+      "2026": { "value": "rgba(165,96,42,0.15)",   "description": "2026 pill active tint" },
+      "hrv":  { "value": "rgba(156,129,150,0.15)", "description": "HRV / range-pill active tint" }
     }
   },
   "font": {
     "family": {
       "value": "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif",
-      "description": "System font stack (used for UI and charts)"
+      "description": "System font stack (UI and charts)"
     },
     "size": {
-      "base":     { "value": "13px" },
-      "label":    { "value": "10px", "description": "Uppercase labels" },
-      "small":    { "value": "11px" },
-      "value":    { "value": "28px", "description": "Summary card figures" },
-      "valueSm":  { "value": "22px", "description": "Bio-stat figures" }
+      "base":    { "value": "13px" },
+      "label":   { "value": "10px", "description": "Uppercase labels" },
+      "small":   { "value": "11px" },
+      "value":   { "value": "28px", "description": "Summary card figures" },
+      "valueSm": { "value": "22px", "description": "Bio-stat figures" }
     },
     "weight": {
-      "regular": { "value": 400 },
-      "semibold":{ "value": 600 },
-      "bold":    { "value": 700 }
+      "regular":  { "value": 400 },
+      "semibold": { "value": 600 },
+      "bold":     { "value": 700 }
     }
   },
   "radius": {
