@@ -725,21 +725,29 @@ function compute13wkRolling(sessions) {
 }
 let _rollingChart = null;
 let _chronicWeeks = 8;   // trailing window for chronic-load baseline (4 / 8 / 13)
+const VISIBLE_WEEKS = 13;   // x-axis shows only the trailing 13 weeks
 function renderRollingChart(sessions) {
-  // Weekly EP series (continuous timeline), sorted
-  const rolling = compute13wkRolling(sessions);
-  const labels  = rolling.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-  const wk      = rolling.map(r => +r.epW.toFixed(1));
+  // Weekly EP series (continuous timeline), sorted — full history
+  const rollingAll = compute13wkRolling(sessions);
+  const wkAll = rollingAll.map(r => +r.epW.toFixed(1));
 
-  // Chronic load = trailing N-week average (expanding window at the start)
+  // Chronic load = trailing N-week average over the FULL history
+  // (computed before slicing so the band at the left edge stays accurate)
   const win = _chronicWeeks;
-  const chronic = wk.map((_, i) => {
-    const s = wk.slice(Math.max(0, i - (win - 1)), i + 1);
+  const chronicAll = wkAll.map((_, i) => {
+    const s = wkAll.slice(Math.max(0, i - (win - 1)), i + 1);
     return s.reduce((a, b) => a + b, 0) / s.length;
   });
-  // ACWR sweet spot: optimal weekly load = 0.8×–1.3× chronic
-  const lower = chronic.map(c => +(c * 0.8).toFixed(1));
-  const upper = chronic.map(c => +(c * 1.3).toFixed(1));
+  const lowerAll = chronicAll.map(c => +(c * 0.8).toFixed(1));   // ACWR sweet spot
+  const upperAll = chronicAll.map(c => +(c * 1.3).toFixed(1));
+
+  // Slice everything to the trailing 13 weeks for display
+  const start   = Math.max(0, rollingAll.length - VISIBLE_WEEKS);
+  const rolling = rollingAll.slice(start);
+  const wk      = wkAll.slice(start);
+  const lower   = lowerAll.slice(start);
+  const upper   = upperAll.slice(start);
+  const labels  = rolling.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
   // Colour each actual dot by where it sits vs the band
   const IN = '#4f483f', HI = '#bb7d77', LO = '#c4a86f';   // text / red / yellow
