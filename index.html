@@ -725,7 +725,7 @@ function compute13wkRolling(sessions) {
 }
 let _rollingChart = null;
 let _chronicWeeks = 8;   // trailing window for chronic-load baseline (4 / 8 / 13)
-const VISIBLE_WEEKS = 13;   // x-axis shows only the trailing 13 weeks
+const VISIBLE_WEEKS = 26;   // x-axis shows only the trailing 26 weeks
 function renderRollingChart(sessions) {
   // Weekly EP series (continuous timeline), sorted — full history
   const rollingAll = compute13wkRolling(sessions);
