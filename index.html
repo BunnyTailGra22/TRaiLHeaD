@@ -92,6 +92,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .grid-2x2 .chart-box { height: 220px; }
 #cumul-box { height: 280px; }
 #bio-box   { height: 260px; }
+#sport-box { height: 260px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -341,6 +342,21 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
   </div>
 
+  <!-- SPORT-SPECIFIC TRAINING -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Sport-Specific Training — All Activities</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="metric-pills" id="sport-metric-pills">
+          <div class="mpill active" data-smetric="hrs">Hours</div>
+          <div class="mpill" data-smetric="n">Sessions</div>
+        </div>
+        <div class="year-pills" id="sport-year-pills"></div>
+      </div>
+    </div>
+    <div class="chart-box" id="sport-box"><canvas id="sport-chart"></canvas></div>
+  </div>
+
   <!-- BIOMETRIC & RECOVERY -->
   <div class="chart-card">
     <div class="chart-header">
@@ -572,6 +588,7 @@ function processSessions(rows, sleepMap) {
   const iType = ci(h, cfg.colType  || 'Type');
 
   const sessions = [];
+  const allActs  = [];
   for (let r = 1; r < rows.length; r++) {
     const row  = rows[r];
     const date = parseDate(row[iDate]);
@@ -580,6 +597,10 @@ function processSessions(rows, sleepMap) {
     const elev    = num(row[iElev]) || 0;
     const hrs     = (num(row[iTime]) || 0) / 60;   // minutes → hours
     const rawType = (row[iType] || '').toLowerCase();
+    if (rawType && rawType !== 'incident_detected') {   // safety trigger, not training
+      allActs.push({ date, hrs, type: rawType, group: sportGroup(rawType),
+                     year: date.getFullYear(), month: date.getMonth() });
+    }
     if (!rawType.includes('run')) continue;
     const type    = rawType.includes('trail') ? 'trail' : 'road';
     const ep      = dist + elev / 100;
@@ -596,6 +617,7 @@ function processSessions(rows, sleepMap) {
     });
   }
   sessions.sort((a, b) => a.date - b.date);
+  _allActs = allActs;
   renderAll(sessions, sleepMap);
 }
 
@@ -611,13 +633,27 @@ function isoWeek(d) {
 }
 
 // ── RENDER ALL ────────────────────────────────────────────────────────────────
-let _sessions = [], _sleepMap = {};
+let _sessions = [], _sleepMap = {}, _allActs = [];
 let _activeYearMonthly = null, _activeCumulMetric = 'ep';
 let _bioDays = 30;
 let _bioSmooth = 1;
 let _activeBioMetrics = new Set(['hrv','rhr','spo2']);
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const YEAR_COLORS = { '2024':'#5f7d8c','2025':'#8a9a5b','2026':'#a5602a' };
+
+// Sport chart: raw Garmin activity types → display groups. First match wins;
+// unmatched types land in 'Other'. floor_climbing is stair climbing, not rock.
+const SPORT_GROUPS = [
+  { key:'Run',         color:'#5f7d8c', match:t => t.includes('run') },
+  { key:'Ride',        color:'#a5602a', match:t => t.includes('cycling') || t.includes('biking') },
+  { key:'Walk & Hike', color:'#8a9a5b', match:t => t.includes('walk') || t.includes('hik') || t.includes('mountaineer') },
+  { key:'Climb',       color:'#9c8196', match:t => t.includes('boulder') || (t.includes('climb') && !t.includes('floor')) },
+  { key:'Swim',        color:'#6f97a6', match:t => t.includes('swim') },
+  { key:'Yoga',        color:'#b39555', match:t => t.includes('yoga') || t.includes('pilates') },
+  { key:'Strength',    color:'#b3746e', match:t => t.includes('strength') || t.includes('cardio') || t.includes('fitness') },
+  { key:'Other',       color:'#a8a29a', match:() => true },
+];
+function sportGroup(t) { return SPORT_GROUPS.find(g => g.match(t)).key; }
 
 function renderAll(sessions, sleepMap) {
   _sessions = sessions; _sleepMap = sleepMap;
@@ -626,6 +662,7 @@ function renderAll(sessions, sleepMap) {
   renderRollingChart(sessions);
   buildCumulChart(sessions, _activeCumulMetric);
   renderScatterChart(sessions);
+  buildSportYearPills(_allActs);
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
 }
@@ -719,6 +756,55 @@ function renderMonthlyChart(sessions, year) {
     options: chartOpts({ stacked:true, yLabel:'EP', yStep:50 })
   });
 }
+
+// ── SPORT-SPECIFIC TRAINING ───────────────────────────────────────────────────
+// Monthly stacked hours (or session counts) per sport group — the one chart
+// that shows ALL activities, not just the runs the rest of the page filters to.
+let _sportChart = null, _activeYearSport = null, _sportMetric = 'hrs';
+function buildSportYearPills(acts) {
+  const years = [...new Set(acts.map(a => a.year))].sort();
+  const wrap = document.getElementById('sport-year-pills');
+  if (!wrap || !years.length) return;
+  if (!_activeYearSport || !years.includes(_activeYearSport)) _activeYearSport = years[years.length-1];
+  wrap.innerHTML = '';
+  years.forEach(y => {
+    const p = document.createElement('div');
+    p.className = `pill ${y===_activeYearSport?`active-${y}`:''}`;
+    p.textContent = y;
+    p.onclick = () => { _activeYearSport = y; buildSportYearPills(acts); };
+    wrap.appendChild(p);
+  });
+  renderSportChart(acts, _activeYearSport);
+}
+function renderSportChart(acts, year) {
+  const byGroup = {};
+  SPORT_GROUPS.forEach(g => byGroup[g.key] = new Array(12).fill(0));
+  acts.filter(a => a.year === year).forEach(a => {
+    byGroup[a.group][a.month] += _sportMetric === 'hrs' ? a.hrs : 1;
+  });
+  const datasets = SPORT_GROUPS
+    .filter(g => byGroup[g.key].some(v => v > 0))   // hide groups empty this year
+    .map(g => ({
+      label: g.key, data: byGroup[g.key].map(v => +v.toFixed(1)),
+      backgroundColor: g.color + 'e6', borderRadius: 2, stack: 'sport',
+    }));
+  const hrs = _sportMetric === 'hrs';
+  const opts = chartOpts({ stacked: true, yLabel: hrs ? 'Hours' : 'Sessions' });
+  opts.plugins.tooltip.callbacks = {
+    label:  item => ` ${item.dataset.label}: ${hrs ? item.parsed.y.toFixed(1) + ' h' : item.parsed.y}`,
+    footer: items => 'Total: ' + (hrs
+      ? items.reduce((s,i) => s + i.parsed.y, 0).toFixed(1) + ' h'
+      : items.reduce((s,i) => s + i.parsed.y, 0)),
+  };
+  const ctx = document.getElementById('sport-chart').getContext('2d');
+  if (_sportChart) _sportChart.destroy();
+  _sportChart = new Chart(ctx, { type:'bar', data:{ labels: MONTHS, datasets }, options: opts });
+}
+document.querySelectorAll('.mpill[data-smetric]').forEach(p => p.addEventListener('click', () => {
+  _sportMetric = p.dataset.smetric;
+  document.querySelectorAll('.mpill[data-smetric]').forEach(x => x.classList.toggle('active', x.dataset.smetric === _sportMetric));
+  if (_allActs.length) renderSportChart(_allActs, _activeYearSport);
+}));
 
 // ── 13-WEEK ROLLING ───────────────────────────────────────────────────────────
 function compute13wkRolling(sessions) {
@@ -1119,6 +1205,22 @@ function loadSampleData() {
     }
   });
   sessions.sort((a,b)=>a.date-b.date);
+  // Cross-training sample for the sport chart: runs + a few other sports/week
+  const acts = sessions.map(s => ({ date:s.date, hrs:s.hrs, type:'running', group:'Run', year:s.year, month:s.month }));
+  const xtypes = ['walking','cycling','yoga','lap_swimming','bouldering','strength_training'];
+  [2024,2025,2026].forEach(yr => {
+    for (let w = 0; w < 52; w++) {
+      const n = Math.floor(rnd(1,4));
+      for (let i = 0; i < n; i++) {
+        const date = new Date(yr,0,1+w*7+Math.floor(rnd(0,7)));
+        if (date > new Date()) continue;
+        const t = xtypes[Math.floor(rnd(0,xtypes.length))];
+        acts.push({ date, hrs:rnd(0.5,2), type:t, group:sportGroup(t),
+                    year:date.getFullYear(), month:date.getMonth() });
+      }
+    }
+  });
+  _allActs = acts;
   renderAll(sessions, sleepMap);
   setStatus('#93a77f', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
 }
