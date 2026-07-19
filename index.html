@@ -578,7 +578,11 @@ function processSessions(rows, sleepMap) {
   const iType = ci(h, cfg.colType  || 'Type');
   const iName = ci(h, cfg.colName  || 'Name');
 
-  const sessions = [];
+  // Foot sports that count as 專項 training (runs + hikes/treks/mountaineering)
+  const FOOT_RE = /run|hik|walk|trek|mountaineer/;
+
+  const sessions = [];     // runs only — feeds the EP / weekly charts
+  const footActs = [];     // runs + hikes/treks — feeds the 專項 chart
   for (let r = 1; r < rows.length; r++) {
     const row  = rows[r];
     const date = parseDate(row[iDate]);
@@ -587,25 +591,32 @@ function processSessions(rows, sleepMap) {
     const elev    = num(row[iElev]) || 0;
     const hrs     = (num(row[iTime]) || 0) / 60;   // minutes → hours
     const rawType = (row[iType] || '').toLowerCase();
-    if (!rawType.includes('run')) continue;
-    const type    = rawType.includes('trail') ? 'trail' : 'road';
+    const isRun   = rawType.includes('run');
+    const isFoot  = FOOT_RE.test(rawType);
+    if (!isFoot) continue;                          // skip cycling/swimming/etc.
+    const type    = rawType.includes('trail') ? 'trail' : (isRun ? 'road' : 'hike');
     const name    = iName >= 0 ? String(row[iName] || '') : '';
     const ep      = dist + elev / 100;
     const dayKey  = toDateKey(row[iDate]);
     const sleep   = sleepMap[dayKey] || {};
-    sessions.push({
-      date, dist, elev, hrs, type, ep, name,
+    const rec = {
+      date, dist, elev, hrs, type, ep, name, sport: rawType,
       year: date.getFullYear(), month: date.getMonth(), week: isoWeek(date),
       rhr:        sleep.rhr        ?? null,
       hrv:        sleep.hrv        ?? null,
       sleepMins:  sleep.sleepMins  ?? null,
       sleepScore: sleep.sleepScore ?? null,
       spo2:       sleep.spo2       ?? null,
-    });
+    };
+    footActs.push(rec);
+    if (isRun) sessions.push(rec);                  // runs-only for the other charts
   }
   sessions.sort((a, b) => a.date - b.date);
+  footActs.sort((a, b) => a.date - b.date);
+  _footActs = footActs;
   renderAll(sessions, sleepMap);
 }
+let _footActs = [];
 
 function parseDate(v) {
   if (!v) return null;
@@ -634,7 +645,7 @@ function renderAll(sessions, sleepMap) {
   renderRollingChart(sessions);
   buildCumulChart(sessions, _activeCumulMetric);
   renderScatterChart(sessions);
-  renderFocusChart(sessions);
+  renderFocusChart(_footActs.length ? _footActs : sessions);  // runs + hikes/treks; falls back for sample data
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
 }
