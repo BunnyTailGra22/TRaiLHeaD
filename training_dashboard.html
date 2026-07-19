@@ -92,6 +92,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 .grid-2x2 .chart-box { height: 220px; }
 #cumul-box { height: 280px; }
 #bio-box   { height: 260px; }
+#focus-box { height: 300px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -341,6 +342,15 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
   </div>
 
+  <!-- 專項訓練 (KEY SESSIONS) SCATTER -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">專項訓練 · EP vs EPH — Each dot = one session</div>
+      <div id="focus-note" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
+  </div>
+
   <!-- BIOMETRIC & RECOVERY -->
   <div class="chart-card">
     <div class="chart-header">
@@ -413,6 +423,7 @@ function defaultCfg() {
     colElev:      'Elevation Gain (m)',
     colTime:      'Duration (min)',
     colType:      'Type',
+    colName:      'Name',
     colSleepDate: 'Date',
     colRhr:       'Resting HR (bpm)',
     colHrv:       'Overnight HRV (ms)',
@@ -565,6 +576,7 @@ function processSessions(rows, sleepMap) {
   const iElev = ci(h, cfg.colElev  || 'Elevation Gain (m)');
   const iTime = ci(h, cfg.colTime  || 'Duration (min)');
   const iType = ci(h, cfg.colType  || 'Type');
+  const iName = ci(h, cfg.colName  || 'Name');
 
   const sessions = [];
   for (let r = 1; r < rows.length; r++) {
@@ -577,11 +589,12 @@ function processSessions(rows, sleepMap) {
     const rawType = (row[iType] || '').toLowerCase();
     if (!rawType.includes('run')) continue;
     const type    = rawType.includes('trail') ? 'trail' : 'road';
+    const name    = iName >= 0 ? String(row[iName] || '') : '';
     const ep      = dist + elev / 100;
     const dayKey  = toDateKey(row[iDate]);
     const sleep   = sleepMap[dayKey] || {};
     sessions.push({
-      date, dist, elev, hrs, type, ep,
+      date, dist, elev, hrs, type, ep, name,
       year: date.getFullYear(), month: date.getMonth(), week: isoWeek(date),
       rhr:        sleep.rhr        ?? null,
       hrv:        sleep.hrv        ?? null,
@@ -621,8 +634,63 @@ function renderAll(sessions, sleepMap) {
   renderRollingChart(sessions);
   buildCumulChart(sessions, _activeCumulMetric);
   renderScatterChart(sessions);
+  renderFocusChart(sessions);
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
+}
+
+// ── 專項訓練 (KEY-SESSION) SCATTER ─────────────────────────────────────────────
+// A session qualifies as 專項訓練 if its NAME contains #劍 or 七星山, OR distance > 20 km.
+function isFocusSession(s) {
+  const n = s.name || '';
+  const named = n.includes('#劍') || n.includes('七星山');
+  return named || s.dist > 20;
+}
+let _focusChart = null;
+function renderFocusChart(sessions) {
+  const focus = sessions.filter(isFocusSession)
+    .map(s => ({ ...s, eph: s.hrs > 0 ? s.ep / s.hrs : null }))
+    .filter(s => s.eph !== null);
+
+  const noteEl = document.getElementById('focus-note');
+  if (noteEl) noteEl.textContent =
+    focus.length ? `${focus.length} sessions · #劍* / 七星山 / >20 km` : 'No qualifying sessions';
+
+  const years = [...new Set(focus.map(s => s.year))].sort();
+  const datasets = years.map(y => {
+    const yc = YEAR_COLORS[y] || '#aaa';
+    return {
+      label: String(y),
+      backgroundColor: yc + 'cc', borderColor: yc, borderWidth: 1,
+      pointRadius: 5, pointHoverRadius: 8,
+      data: focus.filter(s => s.year === y)
+                 .map(s => ({ x: +s.ep.toFixed(1), y: +s.eph.toFixed(1),
+                              name: s.name, d: s.date, dist: s.dist, elev: s.elev })),
+    };
+  });
+
+  const opts = chartOpts({ yLabel: 'EPH' });
+  opts.scales = {
+    x:{...darkScale(), min:0, title:{display:true, text:'Session EP', color:'#6f675c', font:{size:11}}},
+    y:{...darkScale(), min:0, title:{display:true, text:'EPH', color:'#6f675c', font:{size:11}}},
+  };
+  opts.interaction = { mode: 'nearest', intersect: true };
+  opts.plugins.tooltip.callbacks = {
+    title: (items) => {
+      const p = items[0].raw;
+      const nm = (p.name || '(unnamed)').slice(0, 40);
+      return nm + '  ·  ' + p.d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    },
+    label: (item) => {
+      const p = item.raw;
+      return [ 'EP:  ' + p.x.toFixed(1), 'EPH: ' + p.y.toFixed(1),
+               'Dist: ' + p.dist.toFixed(1) + ' km · ↑' + Math.round(p.elev) + ' m' ];
+    },
+  };
+
+  const ctx = document.getElementById('focus-chart').getContext('2d');
+  if (_focusChart) _focusChart.destroy();
+  _focusChart = new Chart(ctx, { type:'scatter', data:{ datasets }, options: opts });
 }
 
 // ── SUMMARY CARDS ─────────────────────────────────────────────────────────────
