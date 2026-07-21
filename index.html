@@ -332,6 +332,17 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
       </div>
     </div>
 
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">Distribution by Category</div>
+        <div class="range-pills" id="box-metric-pills">
+          <div class="rpill active" data-metric="eph">EPH</div>
+          <div class="rpill" data-metric="ep">EP</div>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="box-chart"></canvas></div>
+    </div>
+
   </div>
 
   <!-- 專項訓練 SEASONALITY BUBBLES -->
@@ -620,6 +631,7 @@ function renderAll(sessions, sleepMap) {
   renderRollingChart(sessions);
   buildCumulChart(sessions, _activeCumulMetric);
   renderFocusChart(sessions);   // running activities only
+  renderBoxChart(sessions);
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
 }
@@ -706,6 +718,119 @@ function renderFocusChart(sessions) {
   if (_focusChart) _focusChart.destroy();
   _focusChart = new Chart(ctx, { type:'bubble', data:{ datasets }, options: opts });
 }
+
+// ── DISTRIBUTION BOX PLOT (by 專項 category) ──────────────────────────────────
+// Hand-rolled box-and-whisker (no external plugin) via a Chart.js custom plugin.
+// Each box = one category's EPH (or EP) distribution: whisker min→max, box Q1→Q3,
+// median line, plus faint jittered dots for the raw sessions.
+function quartiles(a) {
+  const s = [...a].sort((x, y) => x - y), n = s.length;
+  const q = p => {
+    const idx = (n - 1) * p, lo = Math.floor(idx), hi = Math.ceil(idx);
+    return s[lo] + (s[hi] - s[lo]) * (idx - lo);
+  };
+  return { min: s[0], q1: q(0.25), median: q(0.5), q3: q(0.75), max: s[n - 1] };
+}
+
+const _boxPlugin = {
+  id: 'catBox',
+  afterDatasetsDraw(chart, args, opts) {
+    const { ctx, chartArea:{ left, right }, scales:{ x, y } } = chart;
+    const cats = opts.cats || [];
+    const bw = Math.min(46, (x.width / cats.length) * 0.5);
+    ctx.save();
+    cats.forEach((c, i) => {
+      if (!c.vals.length) return;
+      const cx = x.getPixelForValue(i);
+      const st = c.stats;
+      const yPix = v => y.getPixelForValue(v);
+      // whisker
+      ctx.strokeStyle = c.color; ctx.fillStyle = c.color + '40'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(cx, yPix(st.min)); ctx.lineTo(cx, yPix(st.max)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx - bw*0.3, yPix(st.min)); ctx.lineTo(cx + bw*0.3, yPix(st.min));
+      ctx.moveTo(cx - bw*0.3, yPix(st.max)); ctx.lineTo(cx + bw*0.3, yPix(st.max)); ctx.stroke();
+      // IQR box
+      const top = yPix(st.q3), bot = yPix(st.q1);
+      ctx.fillRect(cx - bw/2, top, bw, Math.max(1, bot - top));
+      ctx.strokeRect(cx - bw/2, top, bw, Math.max(1, bot - top));
+      // median
+      ctx.strokeStyle = '#453f37'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(cx - bw/2, yPix(st.median)); ctx.lineTo(cx + bw/2, yPix(st.median)); ctx.stroke();
+      // raw dots (jittered)
+      ctx.fillStyle = c.color + 'cc';
+      c.vals.forEach((v, k) => {
+        const jx = cx + ((k % 5) - 2) * (bw * 0.14);
+        ctx.beginPath(); ctx.arc(jx, yPix(v), 2, 0, 7); ctx.fill();
+      });
+    });
+    ctx.restore();
+  },
+};
+
+let _boxChart = null;
+let _boxMetric = 'eph';
+function renderBoxChart(sessions) {
+  const focus = sessions
+    .map(s => ({ ...s, eph: s.hrs > 0 ? s.ep / s.hrs : null }))
+    .filter(s => s.eph !== null && focusCatOf(s));
+
+  const cats = FOCUS_CATS.filter(c => focus.some(s => focusCatOf(s) === c)).map(c => {
+    const vals = focus.filter(s => focusCatOf(s) === c)
+      .map(s => +(_boxMetric === 'ep' ? s.ep : s.eph).toFixed(2));
+    return { key: c.key, color: c.color, vals, stats: quartiles(vals) };
+  });
+
+  const phone = isPhone();
+  const allVals = cats.flatMap(c => c.vals);
+  const yMin = _boxMetric === 'ep' ? 0 : Math.max(0, Math.floor(Math.min(...allVals) - 1));
+  const yMax = Math.ceil(Math.max(...allVals) + 1);
+
+  const opts = {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor:'#f9f6f1', borderColor:'#dcd4c8', borderWidth:1,
+        titleColor:'#453f37', bodyColor:'#6f675c',
+        callbacks: {
+          title: (it) => cats[it[0].dataIndex].key,
+          label: () => '',
+          afterBody: (it) => {
+            const st = cats[it[0].dataIndex].stats, n = cats[it[0].dataIndex].vals.length;
+            const f = v => v.toFixed(1);
+            return [`n = ${n}`, `median ${f(st.median)}`,
+                    `Q1–Q3 ${f(st.q1)}–${f(st.q3)}`, `min–max ${f(st.min)}–${f(st.max)}`];
+          },
+        },
+      },
+      catBox: { cats },
+    },
+    scales: {
+      x: { type:'category', labels: cats.map(c => c.key), offset:true,
+           grid:{ display:false }, ticks:{ color:'#6f675c', font:{ size: phone?10:11 } } },
+      y: { min:yMin, max:yMax, grid:{ color:'rgba(79,72,63,0.08)' },
+           ticks:{ color:'#6f675c', font:{ size: phone?10:11 } },
+           title:{ display:true, text: _boxMetric === 'ep' ? 'EP' : 'EPH', color:'#6f675c', font:{ size:10 } } },
+    },
+  };
+  // Invisible scatter carries the category x-positions so tooltips + axes work
+  const data = { datasets: [{
+    type:'scatter', data: cats.map((c,i) => ({ x:i, y:c.stats.median })),
+    pointRadius: 18, pointHoverRadius: 18, backgroundColor:'transparent', borderColor:'transparent',
+  }] };
+
+  const ctx = document.getElementById('box-chart').getContext('2d');
+  if (_boxChart) _boxChart.destroy();
+  _boxChart = new Chart(ctx, { type:'scatter', data, options: opts, plugins: [_boxPlugin] });
+}
+document.querySelectorAll('#box-metric-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#box-metric-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _boxMetric = p.dataset.metric;
+    if (_sessions.length) renderBoxChart(_sessions);
+  });
+});
 
 // ── SUMMARY CARDS ─────────────────────────────────────────────────────────────
 function renderSummaryCards(sessions) {
