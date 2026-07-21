@@ -648,9 +648,19 @@ function renderFocusChart(sessions) {
     ? `${focus.length} sessions · x = month · y = EPH · size = EP`
     : 'No qualifying sessions';
 
-  // bubble AREA ∝ EP  →  r = k·√EP
+  // Bubble radius: min–max normalized across the focus set for strong differentiation.
+  // Radius scales ~linearly with EP (so area grows ~quadratically) → the smallest-EP
+  // session (e.g. 劍中劍) is clearly the tiniest, the biggest efforts pop.
   const phone = isPhone();
-  const rOf = ep => (phone ? 1.5 : 2) + Math.sqrt(ep) * (phone ? 1.1 : 1.6);
+  const eps   = focus.map(s => s.ep);
+  const minEP = Math.min(...eps), maxEP = Math.max(...eps);
+  const rMin  = phone ? 3  : 4;
+  const rMax  = phone ? 18 : 28;
+  const rOf = ep => {
+    if (maxEP <= minEP) return (rMin + rMax) / 2;
+    const t = (ep - minEP) / (maxEP - minEP);   // 0 (smallest) … 1 (largest)
+    return rMin + t * (rMax - rMin);
+  };
 
   const datasets = FOCUS_CATS.map(c => ({
     label: c.key,
