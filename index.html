@@ -325,14 +325,6 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
     <div class="chart-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">EP vs EPH Scatter — Each dot = one week</div>
-        <div id="scatter-note" style="font-size:11px;color:var(--muted)"></div>
-      </div>
-      <div class="chart-box"><canvas id="scatter-chart"></canvas></div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-header">
         <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
       </div>
       <div class="table-scroll" style="max-height:260px;overflow-y:auto;">
@@ -401,12 +393,6 @@ if (window.Chart) {
 // ── CONFIG ────────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'trailhead_cfg_v2';
 let cfg = {};
-
-// Weeks to exclude from the EP-vs-EPH scatter (outliers), keyed by week-start date.
-// The remark is shown as a caption so the data isn't silently dropped.
-const SCATTER_EXCLUDE = {
-  '2025-10-04': 'Multi-day trekking — Central Mountain Ridge (south, section 3)',
-};
 
 // ── HARDCODED DEFAULTS — no config entry needed ───────────────────────────────
 const DEFAULT_SHEET_ID = '1dWK_5XBGpEXaLl3xgsm7uXi-q5hdvEE49nRZKQyS_gg';
@@ -633,7 +619,6 @@ function renderAll(sessions, sleepMap) {
   buildMonthlyYearPills(sessions);
   renderRollingChart(sessions);
   buildCumulChart(sessions, _activeCumulMetric);
-  renderScatterChart(sessions);
   renderFocusChart(sessions);   // running activities only
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
@@ -647,7 +632,7 @@ const FOCUS_CATS = [
   { key:'劍中劍', color:'#a5602a', test: s => (s.name||'').includes('劍中劍') },
   { key:'劍%',    color:'#bd9a4f', test: s => (s.name||'').includes('劍') },
   { key:'七星山', color:'#8a9a5b', test: s => (s.name||'').includes('七星山') },
-  { key:'≥50 km', color:'#b3746e', test: s => s.dist >= 50 },
+  { key:'≥50 km', color:'#8a8378', test: s => s.dist >= 50 },
   { key:'>20 km', color:'#5f7d8c', test: s => s.dist > 20 },
 ];
 const focusCatOf = s => FOCUS_CATS.find(c => c.test(s));
@@ -906,75 +891,6 @@ function buildCumulChart(sessions, metric) {
 }
 document.querySelectorAll('.mpill[data-metric]').forEach(p => p.addEventListener('click', () => buildCumulChart(_sessions, p.dataset.metric)));
 
-// ── SCATTER ───────────────────────────────────────────────────────────────────
-let _scatterChart = null;
-function renderScatterChart(sessions) {
-  const rolling = compute13wkRolling(sessions);
-
-  // Map each excluded remark to its ISO week, then filter those weeks out
-  const weekNote = {};   // isoWeek -> remark
-  Object.entries(SCATTER_EXCLUDE).forEach(([s, note]) => {
-    const [y, m, d] = s.split('-').map(Number);
-    weekNote[isoWeek(new Date(y, m - 1, d))] = note;
-  });
-  const shown = rolling.filter(r => !(r.week in weekNote));
-
-  // Caption: list any excluded weeks that actually exist in the loaded data
-  const noteEl = document.getElementById('scatter-note');
-  if (noteEl) {
-    const present = rolling.filter(r => r.week in weekNote);
-    noteEl.textContent = present.length
-      ? present.map(r => '⌇ excl. wk of ' +
-          r.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) +
-          ' — ' + weekNote[r.week]).join('    ')
-      : '';
-  }
-
-  // Highlight the LAST COMPLETED week (a hollow ring) — skip the current, in-progress
-  // calendar week whose EP is only partial.
-  const pts = shown.filter(r => r.eph !== null);
-  const nowWeek = isoWeek(new Date());
-  const completed = pts.filter(r => r.week !== nowWeek);
-  const markTime = completed.length ? Math.max(...completed.map(r => r.date.getTime())) : null;
-
-  const years   = [...new Set(shown.map(r => r.date.getFullYear()))].sort();
-  const datasets = years.map(y => {
-    const yc  = YEAR_COLORS[y] || '#aaa';
-    const rows = shown.filter(r => r.date.getFullYear() === y && r.eph !== null);
-    const isMark = rows.map(r => r.date.getTime() === markTime);
-    return {
-      label: String(y),
-      borderColor: yc, borderWidth: 1,
-      pointRadius:      isMark.map(L => L ? 6.5 : 3.5),
-      pointHoverRadius: isMark.map(L => L ? 8   : 6),
-      pointBackgroundColor: isMark.map(L => L ? 'transparent' : yc + 'cc'),  // hollow if last completed
-      pointBorderColor:     isMark.map(() => yc),
-      pointBorderWidth:     isMark.map(L => L ? 2.5 : 1),
-      data: rows.map(r => ({ x:r.epW, y:r.eph, d:r.date })),
-    };
-  });
-  const opts = chartOpts({ yLabel:'EPH' });
-  opts.scales = {
-    x:{...darkScale(),min:0,title:{display:true,text:'Weekly EP',color:'#6f675c',font:{size:11}}},
-    y:{...darkScale(),min:0,suggestedMax:16,title:{display:true,text:'EPH',color:'#6f675c',font:{size:11}}},
-  };
-  // Scatter: show ONLY the single dot under the cursor (not index-matched across years)
-  opts.interaction = { mode: 'nearest', intersect: true };
-  opts.plugins.tooltip.callbacks = {
-    title: (items) => {
-      const d = items[0].raw.d;
-      const tag = d.getTime() === markTime ? '  ○ last completed' : '';
-      return 'Week of ' + d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }) + tag;
-    },
-    label: (item) => [
-      'EP:  ' + item.raw.x.toFixed(1),
-      'EPH: ' + item.raw.y.toFixed(1),
-    ],
-  };
-  const ctx = document.getElementById('scatter-chart').getContext('2d');
-  if (_scatterChart) _scatterChart.destroy();
-  _scatterChart = new Chart(ctx, { type:'scatter', data:{datasets}, options: opts });
-}
 
 // ── LOAD TABLE ────────────────────────────────────────────────────────────────
 function renderLoadTable(sessions) {
