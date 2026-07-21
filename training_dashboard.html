@@ -47,7 +47,16 @@ button.btn.primary { background: var(--road); border-color: var(--road); color: 
 .config-actions { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 4px; }
 
 /* MAIN */
-main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+main { padding: 20px 24px; }
+
+/* TABS */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tab { padding: 9px 16px; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; color: var(--muted);
+  cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none; white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); border-bottom-color: var(--road); }
+.tab-panel { display: none; }
+.tab-panel.active { display: flex; flex-direction: column; gap: 20px; }
 
 /* SUMMARY CARDS */
 .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
@@ -93,6 +102,7 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 #cumul-box { height: 280px; }
 #bio-box   { height: 260px; }
 #focus-box { height: 300px; }
+#body-box  { height: 260px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -278,6 +288,14 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 <!-- MAIN -->
 <main>
 
+  <div class="tabs">
+    <div class="tab active" data-tab="training">Training</div>
+    <div class="tab" data-tab="recovery">Recovery &amp; Body</div>
+  </div>
+
+  <!-- ══ TRAINING TAB ══ -->
+  <div id="tab-training" class="tab-panel active">
+
   <!-- SUMMARY CARDS -->
   <div>
     <div class="section-title">Year-over-Year Summary</div>
@@ -354,6 +372,11 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
     <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
   </div>
 
+  </div><!-- ══ /TRAINING TAB ══ -->
+
+  <!-- ══ RECOVERY & BODY TAB ══ -->
+  <div id="tab-recovery" class="tab-panel">
+
   <!-- BIOMETRIC & RECOVERY -->
   <div class="chart-card">
     <div class="chart-header">
@@ -390,6 +413,34 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
     <div class="chart-box" id="bio-box"><canvas id="bio-chart"></canvas></div>
   </div>
 
+  <!-- BODY COMPOSITION (from Biometrics sheet tab) -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Body Composition</div>
+      <div class="metric-pills" id="body-metric-pills">
+        <div class="mpill active" data-body="weight">Weight</div>
+        <div class="mpill" data-body="bodyFat">Body Fat %</div>
+        <div class="mpill" data-body="muscle">Muscle Mass</div>
+        <div class="mpill" data-body="bmi">BMI</div>
+        <div class="mpill" data-body="water">Body Water %</div>
+        <div class="mpill" data-body="visceral">Visceral Fat</div>
+      </div>
+    </div>
+
+    <!-- Latest value cards -->
+    <div class="bio-stat-grid" id="body-stat-cards">
+      <div class="bio-stat"><div class="bs-icon">⚖️</div><div class="bs-label">Weight</div><div class="bs-value" id="bdv-weight" style="color:var(--weight)">—</div><div class="bs-sub" id="bds-weight">kg</div></div>
+      <div class="bio-stat"><div class="bs-icon">🔥</div><div class="bs-label">Body Fat</div><div class="bs-value" id="bdv-bodyFat" style="color:var(--rhr)">—</div><div class="bs-sub" id="bds-bodyFat">%</div></div>
+      <div class="bio-stat"><div class="bs-icon">💪</div><div class="bs-label">Muscle Mass</div><div class="bs-value" id="bdv-muscle" style="color:var(--trail)">—</div><div class="bs-sub" id="bds-muscle">kg</div></div>
+      <div class="bio-stat"><div class="bs-icon">📊</div><div class="bs-label">BMI</div><div class="bs-value" id="bdv-bmi" style="color:var(--road)">—</div><div class="bs-sub" id="bds-bmi">index</div></div>
+    </div>
+
+    <div class="chart-box" id="body-box"><canvas id="body-chart"></canvas></div>
+    <div id="body-note" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
+  </div>
+
+  </div><!-- ══ /RECOVERY & BODY TAB ══ -->
+
 </main>
 
 <script>
@@ -415,6 +466,7 @@ function defaultCfg() {
     apiKey:     DEFAULT_API_KEY,
     actRange:   'Activities!A1:L5000',
     sleepRange: 'Sleep!A1:V5000',
+    bioRange:   'Biometrics!A1:J3000',
     colDate:      'Start Time',
     colDist:      'Distance (km)',
     colElev:      'Elevation Gain (m)',
@@ -474,6 +526,7 @@ function saveConfig() {
     apiKey:       get('cfg-api-key'),
     actRange:     get('cfg-act-range')   || 'Activities!A1:L5000',
     sleepRange:   get('cfg-sleep-range') || 'Sleep!A1:V5000',
+    bioRange:     cfg.bioRange || 'Biometrics!A1:J3000',
     colDate:      get('col-date'),
     colDist:      get('col-dist'),
     colElev:      get('col-elev'),
@@ -509,14 +562,17 @@ async function loadData() {
   if (!cfg.sheetId || !cfg.apiKey) { setStatus('#bb7d77', 'Config missing — open ⚙'); return; }
   setStatus('#c4a86f', 'Loading…');
   try {
-    const [actRows, sleepRows] = await Promise.all([
+    const [actRows, sleepRows, bioRows] = await Promise.all([
       fetchRange(cfg.actRange),
       fetchRange(cfg.sleepRange).catch(() => []),
+      fetchRange(cfg.bioRange).catch(() => []),
     ]);
     if (actRows.length < 2) throw new Error('Activities tab appears empty');
     const sleepMap = parseSleepRows(sleepRows);
+    _bodyComp = parseBiometrics(bioRows);
     processSessions(actRows, sleepMap);
-    setStatus('#93a77f', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep records`);
+    renderBodyComp();
+    setStatus('#93a77f', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep · ${_bodyComp.length} body records`);
   } catch (e) {
     setStatus('#bb7d77', 'Error: ' + e.message);
   }
@@ -546,6 +602,36 @@ function parseSleepRows(rows) {
     };
   }
   return map;
+}
+
+// ── PARSE BIOMETRICS (body composition, from the Biometrics tab) ──────────────
+let _bodyComp = [];
+function parseBiometrics(rows) {
+  if (!rows.length) return [];
+  const h = rows[0];
+  const iDate = ci(h, 'Date');
+  const cols = {
+    weight:   ci(h, 'Weight (kg)'),
+    bmi:      ci(h, 'BMI'),
+    bodyFat:  ci(h, 'Body Fat %'),
+    water:    ci(h, 'Body Water %'),
+    muscle:   ci(h, 'Muscle Mass (kg)'),
+    bone:     ci(h, 'Bone Mass (kg)'),
+    visceral: ci(h, 'Visceral Fat'),
+    metabolicAge: ci(h, 'Metabolic Age'),
+    physique: ci(h, 'Physique Rating'),
+  };
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const dk = toDateKey(r[iDate]);
+    if (!dk) continue;
+    const rec = { date: new Date(dk) };
+    for (const k in cols) rec[k] = cols[k] >= 0 ? num(r[cols[k]]) : null;
+    out.push(rec);
+  }
+  out.sort((a, b) => a.date - b.date);
+  return out;
 }
 
 function toDateKey(v) {
@@ -1189,6 +1275,88 @@ document.querySelectorAll('.mpill[data-bio]').forEach(p => {
     if (_sleepMap) renderBioSection(_sleepMap);
   });
 });
+
+// ── BODY COMPOSITION (from Biometrics tab) ────────────────────────────────────
+const BODY_METRICS = {
+  weight:   { label:'Weight',       unit:'kg',    color:'#bfa676' },
+  bodyFat:  { label:'Body Fat %',   unit:'%',     color:'#be8984' },
+  muscle:   { label:'Muscle Mass',  unit:'kg',    color:'#8a9a5b' },
+  bmi:      { label:'BMI',          unit:'',      color:'#5f7d8c' },
+  water:    { label:'Body Water %', unit:'%',     color:'#93a8b2' },
+  visceral: { label:'Visceral Fat', unit:'',      color:'#c4a86f' },
+};
+let _bodyChart = null;
+let _bodyMetric = 'weight';
+
+function renderBodyComp() {
+  // latest non-null value per stat card
+  const latest = k => { for (let i=_bodyComp.length-1;i>=0;i--) if (_bodyComp[i][k]!=null) return _bodyComp[i]; return null; };
+  const setStat = (k, id, dp) => {
+    const rec = latest(k);
+    const el = document.getElementById('bdv-'+id), sub = document.getElementById('bds-'+id);
+    if (!el) return;
+    el.textContent = rec ? rec[k].toFixed(dp) : '—';
+    if (rec && sub) sub.textContent = sub.textContent.split(' · ')[0] +
+      ' · ' + rec.date.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  };
+  setStat('weight','weight',1); setStat('bodyFat','bodyFat',1);
+  setStat('muscle','muscle',1); setStat('bmi','bmi',1);
+
+  renderBodyChart();
+}
+
+function renderBodyChart() {
+  const m = BODY_METRICS[_bodyMetric];
+  const pts = _bodyComp.filter(r => r[_bodyMetric] != null);
+  const noteEl = document.getElementById('body-note');
+  if (noteEl) {
+    if (pts.length >= 2) {
+      const first = pts[0][_bodyMetric], last = pts[pts.length-1][_bodyMetric];
+      const d = last - first, sign = d>=0?'+':'';
+      noteEl.textContent = `${pts.length} measurements · ${m.label} ${sign}${d.toFixed(1)}${m.unit} since ${pts[0].date.toLocaleDateString('en-US',{month:'short',year:'2-digit'})}`;
+    } else noteEl.textContent = pts.length ? '1 measurement' : 'No body-composition data in the Biometrics tab';
+  }
+
+  const phone = isPhone();
+  const opts = chartOpts({ yLabel: m.unit || m.label });
+  // Category labels (no Chart.js date adapter loaded), thinned on small screens
+  const labels = pts.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}));
+  opts.scales.x = darkScale({ ticks:{ color:'#6f675c', font:{size:phone?10:11}, maxRotation:0,
+    autoSkip:true, maxTicksLimit:phone?6:10 } });
+  opts.scales.y.beginAtZero = false;
+
+  const ctx = document.getElementById('body-chart').getContext('2d');
+  if (_bodyChart) _bodyChart.destroy();
+  _bodyChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[{
+      label: m.label,
+      data: pts.map(r => +r[_bodyMetric].toFixed(2)),
+      borderColor: m.color, backgroundColor: m.color+'22',
+      borderWidth:2, pointRadius:2.5, pointHoverRadius:5, tension:0.25, fill:true, spanGaps:true,
+    }]},
+    options: opts,
+  });
+}
+
+document.querySelectorAll('.mpill[data-body]').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('.mpill[data-body]').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _bodyMetric = p.dataset.body;
+    renderBodyChart();
+  });
+});
+
+// ── TABS ──────────────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  // Charts built while their panel was display:none render at 0×0 — re-render on show.
+  if (name === 'recovery') { if (_sleepMap) renderBioSection(_sleepMap); renderBodyComp(); }
+  else if (name === 'training' && _sessions.length) renderAll(_sessions, _sleepMap);
+}
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 
 // ── CHART DEFAULTS (Morandi light theme) ──────────────────────────────────────
 function isPhone() { return window.innerWidth <= 600; }
