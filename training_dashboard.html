@@ -342,11 +342,11 @@ main { padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
 
   </div>
 
-  <!-- 專項訓練 (KEY SESSIONS) SCATTER -->
+  <!-- 專項訓練 SEASONALITY BUBBLES -->
   <div class="chart-card">
     <div class="chart-header">
-      <div class="section-title" style="margin:0">專項訓練 · EP vs EPH — Each dot = one session</div>
-      <div id="focus-note" style="font-size:11px;color:var(--muted)"></div>
+      <div class="section-title" style="margin:0">專項訓練 Seasonality — each bubble = one session</div>
+      <div id="focus-note" style="font-size:11px;color:var(--muted)">x = month · y = EPH · size = EP</div>
     </div>
     <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
   </div>
@@ -639,58 +639,77 @@ function renderAll(sessions, sleepMap) {
   renderBioSection(sleepMap);
 }
 
-// ── 專項訓練 (KEY-SESSION) SCATTER ─────────────────────────────────────────────
-// A session qualifies as 專項訓練 if its NAME contains #劍 or 七星山, OR distance > 20 km.
-function isFocusSession(s) {
-  const n = s.name || '';
-  const named = n.includes('#劍') || n.includes('七星山');
-  return named || s.dist > 20;
-}
+// ── 專項訓練 SEASONALITY BUBBLES ───────────────────────────────────────────────
+// Each bubble = one qualifying session. x = calendar month (positioned by date),
+// y = EPH, bubble AREA ∝ EP, color = session category.
+// Category precedence: most-specific name first, then ultra, then long.
+const FOCUS_CATS = [
+  { key:'劍中劍', color:'#a5602a', test: s => (s.name||'').includes('劍中劍') },
+  { key:'劍%',    color:'#bd9a4f', test: s => (s.name||'').includes('劍') },
+  { key:'七星山', color:'#8a9a5b', test: s => (s.name||'').includes('七星山') },
+  { key:'≥50 km', color:'#b3746e', test: s => s.dist >= 50 },
+  { key:'>20 km', color:'#5f7d8c', test: s => s.dist > 20 },
+];
+const focusCatOf = s => FOCUS_CATS.find(c => c.test(s));
+
 let _focusChart = null;
 function renderFocusChart(sessions) {
-  const focus = sessions.filter(isFocusSession)
+  const focus = sessions
     .map(s => ({ ...s, eph: s.hrs > 0 ? s.ep / s.hrs : null }))
-    .filter(s => s.eph !== null);
+    .filter(s => s.eph !== null && focusCatOf(s));
 
   const noteEl = document.getElementById('focus-note');
-  if (noteEl) noteEl.textContent =
-    focus.length ? `${focus.length} sessions · #劍* / 七星山 / >20 km` : 'No qualifying sessions';
+  if (noteEl) noteEl.textContent = focus.length
+    ? `${focus.length} sessions · x = month · y = EPH · size = EP`
+    : 'No qualifying sessions';
 
-  const years = [...new Set(focus.map(s => s.year))].sort();
-  const datasets = years.map(y => {
-    const yc = YEAR_COLORS[y] || '#aaa';
-    return {
-      label: String(y),
-      backgroundColor: yc + 'cc', borderColor: yc, borderWidth: 1,
-      pointRadius: 5, pointHoverRadius: 8,
-      data: focus.filter(s => s.year === y)
-                 .map(s => ({ x: +s.ep.toFixed(1), y: +s.eph.toFixed(1),
-                              name: s.name, d: s.date, dist: s.dist, elev: s.elev })),
-    };
-  });
+  // bubble AREA ∝ EP  →  r = k·√EP
+  const phone = isPhone();
+  const rOf = ep => (phone ? 1.5 : 2) + Math.sqrt(ep) * (phone ? 1.1 : 1.6);
+
+  const datasets = FOCUS_CATS.map(c => ({
+    label: c.key,
+    data: focus.filter(s => focusCatOf(s) === c).map(s => ({
+      x: s.month + (s.date.getDate() - 1) / 31,   // real date position within month
+      y: +s.eph.toFixed(2),
+      r: rOf(s.ep),
+      _s: s,
+    })),
+    backgroundColor: c.color + '99',
+    borderColor: c.color,
+    borderWidth: 1.5,
+  })).filter(d => d.data.length);
 
   const opts = chartOpts({ yLabel: 'EPH' });
-  opts.scales = {
-    x:{...darkScale(), min:0, title:{display:true, text:'Session EP', color:'#6f675c', font:{size:11}}},
-    y:{...darkScale(), min:0, title:{display:true, text:'EPH', color:'#6f675c', font:{size:11}}},
-  };
+  opts.plugins.legend.display = true;
   opts.interaction = { mode: 'nearest', intersect: true };
   opts.plugins.tooltip.callbacks = {
     title: (items) => {
-      const p = items[0].raw;
-      const nm = (p.name || '(unnamed)').slice(0, 40);
-      return nm + '  ·  ' + p.d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      const s = items[0].raw._s;
+      return (s.name || '(unnamed)').slice(0, 40) + '  ·  ' +
+        s.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     },
     label: (item) => {
-      const p = item.raw;
-      return [ 'EP:  ' + p.x.toFixed(1), 'EPH: ' + p.y.toFixed(1),
-               'Dist: ' + p.dist.toFixed(1) + ' km · ↑' + Math.round(p.elev) + ' m' ];
+      const s = item.raw._s;
+      return [
+        'EP:  '  + s.ep.toFixed(1),
+        'EPH: '  + s.eph.toFixed(1),
+        'Dist: ' + s.dist.toFixed(1) + ' km · ↑' + Math.round(s.elev) + ' m',
+        'Slope: '+ (s.dist > 0 ? Math.round(s.elev / s.dist) : 0) + ' m/km',
+      ];
     },
+  };
+  opts.scales = {
+    x: { ...darkScale(), min: -0.3, max: 12,
+      afterBuildTicks: (axis) => { axis.ticks = Array.from({length:13}, (_,i)=>({value:i})); },
+      ticks: { color:'#6f675c', font:{size: phone?10:11}, autoSkip:false, maxRotation:0,
+               callback:(v)=> v>=0&&v<12 ? MONTHS[v] : '' } },
+    y: { ...darkScale(), title:{display:!phone, text:'EPH', color:'#6f675c', font:{size:11}} },
   };
 
   const ctx = document.getElementById('focus-chart').getContext('2d');
   if (_focusChart) _focusChart.destroy();
-  _focusChart = new Chart(ctx, { type:'scatter', data:{ datasets }, options: opts });
+  _focusChart = new Chart(ctx, { type:'bubble', data:{ datasets }, options: opts });
 }
 
 // ── SUMMARY CARDS ─────────────────────────────────────────────────────────────
