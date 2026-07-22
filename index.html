@@ -103,6 +103,7 @@ main { padding: 20px 24px; }
 #bio-box   { height: 260px; }
 #focus-box { height: 300px; }
 #body-box  { height: 260px; }
+#raster-box { height: 420px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -413,6 +414,22 @@ main { padding: 20px 24px; }
     <div class="chart-box" id="bio-box"><canvas id="bio-chart"></canvas></div>
   </div>
 
+  <!-- SLEEP CONSISTENCY RASTER -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Sleep Consistency — one bar = one night</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="raster-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="raster-range-pills">
+          <div class="rpill" data-days="30">30d</div>
+          <div class="rpill active" data-days="60">60d</div>
+          <div class="rpill" data-days="90">90d</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" id="raster-box"><canvas id="raster-chart"></canvas></div>
+  </div>
+
   <!-- BODY COMPOSITION (from Biometrics sheet tab) -->
   <div class="chart-card">
     <div class="chart-header">
@@ -589,6 +606,9 @@ function parseSleepRows(rows) {
   const iSleep  = ci(h, cfg.colSleep);
   const iSleepq = ci(h, cfg.colSleepq);
   const iSpo2   = ci(h, cfg.colSpo2);
+  const iStart  = ci(h, 'Sleep Start');
+  const iEnd    = ci(h, 'Sleep End');
+  const parseDT = v => { if (!v) return null; const d = new Date(String(v).trim().replace(' ', 'T')); return isNaN(d) ? null : d; };
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     const d = toDateKey(r[iDate]);
@@ -599,6 +619,8 @@ function parseSleepRows(rows) {
       sleepMins:  num(r[iSleep]),
       sleepScore: num(r[iSleepq]),
       spo2:       num(r[iSpo2]),
+      start:      iStart >= 0 ? parseDT(r[iStart]) : null,
+      end:        iEnd   >= 0 ? parseDT(r[iEnd])   : null,
     };
   }
   return map;
@@ -720,6 +742,7 @@ function renderAll(sessions, sleepMap) {
   renderBoxChart(sessions);
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
+  renderSleepRaster(sleepMap);
 }
 
 // ── 專項訓練 SEASONALITY BUBBLES ───────────────────────────────────────────────
@@ -1348,12 +1371,117 @@ document.querySelectorAll('.mpill[data-body]').forEach(p => {
   });
 });
 
+// ── SLEEP CONSISTENCY RASTER ──────────────────────────────────────────────────
+// One horizontal bar per night, from bedtime → wake, on a clock axis.
+// Regularity shows as aligned bar edges; median bedtime/wake drawn as reference lines.
+let _rasterChart = null;
+let _rasterDays = 60;
+// Hours since 18:00 (so an evening→morning night maps to one monotonic range 0..24)
+function hrsSince18(dt) { return ((dt.getHours() + dt.getMinutes()/60) - 18 + 24) % 24; }
+function clockLabel(h) {
+  const t = (h + 18) % 24, hh = Math.floor(t), mm = Math.round((t - hh) * 60);
+  return String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0');
+}
+const _rasterMedianLines = {
+  id: 'rasterMedians',
+  afterDatasetsDraw(chart, args, opts) {
+    if (!opts.bed && opts.bed !== 0) return;
+    const { ctx, chartArea:{ top, bottom }, scales:{ x } } = chart;
+    ctx.save();
+    [['bed', opts.bed], ['wake', opts.wake]].forEach(([k, v]) => {
+      if (v == null) return;
+      const px = x.getPixelForValue(v);
+      ctx.strokeStyle = '#6f675c'; ctx.setLineDash([4,3]); ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+    });
+    ctx.restore();
+  },
+};
+function median(a){ const s=[...a].sort((x,y)=>x-y),n=s.length; return n?(n%2?s[(n-1)/2]:(s[n/2-1]+s[n/2])/2):null; }
+
+function renderSleepRaster(sleepMap) {
+  let nights = Object.entries(sleepMap)
+    .map(([d, v]) => ({ date: new Date(d), start: v.start, end: v.end, score: v.sleepScore }))
+    .filter(n => n.start && n.end)
+    .sort((a, b) => a.date - b.date);
+  if (_rasterDays > 0) nights = nights.slice(-_rasterDays);
+
+  const noteEl = document.getElementById('raster-note');
+  const bedH = nights.map(n => hrsSince18(n.start));
+  const wakeH = nights.map(n => hrsSince18(n.end));
+  const medBed = median(bedH), medWake = median(wakeH);
+  // regularity = st.dev of bedtime (minutes); lower = more consistent
+  const sd = arr => { if(arr.length<2) return 0; const m=arr.reduce((a,b)=>a+b,0)/arr.length;
+    return Math.sqrt(arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length); };
+  if (noteEl) noteEl.textContent = nights.length
+    ? `${nights.length} nights · median bed ${clockLabel(medBed)} · wake ${clockLabel(medWake)} · bedtime ±${Math.round(sd(bedH)*60)} min`
+    : 'No sleep start/end data in the Sleep tab';
+
+  // colour each night by sleep score (green good → clay poor), fallback sleep-blue
+  const barColor = n => {
+    if (n.score == null) return '#6f97a6cc';
+    return (n.score >= 80 ? '#7f9d78' : n.score >= 60 ? '#6f97a6' : '#b3746e') + 'cc';
+  };
+
+  const labels = nights.map(n => n.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const data = nights.map((n,i) => [bedH[i], wakeH[i]]);   // floating bars
+
+  const xmin = Math.max(0, Math.floor(Math.min(...bedH) - 0.5));
+  const xmax = Math.min(24, Math.ceil(Math.max(...wakeH) + 0.5));
+  const phone = isPhone();
+
+  const opts = {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { backgroundColor:'#f9f6f1', borderColor:'#dcd4c8', borderWidth:1,
+        titleColor:'#453f37', bodyColor:'#6f675c',
+        callbacks: {
+          title: (it) => nights[it[0].dataIndex].date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),
+          label: (it) => { const n = nights[it.dataIndex];
+            const dur = (n.end - n.start)/3600000;
+            return ['Bed '+clockLabel(hrsSince18(n.start))+' → Wake '+clockLabel(hrsSince18(n.end)),
+                    dur.toFixed(1)+' h' + (n.score!=null?' · score '+n.score:'')]; },
+        },
+      },
+      rasterMedians: { bed: medBed, wake: medWake },
+    },
+    scales: {
+      x: { min: xmin, max: xmax, position: 'top',
+        grid: { color:'rgba(79,72,63,0.08)' },
+        ticks: { color:'#6f675c', font:{size:phone?9:11}, stepSize: 2, callback: v => clockLabel(v) } },
+      y: { grid: { display:false },
+        ticks: { color:'#6f675c', font:{size:phone?8:10}, autoSkip:true, maxTicksLimit: phone?12:24 } },
+    },
+  };
+
+  const ctx = document.getElementById('raster-chart').getContext('2d');
+  if (_rasterChart) _rasterChart.destroy();
+  _rasterChart = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{
+      data, backgroundColor: nights.map(barColor), borderWidth: 0,
+      barPercentage: 0.9, categoryPercentage: 0.9, borderRadius: 2,
+    }]},
+    options: opts,
+    plugins: [_rasterMedianLines],
+  });
+}
+document.querySelectorAll('#raster-range-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#raster-range-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _rasterDays = parseInt(p.dataset.days);
+    if (_sleepMap) renderSleepRaster(_sleepMap);
+  });
+});
+
 // ── TABS ──────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   // Charts built while their panel was display:none render at 0×0 — re-render on show.
-  if (name === 'recovery') { if (_sleepMap) renderBioSection(_sleepMap); renderBodyComp(); }
+  if (name === 'recovery') { if (_sleepMap) { renderBioSection(_sleepMap); renderSleepRaster(_sleepMap); } renderBodyComp(); }
   else if (name === 'training' && _sessions.length) renderAll(_sessions, _sleepMap);
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
