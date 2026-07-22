@@ -89,7 +89,7 @@ main { padding: 20px 24px; }
 .mpill.active { border-color: var(--text); color: var(--text); background: var(--card2); }
 
 /* LAYOUTS */
-.two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
 .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 /* min-width:0 stops wide children (tables/canvas) from blowing out grid columns */
 .grid-2x2 > .chart-card, .two-col > * , .summary-grid > * , .bio-stat-grid > * { min-width: 0; }
@@ -104,7 +104,7 @@ main { padding: 20px 24px; }
 #focus-box { height: 300px; }
 #body-box  { height: 260px; }
 #raster-box { height: 420px; }
-#perf-box  { height: 300px; }
+#perf-box  { height: 420px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -415,6 +415,9 @@ main { padding: 20px 24px; }
     <div class="chart-box" id="bio-box"><canvas id="bio-chart"></canvas></div>
   </div>
 
+  <!-- SLEEP CONSISTENCY + SLEEP→RECOVERY (side by side) -->
+  <div class="two-col">
+
   <!-- SLEEP CONSISTENCY RASTER -->
   <div class="chart-card">
     <div class="chart-header">
@@ -449,6 +452,8 @@ main { padding: 20px 24px; }
     </div>
     <div class="chart-box" id="perf-box"><canvas id="perf-chart"></canvas></div>
   </div>
+
+  </div><!-- /two-col -->
 
   <!-- BODY COMPOSITION (from Biometrics sheet tab) -->
   <div class="chart-card">
