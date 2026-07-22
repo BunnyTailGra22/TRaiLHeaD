@@ -628,7 +628,15 @@ function parseSleepRows(rows) {
   const iSpo2   = ci(h, cfg.colSpo2);
   const iStart  = ci(h, 'Sleep Start');
   const iEnd    = ci(h, 'Sleep End');
-  const parseDT = v => { if (!v) return null; const d = new Date(String(v).trim().replace(' ', 'T')); return isNaN(d) ? null : d; };
+  // Sleep Start/End are stored as naive UTC (the sync writes Garmin GMT timestamps).
+  // Append 'Z' so JS parses them as UTC, then the browser renders them in local time.
+  const parseDT = v => {
+    if (!v) return null;
+    let s = String(v).trim().replace(' ', 'T');
+    if (!/[Z+]|-\d\d:\d\d$/.test(s)) s += 'Z';   // add UTC marker if none present
+    const d = new Date(s);
+    return isNaN(d) ? null : d;
+  };
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i];
     const d = toDateKey(r[iDate]);
