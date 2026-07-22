@@ -104,6 +104,7 @@ main { padding: 20px 24px; }
 #focus-box { height: 300px; }
 #body-box  { height: 260px; }
 #raster-box { height: 420px; }
+#perf-box  { height: 300px; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -430,6 +431,25 @@ main { padding: 20px 24px; }
     <div class="chart-box" id="raster-box"><canvas id="raster-chart"></canvas></div>
   </div>
 
+  <!-- SLEEP → RECOVERY SCATTER -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Sleep → Recovery — each dot = one night</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="perf-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="perf-lag-pills">
+          <div class="rpill" data-lag="0">Same night</div>
+          <div class="rpill active" data-lag="1">Next day</div>
+        </div>
+        <div class="metric-pills" id="perf-y-pills">
+          <div class="mpill active" data-y="hrv">HRV</div>
+          <div class="mpill" data-y="rhr">Resting HR</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" id="perf-box"><canvas id="perf-chart"></canvas></div>
+  </div>
+
   <!-- BODY COMPOSITION (from Biometrics sheet tab) -->
   <div class="chart-card">
     <div class="chart-header">
@@ -743,6 +763,7 @@ function renderAll(sessions, sleepMap) {
   renderLoadTable(sessions);
   renderBioSection(sleepMap);
   renderSleepRaster(sleepMap);
+  renderSleepPerf(sleepMap);
 }
 
 // ── 專項訓練 SEASONALITY BUBBLES ───────────────────────────────────────────────
@@ -1476,13 +1497,100 @@ document.querySelectorAll('#raster-range-pills .rpill').forEach(p => {
   });
 });
 
+// ── SLEEP → RECOVERY SCATTER ──────────────────────────────────────────────────
+// X = sleep score (night N), Y = HRV / Resting HR (same night or next day).
+// Shows whether a good night's sleep predicts recovery, with a regression line + r.
+let _perfChart = null;
+let _perfLag = 1;       // 0 = same night, 1 = next day
+let _perfY = 'hrv';     // 'hrv' | 'rhr'
+function linreg(xs, ys) {
+  const n = xs.length; if (n < 2) return null;
+  const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+  let sxy=0, sxx=0, syy=0;
+  for (let i=0;i<n;i++){ const dx=xs[i]-mx, dy=ys[i]-my; sxy+=dx*dy; sxx+=dx*dx; syy+=dy*dy; }
+  if (sxx===0 || syy===0) return null;
+  return { slope: sxy/sxx, intercept: my - (sxy/sxx)*mx, r: sxy/Math.sqrt(sxx*syy) };
+}
+function renderSleepPerf(sleepMap) {
+  const DAY = 86400000;
+  const pairs = [];
+  for (const [dk, v] of Object.entries(sleepMap)) {
+    if (v.sleepScore == null) continue;
+    const tgtKey = new Date(new Date(dk).getTime() + _perfLag*DAY).toISOString().slice(0,10);
+    const tgt = sleepMap[tgtKey];
+    if (!tgt || tgt[_perfY] == null) continue;
+    pairs.push({ x: v.sleepScore, y: tgt[_perfY], date: new Date(dk) });
+  }
+  const yLabel = _perfY === 'hrv' ? 'HRV (ms)' : 'Resting HR (bpm)';
+  const reg = linreg(pairs.map(p=>p.x), pairs.map(p=>p.y));
+
+  const noteEl = document.getElementById('perf-note');
+  if (noteEl) {
+    if (reg) {
+      const strength = Math.abs(reg.r) < 0.2 ? 'negligible' : Math.abs(reg.r) < 0.4 ? 'weak'
+        : Math.abs(reg.r) < 0.6 ? 'moderate' : 'strong';
+      const dir = reg.r >= 0 ? '↑' : '↓';
+      noteEl.textContent = `${pairs.length} nights · r = ${reg.r.toFixed(2)} (${strength} ${dir})`;
+    } else noteEl.textContent = pairs.length ? `${pairs.length} nights` : 'Not enough paired data';
+  }
+
+  const phone = isPhone();
+  const opts = chartOpts({ yLabel });
+  opts.interaction = { mode:'nearest', intersect:true };
+  opts.plugins.legend.display = false;
+  opts.plugins.tooltip.callbacks = {
+    title: (it) => { const p = it[0].raw; return p.date ? p.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''; },
+    label: (it) => it.raw.date ? ['Sleep score: '+it.raw.x, yLabel.split(' ')[0]+': '+it.raw.y] : null,
+  };
+  opts.scales = {
+    x:{ ...darkScale(), title:{display:true, text:'Sleep Score (night N)', color:'#6f675c', font:{size:11}},
+        ticks:{ color:'#6f675c', font:{size:phone?10:11} } },
+    y:{ ...darkScale(), title:{display:true, text:yLabel + (_perfLag? ' (night N+1)':' (same night)'), color:'#6f675c', font:{size:11}},
+        ticks:{ color:'#6f675c', font:{size:phone?10:11} } },
+  };
+
+  const datasets = [{
+    type:'scatter', data: pairs,
+    backgroundColor:'#6f97a699', borderColor:'#6f97a6', borderWidth:1,
+    pointRadius:4, pointHoverRadius:7,
+  }];
+  if (reg && pairs.length) {
+    const xs = pairs.map(p=>p.x), xmin = Math.min(...xs), xmax = Math.max(...xs);
+    datasets.push({
+      type:'line', label:'trend',
+      data:[{x:xmin, y:reg.slope*xmin+reg.intercept}, {x:xmax, y:reg.slope*xmax+reg.intercept}],
+      borderColor:'#453f37', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false,
+    });
+  }
+
+  const ctx = document.getElementById('perf-chart').getContext('2d');
+  if (_perfChart) _perfChart.destroy();
+  _perfChart = new Chart(ctx, { type:'scatter', data:{ datasets }, options: opts });
+}
+document.querySelectorAll('#perf-lag-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#perf-lag-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active'); _perfLag = parseInt(p.dataset.lag);
+    if (_sleepMap) renderSleepPerf(_sleepMap);
+  });
+});
+document.querySelectorAll('#perf-y-pills .mpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#perf-y-pills .mpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active'); _perfY = p.dataset.y;
+    if (_sleepMap) renderSleepPerf(_sleepMap);
+  });
+});
+
 // ── TABS ──────────────────────────────────────────────────────────────────────
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   // Charts built while their panel was display:none render at 0×0 — re-render on show.
-  if (name === 'recovery') { if (_sleepMap) { renderBioSection(_sleepMap); renderSleepRaster(_sleepMap); } renderBodyComp(); }
-  else if (name === 'training' && _sessions.length) renderAll(_sessions, _sleepMap);
+  if (name === 'recovery') {
+    if (_sleepMap) { renderBioSection(_sleepMap); renderSleepRaster(_sleepMap); renderSleepPerf(_sleepMap); }
+    renderBodyComp();
+  } else if (name === 'training' && _sessions.length) renderAll(_sessions, _sleepMap);
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 
