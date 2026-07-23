@@ -99,9 +99,9 @@ main { padding: 20px 24px; }
 .chart-box { position: relative; width: 100%; }
 .chart-box > canvas { width: 100% !important; height: 100% !important; display: block; }
 .grid-2x2 .chart-box { height: 220px; }
-#cumul-box { height: 280px; }
+/* Training tab: paired rows share a height so each two-col row aligns */
+#cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 280px; }
 #bio-box   { height: 260px; }
-#focus-box { height: 300px; }
 #body-box  { height: 260px; }
 #raster-box { height: 420px; }
 #perf-box  { height: 420px; }
@@ -143,7 +143,7 @@ main { padding: 20px 24px; }
   .config-grid   { grid-template-columns: 1fr; }
   .config-cols   { grid-template-columns: repeat(2, 1fr); }
   .grid-2x2 .chart-box { height: 200px; }
-  #cumul-box { height: 240px; }
+  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 240px; }
   #bio-box   { height: 240px; }
 }
 
@@ -167,7 +167,7 @@ main { padding: 20px 24px; }
   .chart-card { padding: 14px; }
   .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .grid-2x2 .chart-box { height: 180px; }
-  #cumul-box { height: 200px; }
+  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 220px; }
   #bio-box   { height: 220px; }
 
   /* Bio stat — 2 columns */
@@ -306,31 +306,32 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- CUMULATIVE EP YoY -->
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="section-title" style="margin:0">Cumulative EP — Year-over-Year</div>
-      <div class="metric-pills" id="cumul-metric-pills">
-        <div class="mpill active" data-metric="ep">Total EP</div>
-        <div class="mpill" data-metric="dist">Distance km</div>
-        <div class="mpill" data-metric="elev">Elevation m</div>
-        <div class="mpill" data-metric="sessions">Sessions</div>
+  <!-- ROW 1: Cumulative EP | Monthly EP -->
+  <div class="two-col">
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">Cumulative EP — Year-over-Year</div>
+        <div class="metric-pills" id="cumul-metric-pills">
+          <div class="mpill active" data-metric="ep">Total EP</div>
+          <div class="mpill" data-metric="dist">Distance km</div>
+          <div class="mpill" data-metric="elev">Elevation m</div>
+          <div class="mpill" data-metric="sessions">Sessions</div>
+        </div>
       </div>
+      <div class="chart-box" id="cumul-box"><canvas id="cumul-chart"></canvas></div>
     </div>
-    <div class="chart-box" id="cumul-box"><canvas id="cumul-chart"></canvas></div>
-  </div>
-
-  <!-- 2×2 GRID -->
-  <div class="grid-2x2">
 
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">Monthly EP — Road vs Trail</div>
         <div class="year-pills" id="monthly-year-pills"></div>
       </div>
-      <div class="chart-box"><canvas id="monthly-chart"></canvas></div>
+      <div class="chart-box" id="monthly-box"><canvas id="monthly-chart"></canvas></div>
     </div>
+  </div>
 
+  <!-- ROW 2: Progressive Overload | Recent 8 Weeks Load Summary -->
+  <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">Progressive Overload — Weekly EP vs Optimal Range</div>
@@ -340,18 +341,21 @@ main { padding: 20px 24px; }
           <div class="rpill" data-chronic="13">13 wk</div>
         </div>
       </div>
-      <div class="chart-box"><canvas id="rolling-chart"></canvas></div>
+      <div class="chart-box" id="rolling-box"><canvas id="rolling-chart"></canvas></div>
     </div>
 
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
       </div>
-      <div class="table-scroll" style="max-height:260px;overflow-y:auto;">
+      <div class="table-scroll" style="height:280px;overflow-y:auto;">
         <div id="load-table-wrap"><div class="empty">No data loaded.</div></div>
       </div>
     </div>
+  </div>
 
+  <!-- ROW 3: Distribution by Category | 專項訓練 Seasonality -->
+  <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
         <div class="section-title" style="margin:0">Distribution by Category</div>
@@ -360,18 +364,16 @@ main { padding: 20px 24px; }
           <div class="rpill" data-metric="ep">EP</div>
         </div>
       </div>
-      <div class="chart-box"><canvas id="box-chart"></canvas></div>
+      <div class="chart-box" id="box-box"><canvas id="box-chart"></canvas></div>
     </div>
 
-  </div>
-
-  <!-- 專項訓練 SEASONALITY BUBBLES -->
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="section-title" style="margin:0">專項訓練 Seasonality — each bubble = one session</div>
-      <div id="focus-note" style="font-size:11px;color:var(--muted)">x = month · y = EPH · size = EP</div>
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="section-title" style="margin:0">專項訓練 Seasonality — each bubble = one session</div>
+        <div id="focus-note" style="font-size:11px;color:var(--muted)">x = month · y = EPH · size = EP</div>
+      </div>
+      <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
     </div>
-    <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
   </div>
 
   </div><!-- ══ /TRAINING TAB ══ -->
