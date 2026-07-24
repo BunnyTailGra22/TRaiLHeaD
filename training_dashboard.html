@@ -427,8 +427,8 @@ main { padding: 20px 24px; }
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <div id="raster-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="raster-range-pills">
-          <div class="rpill" data-days="30">30d</div>
-          <div class="rpill active" data-days="60">60d</div>
+          <div class="rpill active" data-days="30">30d</div>
+          <div class="rpill" data-days="60">60d</div>
           <div class="rpill" data-days="90">90d</div>
         </div>
       </div>
@@ -1412,7 +1412,7 @@ document.querySelectorAll('.mpill[data-body]').forEach(p => {
 // One horizontal bar per night, from bedtime → wake, on a clock axis.
 // Regularity shows as aligned bar edges; median bedtime/wake drawn as reference lines.
 let _rasterChart = null;
-let _rasterDays = 60;
+let _rasterDays = 30;
 // Hours since 18:00 (so an evening→morning night maps to one monotonic range 0..24)
 function hrsSince18(dt) { return ((dt.getHours() + dt.getMinutes()/60) - 18 + 24) % 24; }
 function clockLabel(h) {
