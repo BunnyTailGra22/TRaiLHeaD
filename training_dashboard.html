@@ -439,7 +439,7 @@ main { padding: 20px 24px; }
   <!-- SLEEP SCORE × DURATION SCATTER -->
   <div class="chart-card">
     <div class="chart-header">
-      <div class="section-title" style="margin:0">Sleep Score × Duration — each dot = one night</div>
+      <div class="section-title" style="margin:0">Sleep Duration → Score — each dot = one night</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <div id="perf-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="perf-scope-pills">
@@ -1514,8 +1514,9 @@ document.querySelectorAll('#raster-range-pills .rpill').forEach(p => {
   });
 });
 
-// ── SLEEP SCORE × DURATION SCATTER ────────────────────────────────────────────
-// X = sleep score, Y = sleep duration (h), colour = sleep quality. Scope-selectable.
+// ── SLEEP DURATION × SCORE SCATTER ────────────────────────────────────────────
+// X = sleep duration (h), Y = sleep score, colour = sleep quality. Scope-selectable.
+// Regression line + Pearson r show how strongly duration predicts score.
 let _perfChart = null;
 let _perfScope = 30;    // trailing days
 const SLEEP_QUALITY = [
@@ -1525,6 +1526,14 @@ const SLEEP_QUALITY = [
   { key:'Poor',      color:'#b3746e' },
 ];
 const qualColor = q => (SLEEP_QUALITY.find(c => c.key.toLowerCase() === (q||'').toLowerCase()) || { color:'#9d9488' }).color;
+function linreg(xs, ys) {
+  const n = xs.length; if (n < 2) return null;
+  const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+  let sxy=0, sxx=0, syy=0;
+  for (let i=0;i<n;i++){ const dx=xs[i]-mx, dy=ys[i]-my; sxy+=dx*dy; sxx+=dx*dx; syy+=dy*dy; }
+  if (sxx===0 || syy===0) return null;
+  return { slope: sxy/sxx, intercept: my - (sxy/sxx)*mx, r: sxy/Math.sqrt(sxx*syy) };
+}
 
 function renderSleepPerf(sleepMap) {
   const cutoff = _perfScope > 0 ? Date.now() - _perfScope * 86400000 : 0;
@@ -1534,10 +1543,16 @@ function renderSleepPerf(sleepMap) {
     .filter(n => n.score != null && n.hours != null && n.date.getTime() >= cutoff)
     .sort((a,b) => a.date - b.date);
 
+  // correlation: does more sleep → higher score?  (x = duration, y = score)
+  const reg = linreg(nights.map(n=>n.hours), nights.map(n=>n.score));
   const noteEl = document.getElementById('perf-note');
-  if (noteEl) noteEl.textContent = nights.length
-    ? `${nights.length} nights · avg ${(nights.reduce((a,n)=>a+n.hours,0)/nights.length).toFixed(1)} h · score ${Math.round(nights.reduce((a,n)=>a+n.score,0)/nights.length)}`
-    : 'No sleep score / duration data in scope';
+  if (noteEl) {
+    if (reg) {
+      const s = Math.abs(reg.r) < 0.2 ? 'negligible' : Math.abs(reg.r) < 0.4 ? 'weak'
+        : Math.abs(reg.r) < 0.6 ? 'moderate' : 'strong';
+      noteEl.textContent = `${nights.length} nights · r = ${reg.r.toFixed(2)} (${s} ${reg.r>=0?'↑':'↓'}) · avg ${(nights.reduce((a,n)=>a+n.hours,0)/nights.length).toFixed(1)} h`;
+    } else noteEl.textContent = nights.length ? `${nights.length} nights` : 'No sleep score / duration data in scope';
+  }
 
   const phone = isPhone();
   // group by quality → one dataset per quality (drives the legend + colour)
@@ -1546,26 +1561,34 @@ function renderSleepPerf(sleepMap) {
   const datasets = cats.map(c => ({
     label: c.key,
     data: nights.filter(n => (n.quality||'').toLowerCase() === c.key.toLowerCase())
-                .map(n => ({ x:n.score, y:n.hours, _n:n })),
+                .map(n => ({ x:n.hours, y:n.score, _n:n })),
     backgroundColor: c.color + 'bb', borderColor: c.color, borderWidth:1,
     pointRadius:4, pointHoverRadius:7,
   }));
-  if (other.length) datasets.push({ label:'—', data:other.map(n=>({x:n.score,y:n.hours,_n:n})),
+  if (other.length) datasets.push({ label:'—', data:other.map(n=>({x:n.hours,y:n.score,_n:n})),
     backgroundColor:'#9d948899', borderColor:'#9d9488', borderWidth:1, pointRadius:4, pointHoverRadius:7 });
+  // regression trend line across all nights
+  if (reg && nights.length) {
+    const hs = nights.map(n=>n.hours), xmin = Math.min(...hs), xmax = Math.max(...hs);
+    datasets.push({ label:'trend', type:'line',
+      data:[{x:xmin, y:reg.slope*xmin+reg.intercept}, {x:xmax, y:reg.slope*xmax+reg.intercept}],
+      borderColor:'#453f37', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false });
+  }
 
   const opts = chartOpts({});
   opts.interaction = { mode:'nearest', intersect:true };
   opts.plugins.legend.display = true;
   opts.plugins.legend.position = phone ? 'bottom' : 'top';
+  opts.plugins.legend.labels = { ...(opts.plugins.legend.labels||{}), filter: it => it.text !== 'trend' };
   opts.plugins.tooltip.callbacks = {
-    title: (it) => it[0].raw._n.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
-    label: (it) => { const n = it.raw._n;
-      return ['Score: '+n.score, 'Duration: '+n.hours.toFixed(1)+' h', 'Quality: '+(n.quality||'—')]; },
+    title: (it) => it[0].raw._n ? it[0].raw._n.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : '',
+    label: (it) => { const n = it.raw._n; if (!n) return null;
+      return ['Duration: '+n.hours.toFixed(1)+' h', 'Score: '+n.score, 'Quality: '+(n.quality||'—')]; },
   };
   opts.scales = {
-    x:{ ...darkScale(), title:{display:true, text:'Sleep Score', color:'#6f675c', font:{size:11}},
+    x:{ ...darkScale(), title:{display:true, text:'Sleep Duration (h)', color:'#6f675c', font:{size:11}},
         ticks:{ color:'#6f675c', font:{size:phone?10:11} } },
-    y:{ ...darkScale(), title:{display:true, text:'Duration (h)', color:'#6f675c', font:{size:11}},
+    y:{ ...darkScale(), title:{display:true, text:'Sleep Score', color:'#6f675c', font:{size:11}},
         ticks:{ color:'#6f675c', font:{size:phone?10:11} } },
   };
 
