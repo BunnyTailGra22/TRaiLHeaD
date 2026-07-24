@@ -1555,25 +1555,26 @@ function renderSleepPerf(sleepMap) {
   }
 
   const phone = isPhone();
+  const latestTime = nights.length ? nights[nights.length - 1].date.getTime() : null;
+  // The most recent night is drawn as a big hollow ring so it stands out.
+  const isLatest = n => n.date.getTime() === latestTime;
+  const mkPoints = (arr, color) => ({
+    data: arr.map(n => ({ x:n.hours, y:n.score, _n:n })),
+    pointRadius:      arr.map(n => isLatest(n) ? 8 : 4),
+    pointHoverRadius: arr.map(n => isLatest(n) ? 10 : 7),
+    pointBackgroundColor: arr.map(n => isLatest(n) ? 'transparent' : color + 'bb'),
+    pointBorderColor:     arr.map(() => color),
+    pointBorderWidth:     arr.map(n => isLatest(n) ? 2.5 : 1),
+  });
   // group by quality → one dataset per quality (drives the legend + colour)
   const cats = SLEEP_QUALITY.filter(c => nights.some(n => (n.quality||'').toLowerCase() === c.key.toLowerCase()));
   const other = nights.filter(n => !SLEEP_QUALITY.some(c => c.key.toLowerCase() === (n.quality||'').toLowerCase()));
   const datasets = cats.map(c => ({
     label: c.key,
-    data: nights.filter(n => (n.quality||'').toLowerCase() === c.key.toLowerCase())
-                .map(n => ({ x:n.hours, y:n.score, _n:n })),
-    backgroundColor: c.color + 'bb', borderColor: c.color, borderWidth:1,
-    pointRadius:4, pointHoverRadius:7,
+    ...mkPoints(nights.filter(n => (n.quality||'').toLowerCase() === c.key.toLowerCase()), c.color),
+    borderColor: c.color, borderWidth:1,
   }));
-  if (other.length) datasets.push({ label:'—', data:other.map(n=>({x:n.hours,y:n.score,_n:n})),
-    backgroundColor:'#9d948899', borderColor:'#9d9488', borderWidth:1, pointRadius:4, pointHoverRadius:7 });
-  // regression trend line across all nights
-  if (reg && nights.length) {
-    const hs = nights.map(n=>n.hours), xmin = Math.min(...hs), xmax = Math.max(...hs);
-    datasets.push({ label:'trend', type:'line',
-      data:[{x:xmin, y:reg.slope*xmin+reg.intercept}, {x:xmax, y:reg.slope*xmax+reg.intercept}],
-      borderColor:'#453f37', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false });
-  }
+  if (other.length) datasets.push({ label:'—', ...mkPoints(other, '#9d9488'), borderColor:'#9d9488', borderWidth:1 });
 
   const opts = chartOpts({});
   opts.interaction = { mode:'nearest', intersect:true };
