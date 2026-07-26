@@ -851,7 +851,7 @@ function renderFocusChart(sessions) {
         'EP:  '  + s.ep.toFixed(1),
         'EPH: '  + s.eph.toFixed(1),
         'Dist: ' + s.dist.toFixed(1) + ' km · ↑' + Math.round(s.elev) + ' m',
-        'Slope: '+ (s.dist > 0 ? Math.round(s.elev / s.dist) : 0) + ' m/km',
+        'Slope: '+ (s.dist > 0 ? (s.elev / s.dist / 10).toFixed(1) : '0.0') + '%',
       ];
     },
   };
