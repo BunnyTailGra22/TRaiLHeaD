@@ -14,7 +14,7 @@
   --road: #5f7d8c; --trail: #8a9a5b;   /* deepened for contrast on white */
   --y2024: #5f7d8c; --y2025: #8a9a5b; --y2026: #a5602a;  /* spread on lightness+hue */
   --hrv: #9c8196; --sleep: #6f97a6; --weight: #b39555; --spo2: #7f9d78;
-  --rhr: #b3746e; --bb: #bd9a4f;
+  --rhr: #b3746e; --bb: #bd9a4f; --resp: #7e8aa2;
   --red: #b3746e; --yellow: #bd9a4f; --green: #7f9d78;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -102,6 +102,7 @@ main { padding: 20px 24px; }
 /* Training tab: paired rows share a height so each two-col row aligns */
 #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 280px; }
 #bio-box   { height: 260px; }
+#vitals-box { height: 300px; }
 #body-box  { height: 260px; }
 #raster-box { height: 420px; }
 #perf-box  { height: 420px; }
@@ -145,6 +146,7 @@ main { padding: 20px 24px; }
   .grid-2x2 .chart-box { height: 200px; }
   #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 240px; }
   #bio-box   { height: 240px; }
+  #vitals-box { height: 260px; }
 }
 
 /* ── PHONE (≤ 600px) ───────────────────────────────────────────────────── */
@@ -169,6 +171,7 @@ main { padding: 20px 24px; }
   .grid-2x2 .chart-box { height: 180px; }
   #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 220px; }
   #bio-box   { height: 220px; }
+  #vitals-box { height: 240px; }
 
   /* Bio stat — 2 columns */
   .bio-stat-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -277,6 +280,7 @@ main { padding: 20px 24px; }
       <div class="field"><label>Total Sleep (min)</label><input id="col-sleep" value="Total (min)" /></div>
       <div class="field"><label>Sleep Score</label><input id="col-sleepq" value="Sleep Score" /></div>
       <div class="field"><label>Avg SpO₂ (%)</label><input id="col-spo2" value="Avg SpO₂" /></div>
+      <div class="field"><label>Avg Respiration (brpm)</label><input id="col-resp" value="Avg Respiration" /></div>
     </div>
 
     <div class="config-actions">
@@ -410,6 +414,42 @@ main { padding: 20px 24px; }
     <div class="chart-box" id="bio-box"><canvas id="bio-chart"></canvas></div>
   </div>
 
+  <!-- RECOVERY VITALS -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Recovery Vitals — Nightly vs Personal 30-day Baseline</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="vitals-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="vitals-scope-pills">
+          <div class="rpill" data-weeks="4">4 wk</div>
+          <div class="rpill active" data-weeks="8">8 wk</div>
+          <div class="rpill" data-weeks="13">13 wk</div>
+          <div class="rpill" data-weeks="26">26 wk</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="metric-pills" id="vitals-metric-pills" style="margin-bottom:16px">
+      <div class="mpill active" data-vital="rhr">Resting HR</div>
+      <div class="mpill" data-vital="spo2">Avg SpO₂</div>
+      <div class="mpill" data-vital="resp">Avg Respiration</div>
+      <div class="mpill" data-vital="all">All (deviation)</div>
+    </div>
+
+    <div class="bio-stat-grid" id="vitals-stat-cards">
+      <div class="bio-stat"><div class="bs-icon">❤️</div><div class="bs-label">Resting HR</div>
+        <div class="bs-value" id="vsv-rhr" style="color:var(--rhr)">—</div><div class="bs-sub" id="vss-rhr">bpm</div></div>
+      <div class="bio-stat"><div class="bs-icon">🫁</div><div class="bs-label">Avg SpO₂</div>
+        <div class="bs-value" id="vsv-spo2" style="color:var(--spo2)">—</div><div class="bs-sub" id="vss-spo2">%</div></div>
+      <div class="bio-stat"><div class="bs-icon">🌬️</div><div class="bs-label">Avg Respiration</div>
+        <div class="bs-value" id="vsv-resp" style="color:var(--resp)">—</div><div class="bs-sub" id="vss-resp">brpm</div></div>
+      <div class="bio-stat"><div class="bs-icon">🔎</div><div class="bs-label">Watch Days</div>
+        <div class="bs-value" id="vsv-watch">—</div><div class="bs-sub" id="vss-watch">≥2 vitals off baseline</div></div>
+    </div>
+
+    <div class="chart-box" id="vitals-box"><canvas id="vitals-chart"></canvas></div>
+  </div>
+
   <!-- SLEEP CONSISTENCY + SLEEP→RECOVERY (side by side) -->
   <div class="two-col">
 
@@ -515,6 +555,7 @@ function defaultCfg() {
     colSleep:     'Total (min)',
     colSleepq:    'Sleep Score',
     colSpo2:      'Avg SpO₂',
+    colResp:      'Avg Respiration',
   };
 }
 
@@ -553,6 +594,7 @@ function applyConfigToUI() {
   set('col-sleep',       cfg.colSleep);
   set('col-sleepq',      cfg.colSleepq);
   set('col-spo2',        cfg.colSpo2);
+  set('col-resp',        cfg.colResp);
 }
 
 function saveConfig() {
@@ -574,6 +616,7 @@ function saveConfig() {
     colSleep:     get('col-sleep'),
     colSleepq:    get('col-sleepq'),
     colSpo2:      get('col-spo2'),
+    colResp:      get('col-resp'),   // required: saveConfig rebuilds cfg from the DOM
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); } catch {}
 }
@@ -625,6 +668,7 @@ function parseSleepRows(rows) {
   const iSleep  = ci(h, cfg.colSleep);
   const iSleepq = ci(h, cfg.colSleepq);
   const iSpo2   = ci(h, cfg.colSpo2);
+  const iResp   = ci(h, cfg.colResp);
   const iQual   = ci(h, 'Quality');
   const iStart  = ci(h, 'Sleep Start');
   const iEnd    = ci(h, 'Sleep End');
@@ -652,6 +696,7 @@ function parseSleepRows(rows) {
       sleepMins:  num(r[iSleep]),
       sleepScore: num(r[iSleepq]),
       spo2:       num(r[iSpo2]),
+      resp:       num(r[iResp]),
       quality:    iQual >= 0 ? String(r[iQual] || '').trim() : '',
       start:      iStart >= 0 ? parseDT(r[iStart]) : null,
       end:        iEnd   >= 0 ? parseDT(r[iEnd])   : null,
@@ -777,6 +822,7 @@ function renderAll(sessions, sleepMap) {
   renderBoxChart(sessions);
   renderLoadTable(sessions);
   renderHrvStatus(sleepMap);
+  renderVitals(sleepMap);
   renderSleepRaster(sleepMap);
   renderSleepPerf(sleepMap);
 }
@@ -1388,6 +1434,285 @@ document.querySelectorAll('#hrv-scope-pills .rpill').forEach(p => {
   });
 });
 
+// ── RECOVERY VITALS ───────────────────────────────────────────────────────────
+// Three sleep-derived vitals, each judged against its OWN personal rolling baseline
+// (median ± 1 SD of the trailing 30 days, EXCLUDING the day itself so tonight's spike
+// can't widen the band that judges it).
+//   bad     = sign of the direction meaning worse recovery (+1 high-bad, -1 low-bad)
+//   sdFloor = guards a zero-width band when a metric sits flat (common for 1-dp SpO₂)
+const VITALS = {
+  rhr:  { key:'rhr',  label:'Resting HR',      short:'RHR',  unit:'bpm',  color:'#b3746e',
+          bad:+1, dp:0, sdFloor:0.8, pad:2 },
+  spo2: { key:'spo2', label:'Avg SpO₂',        short:'SpO₂', unit:'%',    color:'#7f9d78',
+          bad:-1, dp:1, sdFloor:0.4, pad:0.6 },
+  resp: { key:'resp', label:'Avg Respiration', short:'Resp', unit:'brpm', color:'#7e8aa2',
+          bad:+1, dp:1, sdFloor:0.3, pad:0.5 },
+};
+const VITAL_ORDER     = ['rhr','spo2','resp'];
+const VITAL_BASE_WIN  = 30;   // trailing baseline window, in DAYS
+const VITAL_MIN_N     = 10;   // min non-null days required in that window
+const VITAL_BAND_FILL = 'rgba(157,148,136,0.28)';   // same warm grey as the other bands
+const VD_IN = '#453f37', VD_BAD = '#b3746e', VD_WORSE = '#a5602a',
+      VD_GOOD = '#7f9d78', VD_NONE = '#9d9488';
+
+let _vitalMode = 'rhr';     // 'rhr' | 'spo2' | 'resp' | 'all'
+let _vitalWeeks = 8;        // 4 / 8 / 13 / 26
+let _vitalsChart = null;
+
+// For each index i: median + SD of the `win` days STRICTLY BEFORE i. Null-safe; yields
+// nulls when fewer than `minN` known values so the caller renders a gap rather than
+// fabricating a baseline.
+function rollingStats(values, win, minN) {
+  const out = [];
+  for (let i = 0; i < values.length; i++) {
+    const w = [];
+    for (let j = Math.max(0, i - win); j < i; j++) if (values[j] != null) w.push(values[j]);
+    if (w.length < minN) { out.push({ median:null, sd:null, n:w.length }); continue; }
+    const mu = w.reduce((a,b) => a + b, 0) / w.length;
+    const sd = Math.sqrt(w.reduce((a,b) => a + (b - mu) ** 2, 0) / (w.length - 1));  // sample SD
+    out.push({ median: median(w), sd, n: w.length });   // robust centre, ±1 SD spread
+  }
+  return out;
+}
+
+let _vitalGrid = null, _vitalGridSrc = null;
+function vitalSeries(sleepMap) {
+  if (_vitalGridSrc === sleepMap && _vitalGrid) return _vitalGrid;   // pill clicks stay instant
+  const keys = Object.keys(sleepMap).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort();
+  if (!keys.length) { _vitalGridSrc = sleepMap; return (_vitalGrid = []); }
+  const mk = k => { const [y,m,d] = k.split('-').map(Number); return new Date(y, m-1, d); };
+  const today = new Date(); today.setHours(0,0,0,0);
+  const lastMs = Math.max(mk(keys[keys.length-1]).getTime(), today.getTime());
+
+  // Dense DAILY grid — one slot per calendar day (missing nights = null). Required so the
+  // 30-day window is 30 calendar days, not "30 nights with data", and so spanGaps counts days.
+  const grid = [];
+  for (const d = mk(keys[0]); d.getTime() <= lastMs; d.setDate(d.getDate() + 1)) {
+    const dk = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const rec = sleepMap[dk] || {};
+    grid.push({ date: new Date(d),      // COPY — pushing `d` would give every row one mutated date
+                rhr: rec.rhr ?? null, spo2: rec.spo2 ?? null, resp: rec.resp ?? null });
+  }
+
+  VITAL_ORDER.forEach(k => {
+    const v = VITALS[k];
+    const stats = rollingStats(grid.map(g => g[k]), VITAL_BASE_WIN, VITAL_MIN_N);
+    grid.forEach((g, i) => {
+      const s = stats[i];
+      if (!s || s.median == null) { g[k+'Lo'] = g[k+'Hi'] = g[k+'Med'] = g[k+'Z'] = null; return; }
+      const sd = Math.max(s.sd, v.sdFloor);
+      g[k+'Med'] = s.median;
+      g[k+'Lo']  = s.median - sd;
+      g[k+'Hi']  = s.median + sd;
+      g[k+'Sd']  = sd;
+      g[k+'N']   = s.n;
+      // sign-normalised: POSITIVE always means "toward worse recovery", for every metric
+      g[k+'Z']   = g[k] == null ? null : v.bad * (g[k] - s.median) / sd;
+    });
+  });
+  _vitalGridSrc = sleepMap;
+  return (_vitalGrid = grid);
+}
+
+const vitalDotColor = z => z == null ? VD_NONE
+  : z >  2 ? VD_WORSE
+  : z >  1 ? VD_BAD
+  : z < -1 ? VD_GOOD
+  : VD_IN;
+
+// A "watch day" = >=2 of 3 vitals sitting >=1 SD on their bad side. null = not evaluable.
+const isWatchDay = g => {
+  const scored = VITAL_ORDER.filter(k => g[k+'Z'] != null);
+  if (scored.length < 3) return null;
+  return scored.filter(k => g[k+'Z'] >= 1).length >= 2;
+};
+
+function renderVitals(sleepMap) {
+  const canvas = document.getElementById('vitals-chart');
+  if (!canvas || !sleepMap) return;
+
+  // Compute over FULL history, THEN slice the tail — so the band is already warm at the
+  // left edge. A date-cutoff filter (as renderHrvStatus uses) would starve the baseline.
+  const all    = vitalSeries(sleepMap);
+  const series = all.slice(Math.max(0, all.length - _vitalWeeks * 7));
+  const labels = series.map(g => g.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const phone  = isPhone();
+  const dstr   = d => d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+
+  // ── stat cards 1–3: latest measured night per metric ──
+  const rev = [...series].reverse();
+  VITAL_ORDER.forEach(k => {
+    const v = VITALS[k], g = rev.find(x => x[k] != null);
+    const el = document.getElementById('vsv-'+k), sub = document.getElementById('vss-'+k);
+    if (!el) return;
+    el.textContent = g ? g[k].toFixed(v.dp) : '—';
+    el.style.color = g ? vitalDotColor(g[k+'Z']) : 'var(--muted)';
+    if (sub) sub.textContent = v.unit + (g ? ' · ' + dstr(g.date) : '')
+      + (g && g[k+'Z'] != null ? ` · ${g[k+'Z'] >= 0 ? '+' : ''}${g[k+'Z'].toFixed(1)} SD` : '');
+  });
+
+  // ── stat card 4: watch days (the co-movement flag) ──
+  const flags   = series.map(isWatchDay);
+  const scoredN = flags.filter(f => f !== null).length;
+  const watch   = series.filter((g,i) => flags[i] === true);
+  const wEl = document.getElementById('vsv-watch'), wSub = document.getElementById('vss-watch');
+  if (wEl) {
+    const n = watch.length, lastW = n ? watch[n-1] : null;
+    const recent = lastW && (Date.now() - lastW.date.getTime()) < 3 * 86400000;
+    wEl.textContent = scoredN ? String(n) : '—';
+    wEl.style.color = !scoredN ? 'var(--muted)'
+      : recent ? VD_BAD : n >= 3 ? '#bd9a4f' : n ? 'var(--text)' : VD_GOOD;
+    if (wSub) wSub.textContent = scoredN
+      ? `of ${scoredN} scored${lastW ? ' · last ' + dstr(lastW.date) : ''}`
+      : '≥2 vitals off baseline';
+  }
+
+  // ── header note ──
+  const noteEl = document.getElementById('vitals-note');
+  const banded = series.filter(g => VITAL_ORDER.some(k => g[k+'Lo'] != null)).length;
+  if (noteEl) {
+    if (!banded) noteEl.textContent = 'Baseline needs ≥10 nights in the trailing 30 days';
+    else if (_vitalMode === 'all')
+      noteEl.textContent = `${scoredN} scored nights · ↑ = away from baseline toward worse recovery`;
+    else {
+      const m = VITALS[_vitalMode];
+      const sc = series.filter(g => g[m.key] != null && g[m.key+'Lo'] != null);
+      const inB = sc.filter(g => Math.abs(g[m.key+'Z']) <= 1).length;
+      noteEl.textContent = sc.length
+        ? `${sc.length} nights · ${Math.round(inB/sc.length*100)}% within baseline`
+        : `no ${m.short} data in scope`;
+    }
+  }
+
+  const opts = chartOpts({ yLabel: _vitalMode === 'all' ? 'SD from baseline' : VITALS[_vitalMode].unit });
+  opts.scales.x = darkScale({ ticks:{ color:'#6f675c', font:{size:phone?10:11}, maxRotation:0,
+                                      autoSkip:true, maxTicksLimit: phone?6:12 } });
+  opts.plugins.legend.labels.filter = item => item.text !== 'upper';
+
+  const datasets = [];
+
+  if (_vitalMode !== 'all') {
+    // ══ SINGLE METRIC — absolute values vs its own band ══
+    const v = VITALS[_vitalMode], k = v.key;
+    const lo = series.map(g => g[k+'Lo']), hi = series.map(g => g[k+'Hi']);
+    const vals = series.map(g => g[k]);
+
+    if (banded) datasets.push(
+      { label:'upper', data:hi, borderColor:'transparent', pointRadius:0,
+        fill:false, tension:0.35, order:4, spanGaps:false },
+      { label:'Baseline ±1 SD', data:lo, borderColor:'transparent',
+        backgroundColor:VITAL_BAND_FILL, pointRadius:0,
+        fill:'-1', tension:0.35, order:4, spanGaps:false },   // false: never fake a baseline
+    );
+    datasets.push(
+      { label:'30d Median', data: series.map(g => g[k+'Med']),
+        borderColor:'#6f675c', borderWidth:1, borderDash:[4,3],
+        pointRadius:0, pointHoverRadius:0, fill:false, tension:0.35, order:3, spanGaps:false },
+      { label:v.label, _vk:k, data:vals,
+        borderColor:v.color, borderWidth:2,
+        pointRadius: phone?2:3, pointHoverRadius:6,
+        pointBackgroundColor: series.map(g => vitalDotColor(g[k+'Z'])),
+        pointBorderColor:     series.map(g => vitalDotColor(g[k+'Z'])),
+        fill:false, tension:0, order:1, spanGaps:3 },   // bridge <=3 missed nights
+    );
+
+    // MUST NOT start at zero — SpO2 lives in 93–99 and a zero axis flattens it to nothing.
+    const finite = [...vals, ...lo, ...hi].filter(x => x != null && isFinite(x));
+    opts.scales.y.beginAtZero = false;
+    if (finite.length) {
+      opts.scales.y.suggestedMin = Math.min(...finite) - v.pad;
+      opts.scales.y.suggestedMax = Math.max(...finite) + v.pad;
+    }
+    opts.plugins.tooltip.filter = item => item.dataset._vk === k;
+    opts.plugins.tooltip.callbacks = {
+      title: items => series[items[0].dataIndex].date
+        .toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
+      label: item => `${v.label}: ${item.parsed.y.toFixed(v.dp)} ${v.unit}`,
+      afterBody: items => {
+        const g = series[items[0].dataIndex], out = [];
+        if (g[k+'Lo'] == null) return ['Baseline unavailable (too few nights)'];
+        out.push(`Baseline: ${g[k+'Lo'].toFixed(v.dp)}–${g[k+'Hi'].toFixed(v.dp)} ${v.unit}`);
+        const z = g[k+'Z'];
+        if (z != null) {
+          out.push(`${Math.abs(z).toFixed(1)} SD ${(v.bad*z > 0 ? 'above' : 'below')} baseline`);
+          out.push(z > 1 ? '⚠ Off baseline — worse direction'
+                 : z < -1 ? '↑ Off baseline — better direction'
+                 : '✓ Within baseline');
+        }
+        return out;
+      },
+    };
+
+  } else {
+    // ══ ALL (DEVIATION) — sign-normalised so UP = worse for every metric ══
+    const ones = series.map(g => VITAL_ORDER.some(x => g[x+'Lo'] != null) ? 1 : null);
+    datasets.push(
+      { label:'upper', data:ones, borderColor:'transparent', pointRadius:0,
+        fill:false, tension:0, order:4, spanGaps:false },
+      { label:'±1 SD', data: ones.map(o => o == null ? null : -1), borderColor:'transparent',
+        backgroundColor:VITAL_BAND_FILL, pointRadius:0, fill:'-1', tension:0, order:4, spanGaps:false },
+    );
+    VITAL_ORDER.forEach(k => {
+      const v = VITALS[k];
+      datasets.push({
+        label: `${v.short} ${v.bad > 0 ? '↑' : '↓'}`,   // arrow = the direction plotted as POSITIVE
+        _vk: k,
+        data: series.map(g => g[k+'Z'] == null ? null : +g[k+'Z'].toFixed(2)),
+        borderColor: v.color, borderWidth: 1.8,
+        pointRadius: phone ? 0 : 1.5, pointHoverRadius: 5,
+        fill:false, tension:0.25, order:1, spanGaps:3,
+      });
+    });
+
+    opts.scales.y.beginAtZero = false;
+    opts.scales.y.suggestedMin = -3; opts.scales.y.suggestedMax = 3;
+    opts.scales.y.ticks.callback = val => (val > 0 ? '+' : '') + val;
+    opts.scales.y.grid = { color: c => c.tick.value === 0 ? 'rgba(79,72,63,0.35)' : 'rgba(79,72,63,0.08)' };
+    if (!phone) opts.scales.y.title = { display:true, text:'SD from 30d baseline (↑ = worse)',
+                                        color:'#6f675c', font:{size:11} };
+    // keep ALL THREE series in the tooltip — filter out only the band bounds
+    opts.plugins.tooltip.filter = item => !!item.dataset._vk;
+    opts.plugins.tooltip.callbacks = {
+      title: items => series[items[0].dataIndex].date
+        .toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
+      // never a bare signed number for a flipped series: raw value + direction in words
+      label: item => {
+        const v = VITALS[item.dataset._vk], g = series[item.dataIndex];
+        const raw = g[v.key], z = g[v.key+'Z'];
+        if (raw == null || z == null) return null;
+        return `${v.label}: ${raw.toFixed(v.dp)} ${v.unit} · ${Math.abs(z).toFixed(1)} SD `
+             + `${(v.bad * z > 0 ? 'above' : 'below')} baseline`;
+      },
+      afterBody: items => {
+        const w = isWatchDay(series[items[0].dataIndex]);
+        return w === null ? ['(incomplete night — not scored)']
+             : w ? ['⚠ Watch day — ≥2 vitals off baseline'] : ['✓ No co-movement flag'];
+      },
+    };
+  }
+
+  const ctx = canvas.getContext('2d');
+  if (_vitalsChart) _vitalsChart.destroy();   // required, else "Canvas is already in use"
+  _vitalsChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
+}
+
+document.querySelectorAll('#vitals-scope-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#vitals-scope-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _vitalWeeks = parseInt(p.dataset.weeks);
+    if (_sleepMap) renderVitals(_sleepMap);
+  });
+});
+document.querySelectorAll('#vitals-metric-pills .mpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#vitals-metric-pills .mpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _vitalMode = p.dataset.vital;
+    if (_sleepMap) renderVitals(_sleepMap);
+  });
+});
+
 // ── BODY COMPOSITION (from Biometrics tab) ────────────────────────────────────
 const BODY_METRICS = {
   weight:   { label:'Weight',       unit:'kg',    color:'#bfa676' },
@@ -1663,7 +1988,8 @@ function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   // Charts built while their panel was display:none render at 0×0 — re-render on show.
   if (name === 'recovery') {
-    if (_sleepMap) { renderHrvStatus(_sleepMap); renderSleepRaster(_sleepMap); renderSleepPerf(_sleepMap); }
+    if (_sleepMap) { renderHrvStatus(_sleepMap); renderVitals(_sleepMap);
+                     renderSleepRaster(_sleepMap); renderSleepPerf(_sleepMap); }
     renderBodyComp();
   } else if (name === 'training' && _sessions.length) renderAll(_sessions, _sleepMap);
 }
@@ -1725,6 +2051,7 @@ function loadSampleData() {
           sleepMins:  Math.round(rnd(300,520)),
           sleepScore: Math.round(rnd(45,90)),
           spo2:       Math.round(rnd(93,99)*10)/10,
+          resp:       Math.round(rnd(12,17)*10)/10,
         };
       }
     }
