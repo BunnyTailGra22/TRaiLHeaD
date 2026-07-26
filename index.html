@@ -334,11 +334,14 @@ main { padding: 20px 24px; }
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">Progressive Overload — Weekly EP vs Optimal Range</div>
-        <div class="range-pills" id="chronic-pills">
-          <div class="rpill" data-chronic="4">4 wk</div>
-          <div class="rpill active" data-chronic="8">8 wk</div>
-          <div class="rpill" data-chronic="13">13 wk</div>
+        <div class="section-title" style="margin:0">Progressive Overload — Acute EP vs Optimal Range</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
+          <div class="range-pills" id="chronic-pills">
+            <div class="rpill active" data-chronic="4">4 wk</div>
+            <div class="rpill" data-chronic="8">8 wk</div>
+            <div class="rpill" data-chronic="13">13 wk</div>
+          </div>
         </div>
       </div>
       <div class="chart-box" id="rolling-box"><canvas id="rolling-chart"></canvas></div>
@@ -1084,34 +1087,66 @@ function compute13wkRolling(sessions) {
   });
 }
 let _rollingChart = null;
-let _chronicWeeks = 8;   // trailing window for chronic-load baseline (4 / 8 / 13)
-const VISIBLE_WEEKS = 26;   // x-axis shows only the trailing 26 weeks
+let _chronicWeeks = 4;      // chronic EP time constant, in weeks (4 / 8 / 13)
+const VISIBLE_DAYS = 182;   // x-axis shows the trailing 26 weeks, daily resolution
+
+// Acute EP  — exponentially-weighted rolling SUM of daily EP, 7-day time constant.
+//   acute[i] = ep[i] + acute[i-1] * ACUTE_DECAY
+//   A workout enters at 100% of its EP, then decays: ~50% left after 5 d, ~37% after 7 d,
+//   ~24% after 10 d, ~5% after 3 weeks — i.e. it has largely washed out by ~10 days.
+const ACUTE_TAU   = 7;
+const ACUTE_DECAY = Math.exp(-1 / ACUTE_TAU);          // ≈ 0.8669
+// Optimal range = 0.8–1.4 × Chronic EP (acute:chronic workload ratio sweet spot)
+const ACWR_LOW = 0.8, ACWR_HIGH = 1.4;
+
+// Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
+function computeAcuteChronic(sessions, chronicWeeks) {
+  if (!sessions.length) return [];
+  const DAY = 86400000;
+  const key = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const perDay = new Map();
+  sessions.forEach(s => perDay.set(key(s.date), (perDay.get(key(s.date)) || 0) + s.ep));
+
+  const first = Math.min(...perDay.keys());
+  const last  = Math.max(key(new Date()), Math.max(...perDay.keys()));
+
+  // Chronic EP = exponentially-weighted average of Acute EP over `chronicWeeks` weeks
+  const chronicAlpha = 1 - Math.exp(-1 / (chronicWeeks * 7));
+  const out = [];
+  let acute = 0, chronic = null;
+  for (let t = first; t <= last; t += DAY) {
+    const ep = perDay.get(t) || 0;                       // rest days contribute 0
+    acute = ep + acute * ACUTE_DECAY;                    // 100% in, then decays
+    chronic = chronic === null ? acute : chronic + chronicAlpha * (acute - chronic);
+    out.push({ date: new Date(t), ep, acute, chronic });
+  }
+  return out;
+}
+
 function renderRollingChart(sessions) {
-  // Weekly EP series (continuous timeline), sorted — full history
-  const rollingAll = compute13wkRolling(sessions);
-  const wkAll = rollingAll.map(r => +r.epW.toFixed(1));
+  // Computed over FULL history so the band is already "warmed up" at the left edge
+  const all = computeAcuteChronic(sessions, _chronicWeeks);
+  const series = all.slice(Math.max(0, all.length - VISIBLE_DAYS));
 
-  // Chronic load = trailing N-week average over the FULL history
-  // (computed before slicing so the band at the left edge stays accurate)
-  const win = _chronicWeeks;
-  const chronicAll = wkAll.map((_, i) => {
-    const s = wkAll.slice(Math.max(0, i - (win - 1)), i + 1);
-    return s.reduce((a, b) => a + b, 0) / s.length;
-  });
-  const lowerAll = chronicAll.map(c => +(c * 0.8).toFixed(1));   // ACWR sweet spot
-  const upperAll = chronicAll.map(c => +(c * 1.3).toFixed(1));
+  const acute  = series.map(d => +d.acute.toFixed(1));
+  const lower  = series.map(d => +(d.chronic * ACWR_LOW).toFixed(1));
+  const upper  = series.map(d => +(d.chronic * ACWR_HIGH).toFixed(1));
+  const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
-  // Slice everything to the trailing 13 weeks for display
-  const start   = Math.max(0, rollingAll.length - VISIBLE_WEEKS);
-  const rolling = rollingAll.slice(start);
-  const wk      = wkAll.slice(start);
-  const lower   = lowerAll.slice(start);
-  const upper   = upperAll.slice(start);
-  const labels  = rolling.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-
-  // Colour each actual dot by where it sits vs the band
+  // Colour each day by where Acute EP sits vs the band
   const IN = '#453f37', HI = '#b3746e', LO = '#bd9a4f';   // text / red / yellow
-  const dotColors = wk.map((v, i) => v > upper[i] ? HI : (v < lower[i] ? LO : IN));
+  const dotColors = acute.map((v, i) => v > upper[i] ? HI : (v < lower[i] ? LO : IN));
+
+  // Header note: today's acute / chronic / ratio
+  const noteEl = document.getElementById('overload-note');
+  if (noteEl) {
+    const t = series[series.length - 1];
+    if (t) {
+      const ratio = t.chronic > 0 ? t.acute / t.chronic : 0;
+      const state = ratio > ACWR_HIGH ? '⚠ spike risk' : ratio < ACWR_LOW ? '↓ detraining' : '✓ optimal';
+      noteEl.textContent = `acute ${t.acute.toFixed(0)} · chronic ${t.chronic.toFixed(0)} · ratio ${ratio.toFixed(2)} ${state}`;
+    } else noteEl.textContent = '';
+  }
 
   const datasets = [
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
@@ -1119,25 +1154,34 @@ function renderRollingChart(sessions) {
     { label: 'Optimal Range', data: lower, borderColor: 'transparent',
       backgroundColor: 'rgba(138,154,91,0.40)', pointRadius: 0,
       fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
-    { label: 'Weekly EP', data: wk, borderColor: IN, borderWidth: 2,
-      pointRadius: 3, pointHoverRadius: 5,
+    { label: 'Chronic EP', data: series.map(d => +d.chronic.toFixed(1)),
+      borderColor: '#8a9a5b', borderWidth: 1.5, borderDash: [4,3],
+      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2 },
+    { label: 'Acute EP', data: acute, borderColor: IN, borderWidth: 2,
+      pointRadius: 1.5, pointHoverRadius: 5,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
-      fill: false, tension: 0, order: 1 },
+      fill: false, tension: 0.25, order: 1 },
   ];
 
   const opts = chartOpts({ yLabel: 'EP' });
   opts.plugins.legend.labels.filter = (item) => item.text !== 'upper';   // hide the invisible bound
-  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Weekly EP';
+  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute EP';
   opts.plugins.tooltip.callbacks = {
-    title: (items) => 'Week of ' + rolling[items[0].dataIndex].date
-      .toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }),
-    label: (item) => 'Weekly EP: ' + item.parsed.y.toFixed(1),
+    title: (items) => series[items[0].dataIndex].date
+      .toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }),
+    label: (item) => 'Acute EP: ' + item.parsed.y.toFixed(1),
     afterBody: (items) => {
-      const i = items[0].dataIndex, v = wk[i];
+      const i = items[0].dataIndex, d = series[i], v = acute[i];
+      const ratio = d.chronic > 0 ? v / d.chronic : 0;
       const status = v > upper[i] ? '⚠ Above band — spike risk'
                    : v < lower[i] ? '↓ Below band — detraining'
                    : '✓ In optimal range';
-      return ['Optimal: ' + lower[i].toFixed(0) + '–' + upper[i].toFixed(0) + ' EP', status];
+      return [
+        'Chronic EP: ' + d.chronic.toFixed(1),
+        'Ratio: ' + ratio.toFixed(2),
+        'Optimal: ' + lower[i].toFixed(0) + '–' + upper[i].toFixed(0) + ' EP',
+        status,
+      ];
     },
   };
 
