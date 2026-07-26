@@ -1148,7 +1148,7 @@ function renderRollingChart(sessions) {
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
       fill: false, tension: 0.35, order: 3 },
     { label: 'Optimal Range', data: lower, borderColor: 'transparent',
-      backgroundColor: 'rgba(138,154,91,0.40)', pointRadius: 0,
+      backgroundColor: 'rgba(157,148,136,0.28)', pointRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
     { label: 'Chronic EP', data: series.map(d => +d.chronic.toFixed(1)),
       borderColor: '#8a9a5b', borderWidth: 1.5, borderDash: [4,3],
@@ -1330,7 +1330,7 @@ function renderHrvStatus(sleepMap) {
     { label:'upper', data: hi, borderColor:'transparent', pointRadius:0,
       fill:false, tension:0.35, order:4, spanGaps:true },
     { label:'Baseline Range', data: lo, borderColor:'transparent',
-      backgroundColor:'rgba(138,154,91,0.30)', pointRadius:0,
+      backgroundColor:'rgba(157,148,136,0.28)', pointRadius:0,   // light warm grey
       fill:'-1', tension:0.35, order:4, spanGaps:true },
     { label:'7d Avg', data: nights.map(n => n.avg7 ?? null),
       borderColor:'#6f97a6', borderWidth:2, borderDash:[5,4],
