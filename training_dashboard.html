@@ -384,37 +384,27 @@ main { padding: 20px 24px; }
   <!-- ══ RECOVERY & BODY TAB ══ -->
   <div id="tab-recovery" class="tab-panel">
 
-  <!-- BIOMETRIC & RECOVERY -->
+  <!-- HRV STATUS -->
   <div class="chart-card">
     <div class="chart-header">
-      <div class="section-title" style="margin:0">Biometric &amp; Recovery Trends</div>
+      <div class="section-title" style="margin:0">HRV Status — Overnight HRV vs Baseline Range</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <div class="range-pills" id="bio-range-pills">
-          <div class="rpill active" data-days="30">30d</div>
-          <div class="rpill" data-days="90">90d</div>
-          <div class="rpill" data-days="180">180d</div>
-          <div class="rpill" data-days="0">All</div>
-        </div>
-        <div class="range-pills" id="bio-smooth-pills">
-          <div class="rpill active" data-smooth="1">Daily</div>
-          <div class="rpill" data-smooth="7">7d avg</div>
-        </div>
-        <div class="metric-pills" id="bio-metric-pills">
-          <div class="mpill active" data-bio="hrv" style="--active-color:var(--hrv)">HRV</div>
-          <div class="mpill active" data-bio="rhr" style="--active-color:var(--rhr)">Resting HR</div>
-          <div class="mpill active" data-bio="spo2" style="--active-color:var(--spo2)">SpO₂</div>
-          <div class="mpill" data-bio="sleepScore" style="--active-color:var(--sleep)">Sleep Score</div>
-          <div class="mpill" data-bio="sleepHours" style="--active-color:var(--muted)">Sleep hrs</div>
+        <div id="hrv-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="hrv-scope-pills">
+          <div class="rpill" data-weeks="4">4 wk</div>
+          <div class="rpill active" data-weeks="8">8 wk</div>
+          <div class="rpill" data-weeks="13">13 wk</div>
+          <div class="rpill" data-weeks="26">26 wk</div>
         </div>
       </div>
     </div>
 
     <!-- Latest value cards -->
-    <div class="bio-stat-grid" id="bio-stat-cards">
-      <div class="bio-stat"><div class="bs-icon">〰️</div><div class="bs-label">Overnight HRV</div><div class="bs-value" id="bsv-hrv" style="color:var(--hrv)">—</div><div class="bs-sub" id="bss-hrv">ms</div></div>
-      <div class="bio-stat"><div class="bs-icon">❤️</div><div class="bs-label">Resting HR</div><div class="bs-value" id="bsv-rhr" style="color:var(--rhr)">—</div><div class="bs-sub" id="bss-rhr">bpm</div></div>
-      <div class="bio-stat"><div class="bs-icon">🌙</div><div class="bs-label">Sleep Score</div><div class="bs-value" id="bsv-sleep" style="color:var(--sleep)">—</div><div class="bs-sub" id="bss-sleep">/ 100</div></div>
-      <div class="bio-stat"><div class="bs-icon">🫧</div><div class="bs-label">Avg SpO₂</div><div class="bs-value" id="bsv-spo2" style="color:var(--spo2)">—</div><div class="bs-sub" id="bss-spo2">%</div></div>
+    <div class="bio-stat-grid" id="hrv-stat-cards">
+      <div class="bio-stat"><div class="bs-icon">〰️</div><div class="bs-label">Overnight HRV</div><div class="bs-value" id="hsv-hrv" style="color:var(--hrv)">—</div><div class="bs-sub" id="hss-hrv">ms</div></div>
+      <div class="bio-stat"><div class="bs-icon">📈</div><div class="bs-label">7d Average</div><div class="bs-value" id="hsv-avg" style="color:var(--sleep)">—</div><div class="bs-sub" id="hss-avg">ms</div></div>
+      <div class="bio-stat"><div class="bs-icon">🎯</div><div class="bs-label">Baseline Range</div><div class="bs-value" id="hsv-base" style="color:var(--trail)">—</div><div class="bs-sub" id="hss-base">ms</div></div>
+      <div class="bio-stat"><div class="bs-icon">⚖️</div><div class="bs-label">HRV Status</div><div class="bs-value" id="hsv-status" style="font-size:18px">—</div><div class="bs-sub" id="hss-status">latest</div></div>
     </div>
 
     <div class="chart-box" id="bio-box"><canvas id="bio-chart"></canvas></div>
@@ -638,6 +628,11 @@ function parseSleepRows(rows) {
   const iQual   = ci(h, 'Quality');
   const iStart  = ci(h, 'Sleep Start');
   const iEnd    = ci(h, 'Sleep End');
+  // HRV status block (cols R–V of the Sleep tab)
+  const iBaseLo = ci(h, 'Baseline Low (ms)');
+  const iBaseHi = ci(h, 'Baseline High (ms)');
+  const iAvg7d  = ci(h, '7d Avg (ms)');
+  const iHrvSt  = ci(h, 'HRV Status');
   // Sleep Start/End are stored as naive UTC (the sync writes Garmin GMT timestamps).
   // Append 'Z' so JS parses them as UTC, then the browser renders them in local time.
   const parseDT = v => {
@@ -660,6 +655,10 @@ function parseSleepRows(rows) {
       quality:    iQual >= 0 ? String(r[iQual] || '').trim() : '',
       start:      iStart >= 0 ? parseDT(r[iStart]) : null,
       end:        iEnd   >= 0 ? parseDT(r[iEnd])   : null,
+      hrvBaseLo:  num(r[iBaseLo]),
+      hrvBaseHi:  num(r[iBaseHi]),
+      hrv7d:      num(r[iAvg7d]),
+      hrvStatus:  iHrvSt >= 0 ? String(r[iHrvSt] || '').trim() : '',
     };
   }
   return map;
@@ -765,10 +764,7 @@ function isoWeek(d) {
 // ── RENDER ALL ────────────────────────────────────────────────────────────────
 let _sessions = [], _sleepMap = {};
 let _activeYearMonthly = null, _activeCumulMetric = 'ep';
-let _bioDays = 30;
-let _bioSmooth = 1;
-let _activeBioMetrics = new Set(['hrv','rhr','spo2']);
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS =['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const YEAR_COLORS = { '2024':'#5f7d8c','2025':'#8a9a5b','2026':'#a5602a' };
 
 function renderAll(sessions, sleepMap) {
@@ -780,7 +776,7 @@ function renderAll(sessions, sleepMap) {
   renderFocusChart(sessions);   // running activities only
   renderBoxChart(sessions);
   renderLoadTable(sessions);
-  renderBioSection(sleepMap);
+  renderHrvStatus(sleepMap);
   renderSleepRaster(sleepMap);
   renderSleepPerf(sleepMap);
 }
@@ -1251,88 +1247,121 @@ function renderLoadTable(sessions) {
   wrap.innerHTML = html + '</tbody></table>';
 }
 
-// ── BIOMETRIC SECTION ─────────────────────────────────────────────────────────
+// ── HRV STATUS ────────────────────────────────────────────────────────────────
+// Overnight HRV (dots coloured by Garmin's HRV Status) + the 7-day average line,
+// against Garmin's personal baseline range (Baseline Low → Baseline High).
 let _bioChart = null;
+let _hrvWeeks = 8;          // scope in weeks (4 / 8 / 13 / 26)
 
-const BIO_CFG = {
-  hrv:        { label:'Overnight HRV', color:'#aa93a2', unit:'ms',   yAxis:'y1' },
-  rhr:        { label:'Resting HR',    color:'#be8984', unit:'bpm',  yAxis:'y1' },
-  sleepScore: { label:'Sleep Score',   color:'#93a8b2', unit:'/100', yAxis:'y2' },
-  spo2:       { label:'SpO₂',          color:'#9aae93', unit:'%',    yAxis:'y2' },
-  sleepHours: { label:'Sleep hrs',     color:'#6f675c', unit:'h',    yAxis:'y2' },
+const HRV_STATUS = [
+  { key:'BALANCED',   color:'#7f9d78' },   // sage — in range
+  { key:'UNBALANCED', color:'#bd9a4f' },   // gold — drifting
+  { key:'LOW',        color:'#b3746e' },   // rose — suppressed
+  { key:'POOR',       color:'#a5602a' },   // clay — poor
+];
+const hrvStatusColor = s => {
+  const k = String(s || '').trim().toUpperCase().replace(/\s+/g, '_');
+  const exact = HRV_STATUS.find(c => k === c.key);
+  if (exact) return exact.color;
+  // Substring fallback, longest key first — otherwise "UNBALANCED" would match "BALANCED".
+  const byLen = [...HRV_STATUS].sort((a, b) => b.key.length - a.key.length);
+  return (byLen.find(c => k.includes(c.key)) || { color:'#9d9488' }).color;
+};
+// Baseline changes slowly and can be blank on some rows — carry the last value forward
+// (and back-fill any leading blanks) so the band spans the full width without fragmenting.
+const forwardFill = arr => {
+  let last = null;
+  const out = arr.map(v => (v != null ? (last = v) : last));
+  const firstKnown = out.find(v => v != null);
+  return out.map(v => (v != null ? v : firstKnown ?? null));
 };
 
-function renderBioSection(sleepMap) {
-  const entries = Object.entries(sleepMap)
-    .map(([date, v]) => ({ date: new Date(date), ...v, sleepHours: v.sleepMins != null ? +(v.sleepMins/60).toFixed(1) : null }))
+function renderHrvStatus(sleepMap) {
+  const cutoff = Date.now() - _hrvWeeks * 7 * 86400000;
+  const nights = Object.entries(sleepMap)
+    .map(([dk, v]) => ({ date:new Date(dk), hrv:v.hrv, avg7:v.hrv7d,
+                         lo:v.hrvBaseLo, hi:v.hrvBaseHi, status:v.hrvStatus }))
+    .filter(n => n.date.getTime() >= cutoff &&
+                 (n.hrv != null || n.avg7 != null || n.lo != null))
     .sort((a,b) => a.date - b.date);
 
-  // Update stat cards with latest non-null values
-  const latest = [...entries].reverse();
-  const lv = k => latest.find(e => e[k] != null)?.[k];
-  const ldate = k => latest.find(e => e[k] != null)?.date;
-  const fmt = (k, suffix) => {
-    const v = lv(k); const d = ldate(k);
-    document.getElementById(`bsv-${k==='sleepScore'?'sleep':k==='sleepHours'?'sleep':k}`).textContent = v != null ? (k==='sleepHours'?v.toFixed(1):Math.round(v)) : '—';
-    if (d) document.getElementById(`bss-${k==='sleepScore'?'sleep':k==='sleepHours'?'sleep':k}`).textContent = `${suffix} · ${d.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`;
+  // ── stat cards (latest non-null) ──
+  const rev = [...nights].reverse();
+  const lastOf = k => rev.find(n => n[k] != null && n[k] !== '');
+  const setCard = (id, val, sub) => {
+    const v = document.getElementById('hsv-' + id), s = document.getElementById('hss-' + id);
+    if (v && val !== undefined) v.textContent = val;   // undefined = leave value untouched
+    if (s && sub) s.textContent = sub;
   };
-  fmt('hrv', 'ms'); fmt('rhr', 'bpm'); fmt('sleepScore', '/ 100'); fmt('spo2', '%');
+  const dstr = n => n ? n.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  const nHrv = lastOf('hrv'), nAvg = lastOf('avg7'), nLo = lastOf('lo'), nSt = lastOf('status');
+  setCard('hrv', nHrv ? Math.round(nHrv.hrv) : '—', 'ms' + (nHrv ? ' · ' + dstr(nHrv) : ''));
+  setCard('avg', nAvg ? Math.round(nAvg.avg7) : '—', 'ms' + (nAvg ? ' · ' + dstr(nAvg) : ''));
+  setCard('base', (nLo && nLo.hi != null) ? `${Math.round(nLo.lo)}–${Math.round(nLo.hi)}` : '—', 'ms');
+  const stEl = document.getElementById('hsv-status');
+  if (stEl) {
+    const label = nSt ? String(nSt.status).replace(/_/g,' ').toLowerCase()
+                          .replace(/\b\w/g, c=>c.toUpperCase()) : '—';   // BALANCED → Balanced
+    stEl.textContent = label;
+    stEl.style.color = nSt ? hrvStatusColor(nSt.status) : 'var(--muted)';
+  }
+  setCard('status', undefined, nSt ? dstr(nSt) : 'latest');
 
-  renderBioChart(entries);
-}
+  // ── header note ──
+  const noteEl = document.getElementById('hrv-note');
+  if (noteEl) {
+    if (nights.length) {
+      const inBand = nights.filter(n => n.hrv != null && n.lo != null && n.hi != null &&
+                                        n.hrv >= n.lo && n.hrv <= n.hi).length;
+      const scored = nights.filter(n => n.hrv != null && n.lo != null && n.hi != null).length;
+      noteEl.textContent = scored
+        ? `${nights.length} nights · ${Math.round(inBand/scored*100)}% within baseline`
+        : `${nights.length} nights`;
+    } else noteEl.textContent = 'No HRV data in scope';
+  }
 
-// Centered rolling average — smooths spiky daily values, ignores null gaps
-function rollingAvg(values, window) {
-  if (window <= 1) return values.slice();
-  const half = Math.floor(window / 2);
-  return values.map((_, i) => {
-    let sum = 0, n = 0;
-    for (let j = i - half; j <= i + half; j++) {
-      if (j >= 0 && j < values.length && values[j] != null) { sum += values[j]; n++; }
-    }
-    return n ? +(sum / n).toFixed(1) : null;
-  });
-}
+  const labels = nights.map(n => n.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  const lo = forwardFill(nights.map(n => n.lo));
+  const hi = forwardFill(nights.map(n => n.hi));
+  const dotColors = nights.map(n => hrvStatusColor(n.status));
 
-function renderBioChart(entries) {
-  const cutoff = _bioDays > 0 ? new Date(Date.now() - _bioDays * 86400000) : new Date(0);
-  const filtered = entries.filter(e => e.date >= cutoff);
-  const labels = filtered.map(e => e.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-  const smoothing = _bioSmooth > 1;
+  const datasets = [
+    // invisible upper bound + filled lower bound = the baseline band
+    { label:'upper', data: hi, borderColor:'transparent', pointRadius:0,
+      fill:false, tension:0.35, order:4, spanGaps:true },
+    { label:'Baseline Range', data: lo, borderColor:'transparent',
+      backgroundColor:'rgba(138,154,91,0.30)', pointRadius:0,
+      fill:'-1', tension:0.35, order:4, spanGaps:true },
+    { label:'7d Avg', data: nights.map(n => n.avg7 ?? null),
+      borderColor:'#6f97a6', borderWidth:2, borderDash:[5,4],
+      pointRadius:0, pointHoverRadius:4, fill:false, tension:0.3, order:2, spanGaps:true },
+    { label:'Overnight HRV', data: nights.map(n => n.hrv ?? null),
+      borderColor:'#9c8196', borderWidth:2,
+      pointRadius:3, pointHoverRadius:6,
+      pointBackgroundColor: dotColors, pointBorderColor: dotColors,
+      fill:false, tension:0, order:1, spanGaps:true },
+  ];
 
-  const datasets = [];
-  _activeBioMetrics.forEach(k => {
-    const bc = BIO_CFG[k];
-    if (!bc) return;
-    const raw = filtered.map(e => e[k] ?? null);
-    const data = smoothing ? rollingAvg(raw, _bioSmooth) : raw;
-    datasets.push({
-      label: bc.label,
-      data,
-      borderColor: bc.color,
-      backgroundColor: bc.color,
-      borderWidth: 2,
-      pointRadius: 3,
-      pointHoverRadius: 5,
-      pointBackgroundColor: bc.color,
-      tension: 0,            // straight segments — no smoothing
-      fill: false,
-      spanGaps: true,
-      yAxisID: bc.yAxis,
-    });
-  });
-
-  // Start from the shared chartOpts so legend/fonts/x-axis match every other chart,
-  // then replace the single y-axis with the dual y1/y2 setup this chart needs.
-  const phone = isPhone();
-  const opts = chartOpts({ yLabel: 'bpm / ms' });
-  delete opts.scales.y;
-  opts.scales.y1 = darkScale({ position:'left',
-    ticks:{ color:'#6f675c', font:{ size: phone ? 10 : 11 } },
-    title: phone ? undefined : { display:true, text:'bpm / ms', color:'#6f675c', font:{ size:11 } } });
-  opts.scales.y2 = darkScale({ position:'right', grid:{ drawOnChartArea:false },
-    ticks:{ color:'#6f675c', font:{ size: phone ? 10 : 11 } },
-    title: phone ? undefined : { display:true, text:'score / %', color:'#6f675c', font:{ size:11 } } });
+  const opts = chartOpts({ yLabel:'ms' });
+  opts.plugins.legend.labels.filter = (item) => item.text !== 'upper';
+  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Overnight HRV';
+  opts.plugins.tooltip.callbacks = {
+    title: (items) => nights[items[0].dataIndex].date
+      .toLocaleDateString('en-US',{ weekday:'short', month:'short', day:'numeric', year:'numeric' }),
+    label: (item) => 'Overnight HRV: ' + item.parsed.y.toFixed(0) + ' ms',
+    afterBody: (items) => {
+      const i = items[0].dataIndex, n = nights[i];
+      const out = [];
+      if (n.avg7 != null) out.push('7d avg: ' + n.avg7.toFixed(0) + ' ms');
+      if (lo[i] != null && hi[i] != null) {
+        out.push(`Baseline: ${Math.round(lo[i])}–${Math.round(hi[i])} ms`);
+        if (n.hrv != null) out.push(n.hrv > hi[i] ? '↑ Above baseline'
+          : n.hrv < lo[i] ? '↓ Below baseline' : '✓ Within baseline');
+      }
+      if (n.status) out.push('Status: ' + n.status);
+      return out;
+    },
+  };
 
   const ctx = document.getElementById('bio-chart').getContext('2d');
   if (_bioChart) _bioChart.destroy();
@@ -1349,34 +1378,13 @@ document.querySelectorAll('#chronic-pills .rpill').forEach(p => {
   });
 });
 
-// Bio range pills (scoped to their own group)
-document.querySelectorAll('#bio-range-pills .rpill').forEach(p => {
+// HRV status scope pills (4 / 8 / 13 / 26 wk)
+document.querySelectorAll('#hrv-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('#bio-range-pills .rpill').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('#hrv-scope-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
-    _bioDays = parseInt(p.dataset.days);
-    if (_sleepMap) renderBioSection(_sleepMap);
-  });
-});
-
-// Bio smoothing pills
-document.querySelectorAll('#bio-smooth-pills .rpill').forEach(p => {
-  p.addEventListener('click', () => {
-    document.querySelectorAll('#bio-smooth-pills .rpill').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
-    _bioSmooth = parseInt(p.dataset.smooth);
-    if (_sleepMap) renderBioSection(_sleepMap);
-  });
-});
-
-// Bio metric pills
-document.querySelectorAll('.mpill[data-bio]').forEach(p => {
-  p.addEventListener('click', () => {
-    const k = p.dataset.bio;
-    if (_activeBioMetrics.has(k)) { if (_activeBioMetrics.size > 1) _activeBioMetrics.delete(k); }
-    else _activeBioMetrics.add(k);
-    p.classList.toggle('active', _activeBioMetrics.has(k));
-    if (_sleepMap) renderBioSection(_sleepMap);
+    _hrvWeeks = parseInt(p.dataset.weeks);
+    if (_sleepMap) renderHrvStatus(_sleepMap);
   });
 });
 
@@ -1655,7 +1663,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
   // Charts built while their panel was display:none render at 0×0 — re-render on show.
   if (name === 'recovery') {
-    if (_sleepMap) { renderBioSection(_sleepMap); renderSleepRaster(_sleepMap); renderSleepPerf(_sleepMap); }
+    if (_sleepMap) { renderHrvStatus(_sleepMap); renderSleepRaster(_sleepMap); renderSleepPerf(_sleepMap); }
     renderBodyComp();
   } else if (name === 'training' && _sessions.length) renderAll(_sessions, _sleepMap);
 }
