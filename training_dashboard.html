@@ -428,6 +428,13 @@ main { padding: 20px 24px; }
     <div class="chart-header">
       <div class="section-title" style="margin:0">Sleep Consistency — one bar = one night</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <!-- same colours + order as the Sleep Duration → Score legend beside it -->
+        <div class="shape-key">
+          <span><i style="color:#5f7d8c">●</i>Excellent</span>
+          <span><i style="color:#7f9d78">●</i>Good</span>
+          <span><i style="color:#bd9a4f">●</i>Fair</span>
+          <span><i style="color:#b3746e">●</i>Poor</span>
+        </div>
         <div id="raster-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="raster-range-pills">
           <div class="rpill active" data-days="30">30d</div>
@@ -1843,6 +1850,28 @@ document.querySelectorAll('.mpill[data-body]').forEach(p => {
   });
 });
 
+// ── SLEEP QUALITY SCALE (shared) ──────────────────────────────────────────────
+// ONE colour scale for every sleep chart — the raster bars and the duration→score dots
+// must agree, otherwise the same colour means two different things across the row.
+// Ordered high → low so the score fallback can take the first band it clears.
+// Bands are Garmin's own: Excellent 90+, Good 80–89, Fair 60–79, Poor < 60.
+const SLEEP_QUALITY = [
+  { key:'Excellent', min:90, color:'#5f7d8c' },   // slate blue
+  { key:'Good',      min:80, color:'#7f9d78' },   // sage green
+  { key:'Fair',      min:60, color:'#bd9a4f' },   // gold
+  { key:'Poor',      min:0,  color:'#b3746e' },   // rose
+];
+const SLEEP_QUALITY_NONE = { key:'—', color:'#9d9488' };
+// Prefer Garmin's own label; fall back to the score bands when the column is absent
+// (the raster has no quality column of its own, but every night carries a score).
+const sleepQuality = (quality, score) => {
+  const q = String(quality || '').trim().toLowerCase();
+  const named = SLEEP_QUALITY.find(c => c.key.toLowerCase() === q);
+  if (named) return named;
+  if (score == null) return SLEEP_QUALITY_NONE;
+  return SLEEP_QUALITY.find(c => score >= c.min) || SLEEP_QUALITY_NONE;
+};
+
 // ── SLEEP CONSISTENCY RASTER ──────────────────────────────────────────────────
 // One horizontal bar per night, from bedtime → wake, on a clock axis.
 // Regularity shows as aligned bar edges; median bedtime/wake drawn as reference lines.
@@ -1873,7 +1902,8 @@ function median(a){ const s=[...a].sort((x,y)=>x-y),n=s.length; return n?(n%2?s[
 
 function renderSleepRaster(sleepMap) {
   let nights = Object.entries(sleepMap)
-    .map(([d, v]) => ({ date: new Date(d), start: v.start, end: v.end, score: v.sleepScore }))
+    .map(([d, v]) => ({ date: new Date(d), start: v.start, end: v.end,
+                        score: v.sleepScore, quality: v.quality }))
     .filter(n => n.start && n.end)
     .sort((a, b) => a.date - b.date);
   if (_rasterDays > 0) nights = nights.slice(-_rasterDays);
@@ -1890,11 +1920,8 @@ function renderSleepRaster(sleepMap) {
     ? `${nights.length} nights · median bed ${clockLabel(medBed)} · wake ${clockLabel(medWake)} · bedtime ±${Math.round(sd(bedH)*60)} min`
     : 'No sleep start/end data in the Sleep tab';
 
-  // colour each night by sleep score (green good → clay poor), fallback sleep-blue
-  const barColor = n => {
-    if (n.score == null) return '#6f97a6cc';
-    return (n.score >= 80 ? '#7f9d78' : n.score >= 60 ? '#6f97a6' : '#b3746e') + 'cc';
-  };
+  // colour each night on the SHARED quality scale — same key as the scatter beside it
+  const barColor = n => sleepQuality(n.quality, n.score).color + 'cc';
 
   const labels = nights.map(n => n.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   const data = nights.map((n,i) => [bedH[i], wakeH[i]]);   // floating bars
@@ -1914,7 +1941,8 @@ function renderSleepRaster(sleepMap) {
           label: (it) => { const n = nights[it.dataIndex];
             const dur = (n.end - n.start)/3600000;
             return ['Bed '+clockLabel(hrsSince18(n.start))+' → Wake '+clockLabel(hrsSince18(n.end)),
-                    dur.toFixed(1)+' h' + (n.score!=null?' · score '+n.score:'')]; },
+                    dur.toFixed(1)+' h' + (n.score!=null?' · score '+n.score:'')
+                      + ' · ' + sleepQuality(n.quality, n.score).key]; },
         },
       },
       rasterMedians: { bed: medBed, wake: medWake },
@@ -1954,13 +1982,6 @@ document.querySelectorAll('#raster-range-pills .rpill').forEach(p => {
 // Regression line + Pearson r show how strongly duration predicts score.
 let _perfChart = null;
 let _perfScope = 30;    // trailing days
-const SLEEP_QUALITY = [
-  { key:'Excellent', color:'#5f7d8c' },
-  { key:'Good',      color:'#7f9d78' },
-  { key:'Fair',      color:'#bd9a4f' },
-  { key:'Poor',      color:'#b3746e' },
-];
-const qualColor = q => (SLEEP_QUALITY.find(c => c.key.toLowerCase() === (q||'').toLowerCase()) || { color:'#9d9488' }).color;
 function linreg(xs, ys) {
   const n = xs.length; if (n < 2) return null;
   const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
@@ -2001,15 +2022,15 @@ function renderSleepPerf(sleepMap) {
     pointBorderColor:     arr.map(() => color),
     pointBorderWidth:     arr.map(n => isLatest(n) ? 2.5 : 1),
   });
-  // group by quality → one dataset per quality (drives the legend + colour)
-  const cats = SLEEP_QUALITY.filter(c => nights.some(n => (n.quality||'').toLowerCase() === c.key.toLowerCase()));
-  const other = nights.filter(n => !SLEEP_QUALITY.some(c => c.key.toLowerCase() === (n.quality||'').toLowerCase()));
+  // group by RESOLVED quality → one dataset per band (drives the legend + colour).
+  // Same resolver the raster uses, so a colour means the same night quality in both.
+  const catOf = n => sleepQuality(n.quality, n.score);
+  const cats = SLEEP_QUALITY.filter(c => nights.some(n => catOf(n) === c));
   const datasets = cats.map(c => ({
     label: c.key,
-    ...mkPoints(nights.filter(n => (n.quality||'').toLowerCase() === c.key.toLowerCase()), c.color),
+    ...mkPoints(nights.filter(n => catOf(n) === c), c.color),
     borderColor: c.color, borderWidth:1,
   }));
-  if (other.length) datasets.push({ label:'—', ...mkPoints(other, '#9d9488'), borderColor:'#9d9488', borderWidth:1 });
 
   const opts = chartOpts({});
   opts.interaction = { mode:'nearest', intersect:true };
@@ -2019,7 +2040,7 @@ function renderSleepPerf(sleepMap) {
   opts.plugins.tooltip.callbacks = {
     title: (it) => it[0].raw._n ? it[0].raw._n.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : '',
     label: (it) => { const n = it.raw._n; if (!n) return null;
-      return ['Duration: '+n.hours.toFixed(1)+' h', 'Score: '+n.score, 'Quality: '+(n.quality||'—')]; },
+      return ['Duration: '+n.hours.toFixed(1)+' h', 'Score: '+n.score, 'Quality: '+catOf(n).key]; },
   };
   opts.scales = {
     x:{ ...darkScale(), title:{display:true, text:'Sleep Duration (h)', color:'#6f675c', font:{size:11}},
