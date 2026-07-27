@@ -101,11 +101,18 @@ main { padding: 20px 24px; }
 .grid-2x2 .chart-box { height: 220px; }
 /* Training tab: paired rows share a height so each two-col row aligns */
 #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 280px; }
-#bio-box   { height: 260px; }
-#vitals-box { height: 300px; }
+/* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
+   its chart, so bio-box gets that height back to keep the two plot areas level. */
+#bio-box   { height: 330px; }
+#vitals-box { height: 280px; }
 #body-box  { height: 260px; }
 #raster-box { height: 420px; }
 #perf-box  { height: 420px; }
+
+/* SHAPE/STATUS KEY — legend for the marker shapes used on the dot charts */
+.shape-key { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 11px; color: var(--muted); }
+.shape-key span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.shape-key i { font-style: normal; font-size: 12px; line-height: 1; }
 
 /* BIO STAT CARDS */
 .bio-stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
@@ -133,6 +140,13 @@ main { padding: 20px 24px; }
 
 /* PILL TOUCH TARGETS */
 .pill, .mpill, .rpill { min-height: 32px; display: inline-flex; align-items: center; }
+
+/* ── NARROW DESKTOP (≤ 1200px) ─────────────────────────────────────────── */
+/* Above 900px the two-col rows are still side by side, so a 4-across stat grid inside
+   one lands at ~110px per card and the labels crush. Go 2×2 inside two-col only. */
+@media (max-width: 1200px) {
+  .two-col .bio-stat-grid { grid-template-columns: repeat(2, 1fr); }
+}
 
 /* ── TABLET (≤ 900px) ──────────────────────────────────────────────────── */
 @media (max-width: 900px) {
@@ -341,10 +355,11 @@ main { padding: 20px 24px; }
         <div class="section-title" style="margin:0">Progressive Overload — Acute EP vs Optimal Range</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
-          <div class="range-pills" id="chronic-pills">
-            <div class="rpill active" data-chronic="4">4 wk</div>
-            <div class="rpill" data-chronic="8">8 wk</div>
-            <div class="rpill" data-chronic="13">13 wk</div>
+          <!-- view scope only — the chronic window itself is fixed at 4 wk -->
+          <div class="range-pills" id="overload-scope-pills">
+            <div class="rpill" data-weeks="4">4 wk</div>
+            <div class="rpill active" data-weeks="8">8 wk</div>
+            <div class="rpill" data-weeks="13">13 wk</div>
           </div>
         </div>
       </div>
@@ -388,11 +403,65 @@ main { padding: 20px 24px; }
   <!-- ══ RECOVERY & BODY TAB ══ -->
   <div id="tab-recovery" class="tab-panel">
 
+  <!-- ROW 1: SLEEP→RECOVERY + SLEEP CONSISTENCY (side by side) -->
+  <div class="two-col">
+
+  <!-- SLEEP SCORE × DURATION SCATTER -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Sleep Duration → Score — each dot = one night</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="perf-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="perf-scope-pills">
+          <div class="rpill active" data-days="30">30d</div>
+          <div class="rpill" data-days="60">60d</div>
+          <div class="rpill" data-days="90">90d</div>
+          <div class="rpill" data-days="180">180d</div>
+          <div class="rpill" data-days="365">1y</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" id="perf-box"><canvas id="perf-chart"></canvas></div>
+  </div>
+
+  <!-- SLEEP CONSISTENCY RASTER -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Sleep Consistency — one bar = one night</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <!-- same colours + order as the Sleep Duration → Score legend beside it -->
+        <div class="shape-key">
+          <span><i style="color:#5f7d8c">●</i>Excellent</span>
+          <span><i style="color:#7f9d78">●</i>Good</span>
+          <span><i style="color:#bd9a4f">●</i>Fair</span>
+          <span><i style="color:#b3746e">●</i>Poor</span>
+        </div>
+        <div id="raster-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="raster-range-pills">
+          <div class="rpill active" data-days="30">30d</div>
+          <div class="rpill" data-days="60">60d</div>
+          <div class="rpill" data-days="90">90d</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" id="raster-box"><canvas id="raster-chart"></canvas></div>
+  </div>
+
+  </div><!-- /two-col -->
+
+  <!-- ROW 2: HRV STATUS + RECOVERY VITALS (side by side) -->
+  <div class="two-col">
+
   <!-- HRV STATUS -->
   <div class="chart-card">
     <div class="chart-header">
       <div class="section-title" style="margin:0">HRV Status — Overnight HRV vs Baseline Range</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="shape-key">
+          <span><i style="color:#7f9d78">●</i>Balanced</span>
+          <span><i style="color:#6f97a6">■</i>Unbalanced</span>
+          <span><i style="color:#b3746e">▲</i>Low</span>
+        </div>
         <div id="hrv-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="hrv-scope-pills">
           <div class="rpill" data-weeks="4">4 wk</div>
@@ -419,6 +488,11 @@ main { padding: 20px 24px; }
     <div class="chart-header">
       <div class="section-title" style="margin:0">Recovery Vitals — Nightly vs Personal 30-day Baseline</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div class="shape-key">
+          <span><i style="color:#7f9d78">●</i>Above</span>
+          <span><i style="color:#6f97a6">■</i>Within baseline</span>
+          <span><i style="color:#b3746e">▲</i>Off baseline</span>
+        </div>
         <div id="vitals-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="vitals-scope-pills">
           <div class="rpill" data-weeks="4">4 wk</div>
@@ -448,43 +522,6 @@ main { padding: 20px 24px; }
     </div>
 
     <div class="chart-box" id="vitals-box"><canvas id="vitals-chart"></canvas></div>
-  </div>
-
-  <!-- SLEEP CONSISTENCY + SLEEP→RECOVERY (side by side) -->
-  <div class="two-col">
-
-  <!-- SLEEP CONSISTENCY RASTER -->
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="section-title" style="margin:0">Sleep Consistency — one bar = one night</div>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <div id="raster-note" style="font-size:11px;color:var(--muted)"></div>
-        <div class="range-pills" id="raster-range-pills">
-          <div class="rpill active" data-days="30">30d</div>
-          <div class="rpill" data-days="60">60d</div>
-          <div class="rpill" data-days="90">90d</div>
-        </div>
-      </div>
-    </div>
-    <div class="chart-box" id="raster-box"><canvas id="raster-chart"></canvas></div>
-  </div>
-
-  <!-- SLEEP SCORE × DURATION SCATTER -->
-  <div class="chart-card">
-    <div class="chart-header">
-      <div class="section-title" style="margin:0">Sleep Duration → Score — each dot = one night</div>
-      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <div id="perf-note" style="font-size:11px;color:var(--muted)"></div>
-        <div class="range-pills" id="perf-scope-pills">
-          <div class="rpill active" data-days="30">30d</div>
-          <div class="rpill" data-days="60">60d</div>
-          <div class="rpill" data-days="90">90d</div>
-          <div class="rpill" data-days="180">180d</div>
-          <div class="rpill" data-days="365">1y</div>
-        </div>
-      </div>
-    </div>
-    <div class="chart-box" id="perf-box"><canvas id="perf-chart"></canvas></div>
   </div>
 
   </div><!-- /two-col -->
@@ -1129,8 +1166,11 @@ function compute13wkRolling(sessions) {
   });
 }
 let _rollingChart = null;
-let _chronicWeeks = 4;      // chronic EP time constant, in weeks (4 / 8 / 13)
-const VISIBLE_DAYS = 182;   // x-axis shows the trailing 26 weeks, daily resolution
+// Chronic EP time constant is FIXED at 4 weeks — it's the model's definition of
+// "what you're accustomed to", not a view setting, so it must not move underneath the
+// optimal range. The pills now scope the VIEW instead (see _overloadWeeks).
+const CHRONIC_WEEKS = 4;
+let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13), daily resolution
 
 // Acute EP  — exponentially-weighted rolling SUM of daily EP, 7-day time constant.
 //   acute[i] = ep[i] + acute[i-1] * ACUTE_DECAY
@@ -1142,7 +1182,7 @@ const ACUTE_DECAY = Math.exp(-1 / ACUTE_TAU);          // ≈ 0.8669
 const ACWR_LOW = 0.8, ACWR_HIGH = 1.4;
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
-function computeAcuteChronic(sessions, chronicWeeks) {
+function computeAcuteChronic(sessions) {
   if (!sessions.length) return [];
   const DAY = 86400000;
   const key = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -1152,8 +1192,8 @@ function computeAcuteChronic(sessions, chronicWeeks) {
   const first = Math.min(...perDay.keys());
   const last  = Math.max(key(new Date()), Math.max(...perDay.keys()));
 
-  // Chronic EP = exponentially-weighted average of Acute EP over `chronicWeeks` weeks
-  const chronicAlpha = 1 - Math.exp(-1 / (chronicWeeks * 7));
+  // Chronic EP = exponentially-weighted average of Acute EP over CHRONIC_WEEKS weeks
+  const chronicAlpha = 1 - Math.exp(-1 / (CHRONIC_WEEKS * 7));
   const out = [];
   let acute = 0, chronic = null;
   for (let t = first; t <= last; t += DAY) {
@@ -1167,8 +1207,8 @@ function computeAcuteChronic(sessions, chronicWeeks) {
 
 function renderRollingChart(sessions) {
   // Computed over FULL history so the band is already "warmed up" at the left edge
-  const all = computeAcuteChronic(sessions, _chronicWeeks);
-  const series = all.slice(Math.max(0, all.length - VISIBLE_DAYS));
+  const all = computeAcuteChronic(sessions);
+  const series = all.slice(Math.max(0, all.length - _overloadWeeks * 7));
 
   const acute  = series.map(d => +d.acute.toFixed(1));
   const lower  = series.map(d => +(d.chronic * ACWR_LOW).toFixed(1));
@@ -1186,7 +1226,9 @@ function renderRollingChart(sessions) {
     if (t) {
       const ratio = t.chronic > 0 ? t.acute / t.chronic : 0;
       const state = ratio > ACWR_HIGH ? '⚠ spike risk' : ratio < ACWR_LOW ? '↓ detraining' : '✓ optimal';
-      noteEl.textContent = `acute ${t.acute.toFixed(0)} · chronic ${t.chronic.toFixed(0)} · ratio ${ratio.toFixed(2)} ${state}`;
+      // the time constants are named here since they're fixed and no longer pickable
+      noteEl.textContent = `acute ${t.acute.toFixed(0)} (7d) · chronic ${t.chronic.toFixed(0)} `
+        + `(${CHRONIC_WEEKS} wk) · ratio ${ratio.toFixed(2)} ${state}`;
     } else noteEl.textContent = '';
   }
 
@@ -1294,25 +1336,32 @@ function renderLoadTable(sessions) {
 }
 
 // ── HRV STATUS ────────────────────────────────────────────────────────────────
-// Overnight HRV (dots coloured by Garmin's HRV Status) + the 7-day average line,
-// against Garmin's personal baseline range (Baseline Low → Baseline High).
+// Overnight HRV as DOTS ONLY — no connecting line — each dot shaped AND coloured by
+// Garmin's HRV Status (Balanced = green circle, Unbalanced = blue square, Low = red
+// triangle). Plotted with the 7-day average line against Garmin's personal baseline
+// range (Baseline Low → Baseline High).
 let _bioChart = null;
 let _hrvWeeks = 8;          // scope in weeks (4 / 8 / 13 / 26)
 
+// Each status gets its OWN colour AND its own marker shape, so the chart stays readable
+// in greyscale / for colour-blind eyes — shape carries the same message as colour.
 const HRV_STATUS = [
-  { key:'BALANCED',   color:'#7f9d78' },   // green  — in range
-  { key:'UNBALANCED', color:'#c08552' },   // orange — drifting
-  { key:'LOW',        color:'#ab5a52' },   // red    — suppressed
-  { key:'POOR',       color:'#8f3f38' },   // deep red — worst (escalates from LOW)
+  { key:'BALANCED',   color:'#7f9d78', shape:'circle'   },   // green circle      — in range
+  { key:'UNBALANCED', color:'#c08552', shape:'rect'     },   // orange square     — drifting
+  { key:'LOW',        color:'#ab5a52', shape:'triangle' },   // red triangle      — suppressed
+  { key:'POOR',       color:'#8f3f38', shape:'triangle' },   // deep red triangle — worse than Low
 ];
-const hrvStatusColor = s => {
+const HRV_STATUS_NONE = { color:'#9d9488', shape:'circle' };
+const hrvStatusStyle = s => {
   const k = String(s || '').trim().toUpperCase().replace(/\s+/g, '_');
   const exact = HRV_STATUS.find(c => k === c.key);
-  if (exact) return exact.color;
+  if (exact) return exact;
   // Substring fallback, longest key first — otherwise "UNBALANCED" would match "BALANCED".
   const byLen = [...HRV_STATUS].sort((a, b) => b.key.length - a.key.length);
-  return (byLen.find(c => k.includes(c.key)) || { color:'#9d9488' }).color;
+  return byLen.find(c => k.includes(c.key)) || HRV_STATUS_NONE;
 };
+const hrvStatusColor = s => hrvStatusStyle(s).color;
+const hrvStatusShape = s => hrvStatusStyle(s).shape;
 // Baseline changes slowly and can be blank on some rows — carry the last value forward
 // (and back-fill any leading blanks) so the band spans the full width without fragmenting.
 const forwardFill = arr => {
@@ -1370,6 +1419,7 @@ function renderHrvStatus(sleepMap) {
   const lo = forwardFill(nights.map(n => n.lo));
   const hi = forwardFill(nights.map(n => n.hi));
   const dotColors = nights.map(n => hrvStatusColor(n.status));
+  const dotShapes = nights.map(n => hrvStatusShape(n.status));
 
   const datasets = [
     // invisible upper bound + filled lower bound = the baseline band
@@ -1381,12 +1431,13 @@ function renderHrvStatus(sleepMap) {
     { label:'7d Avg', data: nights.map(n => n.avg7 ?? null),
       borderColor:'#6f97a6', borderWidth:2, borderDash:[5,4],
       pointRadius:0, pointHoverRadius:4, fill:false, tension:0.3, order:2, spanGaps:true },
+    // DOTS ONLY — showLine:false. Shape + colour both encode the nightly HRV Status.
     { label:'Overnight HRV', data: nights.map(n => n.hrv ?? null),
-      borderColor:'#9c8196',                 // legend swatch colour only (no line drawn)
-      showLine:false,                        // dots only — nightly HRV is a scatter, not a trend
-      pointRadius:3.5, pointHoverRadius:6,
+      showLine:false, borderColor:'#9c8196', borderWidth:2,
+      pointStyle: dotShapes,
+      pointRadius:4, pointHoverRadius:7,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
-      fill:false, order:1, spanGaps:true },
+      fill:false, tension:0, order:1 },
   ];
 
   const opts = chartOpts({ yLabel:'ms' });
@@ -1415,12 +1466,13 @@ function renderHrvStatus(sleepMap) {
   _bioChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
-// Progressive-overload chronic-window pills (4 / 8 / 13 wk)
-document.querySelectorAll('#chronic-pills .rpill').forEach(p => {
+// Progressive-overload VIEW scope pills (4 / 8 / 13 wk). These pan the x-axis only —
+// acute/chronic are computed over full history, so the curves don't change with scope.
+document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('#chronic-pills .rpill').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('#overload-scope-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
-    _chronicWeeks = parseInt(p.dataset.chronic);
+    _overloadWeeks = parseInt(p.dataset.weeks);
     if (_sessions.length) renderRollingChart(_sessions);
   });
 });
@@ -1436,6 +1488,8 @@ document.querySelectorAll('#hrv-scope-pills .rpill').forEach(p => {
 });
 
 // ── RECOVERY VITALS ───────────────────────────────────────────────────────────
+// Plotted as DOTS ONLY — no connecting line — each dot shaped and coloured by its status
+// (Above = green circle, Within baseline = blue square, Off baseline = red triangle).
 // Three sleep-derived vitals, each judged against its OWN personal rolling baseline
 // (median ± 1 SD of the trailing 30 days, EXCLUDING the day itself so tonight's spike
 // can't widen the band that judges it).
@@ -1453,13 +1507,26 @@ const VITAL_ORDER     = ['rhr','spo2','resp'];
 const VITAL_BASE_WIN  = 30;   // trailing baseline window, in DAYS
 const VITAL_MIN_N     = 10;   // min non-null days required in that window
 const VITAL_BAND_FILL = 'rgba(157,148,136,0.28)';   // same warm grey as the other bands
-// Dot / stat-card colours by verdict:
-//   ABOVE = off baseline in the BETTER direction · IN = within baseline · BAD = off, worse
-const VD_ABOVE = '#6f97a6',   // blue  — off baseline, better direction
-      VD_IN    = '#7f9d78',   // green — within baseline
-      VD_BAD   = '#ab5a52',   // red   — off baseline, worse direction
-      VD_WORSE = '#8f3f38',   // deep red — >2 SD off, worse
-      VD_NONE  = '#9d9488';   // grey  — no baseline yet
+const VD_ABOVE  = '#6f97a6',   // blue  — off baseline, BETTER direction
+      VD_WITHIN = '#7f9d78',   // green — within baseline
+      VD_OFF    = '#ab5a52',   // red   — off baseline, WORSE direction
+      VD_NONE   = '#9d9488';   // grey  — not scored
+
+// Nightly status, read off the sign-normalised z (POSITIVE = toward WORSE recovery), with
+// a marker shape per status so the read survives greyscale / colour-blind eyes:
+//   z < -1  Above baseline   blue circle     (>1 SD toward better recovery)
+//   |z| ≤ 1 Within baseline  green square
+//   z >  1  Off baseline     red triangle    (>1 SD toward worse recovery)
+const VITAL_STATUS = {
+  above:  { key:'above',  color:VD_ABOVE,  shape:'circle',   label:'Above baseline'  },
+  within: { key:'within', color:VD_WITHIN, shape:'rect',     label:'Within baseline' },
+  off:    { key:'off',    color:VD_OFF,    shape:'triangle', label:'Off baseline'    },
+  none:   { key:'none',   color:VD_NONE,   shape:'circle',   label:'Not scored'      },
+};
+const vitalStatus = z => z == null ? VITAL_STATUS.none
+  : z < -1 ? VITAL_STATUS.above
+  : z >  1 ? VITAL_STATUS.off
+  : VITAL_STATUS.within;
 
 let _vitalMode = 'rhr';     // 'rhr' | 'spo2' | 'resp' | 'all'
 let _vitalWeeks = 8;        // 4 / 8 / 13 / 26
@@ -1520,11 +1587,8 @@ function vitalSeries(sleepMap) {
   return (_vitalGrid = grid);
 }
 
-const vitalDotColor = z => z == null ? VD_NONE
-  : z >  2 ? VD_WORSE
-  : z >  1 ? VD_BAD
-  : z < -1 ? VD_ABOVE
-  : VD_IN;
+const vitalDotColor = z => vitalStatus(z).color;
+const vitalDotShape = z => vitalStatus(z).shape;
 
 // A "watch day" = >=2 of 3 vitals sitting >=1 SD on their bad side. null = not evaluable.
 const isWatchDay = g => {
@@ -1567,10 +1631,10 @@ function renderVitals(sleepMap) {
     const recent = lastW && (Date.now() - lastW.date.getTime()) < 3 * 86400000;
     wEl.textContent = scoredN ? String(n) : '—';
     wEl.style.color = !scoredN   ? 'var(--muted)'   // nothing scored yet
-      : recent   ? VD_BAD        // red    — an ACTIVE flag in the last 3 days
+      : recent   ? VD_OFF        // red    — an ACTIVE flag in the last 3 days
       : n >= 3   ? '#c08552'     // orange — several flags in scope
       : n        ? 'var(--text)' // neutral — an isolated flag
-      :            VD_IN;        // green  — no flags at all
+      :            VD_WITHIN;    // green  — no flags at all
     if (wSub) wSub.textContent = scoredN
       ? `of ${scoredN} scored${lastW ? ' · last ' + dstr(lastW.date) : ''}`
       : '≥2 vitals off baseline';
@@ -1617,12 +1681,14 @@ function renderVitals(sleepMap) {
       { label:'30d Median', data: series.map(g => g[k+'Med']),
         borderColor:'#6f675c', borderWidth:1, borderDash:[4,3],
         pointRadius:0, pointHoverRadius:0, fill:false, tension:0.35, order:3, spanGaps:false },
+      // DOTS ONLY — showLine:false. Shape + colour both encode the nightly status.
       { label:v.label, _vk:k, data:vals,
-        borderColor:v.color, borderWidth:2,
-        pointRadius: phone?2:3, pointHoverRadius:6,
+        showLine:false, borderColor:v.color, borderWidth:2,
+        pointStyle: series.map(g => vitalDotShape(g[k+'Z'])),
+        pointRadius: phone?3:4, pointHoverRadius:7,
         pointBackgroundColor: series.map(g => vitalDotColor(g[k+'Z'])),
         pointBorderColor:     series.map(g => vitalDotColor(g[k+'Z'])),
-        fill:false, tension:0, order:1, spanGaps:3 },   // bridge <=3 missed nights
+        fill:false, tension:0, order:1 },
     );
 
     // MUST NOT start at zero — SpO2 lives in 93–99 and a zero axis flattens it to nothing.
@@ -1644,10 +1710,8 @@ function renderVitals(sleepMap) {
         const z = g[k+'Z'];
         if (z != null) {
           out.push(`${Math.abs(z).toFixed(1)} SD ${(v.bad*z > 0 ? 'above' : 'below')} baseline`);
-          // wording matches the dot colours: red / green / blue
-          out.push(z > 1 ? '⚠ Off baseline'
-                 : z < -1 ? '↑ Above baseline'
-                 : '✓ Within baseline');
+          const st = vitalStatus(z);
+          out.push((st === VITAL_STATUS.off ? '▲ ' : st === VITAL_STATUS.above ? '● ' : '■ ') + st.label);
         }
         return out;
       },
@@ -1664,13 +1728,17 @@ function renderVitals(sleepMap) {
     );
     VITAL_ORDER.forEach(k => {
       const v = VITALS[k];
+      // DOTS ONLY here too. Three series overlap, so COLOUR stays the metric identity and
+      // SHAPE carries the status — otherwise recolouring by status would fuse the series.
       datasets.push({
         label: `${v.short} ${v.bad > 0 ? '↑' : '↓'}`,   // arrow = the direction plotted as POSITIVE
         _vk: k,
         data: series.map(g => g[k+'Z'] == null ? null : +g[k+'Z'].toFixed(2)),
-        borderColor: v.color, borderWidth: 1.8,
-        pointRadius: phone ? 0 : 1.5, pointHoverRadius: 5,
-        fill:false, tension:0.25, order:1, spanGaps:3,
+        showLine: false, borderColor: v.color, borderWidth: 1.8,
+        pointStyle: series.map(g => vitalDotShape(g[k+'Z'])),
+        pointRadius: phone ? 2.5 : 3.5, pointHoverRadius: 6,
+        pointBackgroundColor: v.color, pointBorderColor: v.color,
+        fill:false, tension:0, order:1,
       });
     });
 
@@ -1795,6 +1863,28 @@ document.querySelectorAll('.mpill[data-body]').forEach(p => {
   });
 });
 
+// ── SLEEP QUALITY SCALE (shared) ──────────────────────────────────────────────
+// ONE colour scale for every sleep chart — the raster bars and the duration→score dots
+// must agree, otherwise the same colour means two different things across the row.
+// Ordered high → low so the score fallback can take the first band it clears.
+// Bands are Garmin's own: Excellent 90+, Good 80–89, Fair 60–79, Poor < 60.
+const SLEEP_QUALITY = [
+  { key:'Excellent', min:90, color:'#5f7d8c' },   // slate blue
+  { key:'Good',      min:80, color:'#7f9d78' },   // sage green
+  { key:'Fair',      min:60, color:'#bd9a4f' },   // gold
+  { key:'Poor',      min:0,  color:'#b3746e' },   // rose
+];
+const SLEEP_QUALITY_NONE = { key:'—', color:'#9d9488' };
+// Prefer Garmin's own label; fall back to the score bands when the column is absent
+// (the raster has no quality column of its own, but every night carries a score).
+const sleepQuality = (quality, score) => {
+  const q = String(quality || '').trim().toLowerCase();
+  const named = SLEEP_QUALITY.find(c => c.key.toLowerCase() === q);
+  if (named) return named;
+  if (score == null) return SLEEP_QUALITY_NONE;
+  return SLEEP_QUALITY.find(c => score >= c.min) || SLEEP_QUALITY_NONE;
+};
+
 // ── SLEEP CONSISTENCY RASTER ──────────────────────────────────────────────────
 // One horizontal bar per night, from bedtime → wake, on a clock axis.
 // Regularity shows as aligned bar edges; median bedtime/wake drawn as reference lines.
@@ -1825,7 +1915,8 @@ function median(a){ const s=[...a].sort((x,y)=>x-y),n=s.length; return n?(n%2?s[
 
 function renderSleepRaster(sleepMap) {
   let nights = Object.entries(sleepMap)
-    .map(([d, v]) => ({ date: new Date(d), start: v.start, end: v.end, score: v.sleepScore }))
+    .map(([d, v]) => ({ date: new Date(d), start: v.start, end: v.end,
+                        score: v.sleepScore, quality: v.quality }))
     .filter(n => n.start && n.end)
     .sort((a, b) => a.date - b.date);
   if (_rasterDays > 0) nights = nights.slice(-_rasterDays);
@@ -1842,11 +1933,8 @@ function renderSleepRaster(sleepMap) {
     ? `${nights.length} nights · median bed ${clockLabel(medBed)} · wake ${clockLabel(medWake)} · bedtime ±${Math.round(sd(bedH)*60)} min`
     : 'No sleep start/end data in the Sleep tab';
 
-  // colour each night by sleep score (green good → clay poor), fallback sleep-blue
-  const barColor = n => {
-    if (n.score == null) return '#6f97a6cc';
-    return (n.score >= 80 ? '#7f9d78' : n.score >= 60 ? '#6f97a6' : '#b3746e') + 'cc';
-  };
+  // colour each night on the SHARED quality scale — same key as the scatter beside it
+  const barColor = n => sleepQuality(n.quality, n.score).color + 'cc';
 
   const labels = nights.map(n => n.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   const data = nights.map((n,i) => [bedH[i], wakeH[i]]);   // floating bars
@@ -1866,7 +1954,8 @@ function renderSleepRaster(sleepMap) {
           label: (it) => { const n = nights[it.dataIndex];
             const dur = (n.end - n.start)/3600000;
             return ['Bed '+clockLabel(hrsSince18(n.start))+' → Wake '+clockLabel(hrsSince18(n.end)),
-                    dur.toFixed(1)+' h' + (n.score!=null?' · score '+n.score:'')]; },
+                    dur.toFixed(1)+' h' + (n.score!=null?' · score '+n.score:'')
+                      + ' · ' + sleepQuality(n.quality, n.score).key]; },
         },
       },
       rasterMedians: { bed: medBed, wake: medWake },
@@ -1906,13 +1995,6 @@ document.querySelectorAll('#raster-range-pills .rpill').forEach(p => {
 // Regression line + Pearson r show how strongly duration predicts score.
 let _perfChart = null;
 let _perfScope = 30;    // trailing days
-const SLEEP_QUALITY = [
-  { key:'Excellent', color:'#5f7d8c' },
-  { key:'Good',      color:'#7f9d78' },
-  { key:'Fair',      color:'#bd9a4f' },
-  { key:'Poor',      color:'#b3746e' },
-];
-const qualColor = q => (SLEEP_QUALITY.find(c => c.key.toLowerCase() === (q||'').toLowerCase()) || { color:'#9d9488' }).color;
 function linreg(xs, ys) {
   const n = xs.length; if (n < 2) return null;
   const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
@@ -1953,15 +2035,15 @@ function renderSleepPerf(sleepMap) {
     pointBorderColor:     arr.map(() => color),
     pointBorderWidth:     arr.map(n => isLatest(n) ? 2.5 : 1),
   });
-  // group by quality → one dataset per quality (drives the legend + colour)
-  const cats = SLEEP_QUALITY.filter(c => nights.some(n => (n.quality||'').toLowerCase() === c.key.toLowerCase()));
-  const other = nights.filter(n => !SLEEP_QUALITY.some(c => c.key.toLowerCase() === (n.quality||'').toLowerCase()));
+  // group by RESOLVED quality → one dataset per band (drives the legend + colour).
+  // Same resolver the raster uses, so a colour means the same night quality in both.
+  const catOf = n => sleepQuality(n.quality, n.score);
+  const cats = SLEEP_QUALITY.filter(c => nights.some(n => catOf(n) === c));
   const datasets = cats.map(c => ({
     label: c.key,
-    ...mkPoints(nights.filter(n => (n.quality||'').toLowerCase() === c.key.toLowerCase()), c.color),
+    ...mkPoints(nights.filter(n => catOf(n) === c), c.color),
     borderColor: c.color, borderWidth:1,
   }));
-  if (other.length) datasets.push({ label:'—', ...mkPoints(other, '#9d9488'), borderColor:'#9d9488', borderWidth:1 });
 
   const opts = chartOpts({});
   opts.interaction = { mode:'nearest', intersect:true };
@@ -1971,7 +2053,7 @@ function renderSleepPerf(sleepMap) {
   opts.plugins.tooltip.callbacks = {
     title: (it) => it[0].raw._n ? it[0].raw._n.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : '',
     label: (it) => { const n = it.raw._n; if (!n) return null;
-      return ['Duration: '+n.hours.toFixed(1)+' h', 'Score: '+n.score, 'Quality: '+(n.quality||'—')]; },
+      return ['Duration: '+n.hours.toFixed(1)+' h', 'Score: '+n.score, 'Quality: '+catOf(n).key]; },
   };
   opts.scales = {
     x:{ ...darkScale(), title:{display:true, text:'Sleep Duration (h)', color:'#6f675c', font:{size:11}},
