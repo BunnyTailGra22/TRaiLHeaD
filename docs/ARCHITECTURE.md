@@ -10,6 +10,8 @@ package.json. Open it in a browser and it runs.
 ```
 index.html              the dashboard (HTML + CSS + JS in one file)
 training_dashboard.html byte-identical copy of index.html
+prototype-monthly.html  scratch prototype, not part of the site
+README.md               what this is, how to run it, what to know before editing
 tokens/                 design tokens, reference only — not loaded at runtime
   trailhead-tokens.css
   trailhead-tokens.json

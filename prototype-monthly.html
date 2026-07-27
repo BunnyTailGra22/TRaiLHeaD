@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype · 專項訓練 Seasonality Bubbles</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#e9e4dc; --card:#f9f6f1; --card2:#ece6dd; --border:#dcd4c8;
+  --text:#453f37; --muted:#6f675c;
+  --y2024:#5f7d8c; --y2025:#8a9a5b; --y2026:#a5602a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;font-size:13px;padding:24px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;max-width:980px;margin:0 auto}
+.header{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.section-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.sub{font-size:11px;color:var(--muted);margin-top:2px}
+.legend{display:flex;gap:14px;align-items:center;font-size:11px;color:var(--muted);flex-wrap:wrap}
+.legend .dot{display:inline-block;border-radius:50%;vertical-align:middle;margin-right:5px}
+.box{position:relative;width:100%;height:380px}
+.box>canvas{width:100%!important;height:100%!important;display:block}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="header">
+    <div>
+      <div class="section-title">專項訓練 Seasonality — each bubble = one session</div>
+      <div class="sub">x = month · y = EPH · bubble size = EP · color = session category</div>
+    </div>
+    <div class="legend">
+      <span><span class="dot" style="width:10px;height:10px;background:#a5602acc"></span>劍中劍</span>
+      <span><span class="dot" style="width:10px;height:10px;background:#bd9a4fcc"></span>劍%</span>
+      <span><span class="dot" style="width:10px;height:10px;background:#8a9a5bcc"></span>七星山</span>
+      <span><span class="dot" style="width:10px;height:10px;background:#5f7d8ccc"></span>&gt;20 km</span>
+      <span><span class="dot" style="width:10px;height:10px;background:#b3746ecc"></span>&ge;50 km</span>
+      <span style="margin-left:10px"><span class="dot" style="width:8px;height:8px;border:1.5px solid #6f675c"></span>EP 30
+        <span class="dot" style="width:16px;height:16px;border:1.5px solid #6f675c;margin-left:8px"></span>EP 80</span>
+    </div>
+  </div>
+  <div class="box"><canvas id="bubble-chart"></canvas></div>
+</div>
+
+<script>
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#6b6358';
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const YEAR_COLORS = { 2024:'#5f7d8c', 2025:'#8a9a5b', 2026:'#a5602a' };
+
+// ── sample 專項 sessions: [name, year, month(0-11), day, dist, elev, hrs] ─────
+const S = [
+  ['22k 長課',2024,0,14, 22, 700,2.6], ['七星山 主峰',2024,1,9, 12, 850,2.3],
+  ['25k 山徑',2024,2,17, 25, 900,2.9], ['#劍 連峰',2024,3,6, 24,1300,3.4],
+  ['21k 長課',2024,4,19, 21, 600,2.3], ['#劍中劍 訓練',2024,5,8, 14, 900,2.6],
+  ['21k 節奏',2024,6,13, 21, 300,2.2], ['七星山 夜跑',2024,7,24, 12, 800,2.4],
+  ['23k 山徑',2024,8,15, 23, 800,2.6], ['28k 備賽',2024,9,12, 28,1500,3.8],
+  ['50k 賽事',2024,10,23, 50,2400,8.4], ['24k 恢復',2024,11,15, 24, 600,2.5],
+  ['24k 長課',2025,0,12, 24, 800,2.7], ['#劍中劍 訓練',2025,1,2, 14, 900,2.5],
+  ['七星山 主峰',2025,1,23, 12, 850,2.2], ['30k 長課',2025,2,16, 30, 700,3.1],
+  ['26k 山徑',2025,3,6, 26,1300,3.5], ['#劍 連峰',2025,3,27, 18,1500,3.9],
+  ['22k 長課',2025,4,18, 22, 900,2.6], ['35k 備賽長課',2025,5,15, 35,1800,5.3],
+  ['21k 節奏',2025,6,6, 21, 300,2.1], ['#劍中劍 全程',2025,7,17, 24,2400,6.2],
+  ['28k 山徑',2025,8,14, 28,1500,3.9], ['30k 備賽',2025,9,4, 30,1600,4.0],
+  ['32k 長課',2025,10,16, 32,1100,3.6], ['UTMB #HMONG50',2025,11,6, 52,2600,8.1],
+  ['32k 長課',2026,0,11, 32,1100,3.6], ['#劍 連峰 II',2026,1,22, 19,1600,4.0],
+  ['七星山 主峰',2026,2,8, 12, 860,2.1], ['40k 備賽',2026,3,19, 40,2100,5.8],
+  ['25k 山徑',2026,4,10, 25,1200,3.2], ['七星山 大縱走',2026,5,21, 16,1250,2.9],
+];
+
+const sess = S.map(([name,y,m,day,dist,elev,hrs]) => ({
+  name, y, m, day, dist, elev, hrs,
+  ep: dist + elev/100,
+  eph: (dist + elev/100)/hrs,
+  slope: elev/dist,
+}));
+
+// bubble AREA ∝ EP  →  r = k·sqrt(EP)
+const rOf = ep => 2 + Math.sqrt(ep) * 1.6;
+
+// Category precedence: most-specific name first, then ultra, then long
+const CATS = [
+  { key:'劍中劍', color:'#a5602a', test: s => (s.name||'').includes('劍中劍') },
+  { key:'劍%',    color:'#bd9a4f', test: s => (s.name||'').includes('劍') },      // other 劍 sessions
+  { key:'七星山', color:'#8a9a5b', test: s => (s.name||'').includes('七星山') },
+  { key:'≥50 km', color:'#b3746e', test: s => s.dist >= 50 },
+  { key:'>20 km', color:'#5f7d8c', test: s => s.dist > 20 },
+];
+const catOf = s => CATS.find(c => c.test(s));
+
+const datasets = CATS.map(c => ({
+  label: c.key,
+  data: sess.filter(s => catOf(s) === c).map(s => ({
+    x: s.m + (s.day-1)/31,          // positioned by real date within the month
+    y: +s.eph.toFixed(2),
+    r: rOf(s.ep),
+    _s: s,
+  })),
+  backgroundColor: c.color + '99',
+  borderColor: c.color,
+  borderWidth: 1.5,
+}));
+
+new Chart(document.getElementById('bubble-chart'), {
+  type: 'bubble',
+  data: { datasets },
+  options: {
+    responsive: true, maintainAspectRatio: false, animation:{duration:300},
+    plugins: {
+      legend: { display:false },
+      tooltip: {
+        backgroundColor:'#f9f6f1', borderColor:'#dcd4c8', borderWidth:1,
+        titleColor:'#453f37', bodyColor:'#6f675c',
+        callbacks: {
+          title: (it) => {
+            const s = it[0].raw._s;
+            return s.name + ' · ' + new Date(s.y, s.m, s.day)
+              .toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+          },
+          label: (it) => {
+            const s = it.raw._s;
+            return [
+              'EP:  '  + s.ep.toFixed(1),
+              'EPH: '  + s.eph.toFixed(1),
+              'Dist: ' + s.dist.toFixed(1) + ' km · ↑' + Math.round(s.elev) + ' m',
+              'Slope: '+ Math.round(s.slope) + ' m/km',
+            ];
+          },
+        },
+      },
+    },
+    interaction: { mode:'nearest', intersect:true },
+    scales: {
+      x: {
+        min:-0.3, max:12,
+        grid:{ color:'rgba(79,72,63,0.08)' },
+        afterBuildTicks: (axis) => { axis.ticks = Array.from({length:13}, (_,i)=>({value:i})); },
+        ticks: { autoSkip:false, maxRotation:0,
+                 callback:(v)=> v>=0&&v<12 ? MONTHS[v] : '' },
+      },
+      y: {
+        grid:{ color:'rgba(79,72,63,0.08)' },
+        title:{ display:true, text:'EPH', color:'#6f675c', font:{size:11} },
+      },
+    },
+  },
+});
+</script>
+</body>
+</html>

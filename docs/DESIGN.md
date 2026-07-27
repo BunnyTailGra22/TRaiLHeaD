@@ -35,8 +35,23 @@ sage `#7f9d78`, RHR dusty rose `#b3746e`, respiration slate `#7e8aa2`, weight oc
 
 ### Status
 
-Green `#7f9d78` · gold `#bd9a4f` · red `#b3746e`, plus clay `#a5602a` for the worst tier
-and grey `#9d9488` for "no data / not scored".
+Two status families, because they answer different questions.
+
+**Load & sleep quality** — a graded scale where both ends are informative:
+green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`. Progressive Overload's
+dots use dark `#453f37` for "inside the band" rather than green, because in-range is the
+unremarkable case there and the eye should go to the deviations.
+
+**Recovery status** (HRV Status, Recovery Vitals) — a heat ramp where severity should read
+before the legend does: green `#7f9d78` → orange `#c08552` → red `#ab5a52` → deep red
+`#8f3f38`. Plus blue `#6f97a6` for "off baseline in the *better* direction" — noteworthy,
+not a goal, and kept clearly distinct from green.
+
+Grey `#9d9488` means "no data / not scored" in both families.
+
+The two families deliberately share green and diverge after it: green always means "this
+is the state you want", while the warning hues differ so a recovery chart never reads as a
+training chart.
 
 ## Encoding rules
 
@@ -44,16 +59,27 @@ and grey `#9d9488` for "no data / not scored".
 encoded twice — once in colour, once in marker shape — so the reading survives greyscale
 and colour-blind vision:
 
-| Shape | Meaning |
-|---|---|
-| ● circle | good / in range / above baseline |
-| ■ square | neutral / within baseline |
-| ▲ triangle | attention / off baseline |
+The two channels carry different things, and keeping them separate is what makes the
+system work:
 
-Applied identically in HRV Status (Balanced ● / Unbalanced ■ / Low ▲) and Recovery Vitals
-(Above ● / Within ■ / Off ▲). The one place shape is *not* redundant is Recovery Vitals'
-"All (deviation)" mode, where three metrics overlap: there colour identifies the metric
-and shape alone carries the status.
+- **Shape = position on the metric's own scale.** ● top tier · ■ middle tier · ▲ bottom
+  tier. Purely ordinal, no judgement.
+- **Colour = desirability.** Green is always "the state you want"; the warm ramp is always
+  "attention".
+
+| | ● circle | ■ square | ▲ triangle |
+|---|---|---|---|
+| **HRV Status** | Balanced — green | Unbalanced — orange | Low / Poor — red |
+| **Recovery Vitals** | Above baseline — blue | Within baseline — green | Off baseline — red |
+
+Note that green sits on ● in one chart and ■ in the other. That is not an inconsistency to
+fix: HRV's scale is *balance-centric* (its top tier is the healthy one), while Vitals' is
+*deviation-centric* (its middle tier is). Shape stays honest about scale position, colour
+stays honest about desirability, and forcing either to bend would break the other.
+
+The one place shape is *not* redundant is Recovery Vitals' "All (deviation)" mode, where
+three metrics overlap: there colour identifies the metric and shape alone carries the
+status.
 
 **Nightly series are dots, not lines.** A connecting line between nights implies a
 continuity the data does not have. Lines are reserved for genuinely continuous or smoothed

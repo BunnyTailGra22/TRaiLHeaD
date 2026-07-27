@@ -132,9 +132,13 @@ Garmin's `HRV Status`:
 | Status | Marker | Colour |
 |---|---|---|
 | Balanced | ● circle | green `#7f9d78` |
-| Unbalanced | ■ square | blue `#6f97a6` |
-| Low | ▲ triangle | red `#b3746e` |
-| Poor | ▲ triangle | clay `#a5602a` |
+| Unbalanced | ■ square | orange `#c08552` |
+| Low | ▲ triangle | red `#ab5a52` |
+| Poor | ▲ triangle | deep red `#8f3f38` |
+
+The ramp is deliberately green → orange → red → deeper red, so severity reads as heat even
+before you consult the legend. Poor is a darkened Low rather than a new hue, so the two most
+serious states group visually.
 
 Status matching is exact-first, then substring with **longest key first** — otherwise
 `UNBALANCED` would match on `BALANCED`. Unknown/blank status falls back to grey `#9d9488`.
@@ -173,9 +177,13 @@ z = bad_sign × (value - median) / spread
 
 | z | Status | Marker | Colour |
 |---|---|---|---|
-| z < −1 | Above baseline | ● circle | green `#7f9d78` |
-| −1 ≤ z ≤ 1 | Within baseline | ■ square | blue `#6f97a6` |
-| z > 1 | Off baseline | ▲ triangle | red `#b3746e` |
+| z < −1 | Above baseline | ● circle | blue `#6f97a6` |
+| −1 ≤ z ≤ 1 | Within baseline | ■ square | green `#7f9d78` |
+| z > 1 | Off baseline | ▲ triangle | red `#ab5a52` |
+
+Green marks the *expected* state here — "within your normal" is the healthy reading, so it takes
+the reassuring colour. Blue (not green) marks Above baseline because better-than-usual is
+noteworthy rather than a goal, and it must stay visually distinct from "normal".
 
 Dots only, no connecting line, same reasoning as the HRV chart.
 
@@ -248,3 +256,9 @@ Muscle Mass (kg), Bone Mass (kg), Visceral Fat, Metabolic Age, Physique Rating.
 
 Lookup is by header name, case-insensitive, so column order in the sheet does not matter.
 A missing column resolves to `-1` and yields `null` values rather than an error.
+
+> The sheet also carries a **`TrainingLoad`** tab (Garmin's own acute/chronic load, ACWR,
+> training status, VO₂ max, training readiness), written by `garmin_google_sync`. The
+> dashboard does **not** read it. Progressive Overload deliberately computes its own ACWR
+> from EP so the model is inspectable and trail elevation is weighted in — Garmin's figures
+> are kept alongside as an independent second opinion, not as the chart's source.
