@@ -355,10 +355,11 @@ main { padding: 20px 24px; }
         <div class="section-title" style="margin:0">Progressive Overload — Acute EP vs Optimal Range</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
-          <div class="range-pills" id="chronic-pills">
-            <div class="rpill active" data-chronic="4">4 wk</div>
-            <div class="rpill" data-chronic="8">8 wk</div>
-            <div class="rpill" data-chronic="13">13 wk</div>
+          <!-- view scope only — the chronic window itself is fixed at 4 wk -->
+          <div class="range-pills" id="overload-scope-pills">
+            <div class="rpill" data-weeks="4">4 wk</div>
+            <div class="rpill active" data-weeks="8">8 wk</div>
+            <div class="rpill" data-weeks="13">13 wk</div>
           </div>
         </div>
       </div>
@@ -1165,8 +1166,11 @@ function compute13wkRolling(sessions) {
   });
 }
 let _rollingChart = null;
-let _chronicWeeks = 4;      // chronic EP time constant, in weeks (4 / 8 / 13)
-const VISIBLE_DAYS = 182;   // x-axis shows the trailing 26 weeks, daily resolution
+// Chronic EP time constant is FIXED at 4 weeks — it's the model's definition of
+// "what you're accustomed to", not a view setting, so it must not move underneath the
+// optimal range. The pills now scope the VIEW instead (see _overloadWeeks).
+const CHRONIC_WEEKS = 4;
+let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13), daily resolution
 
 // Acute EP  — exponentially-weighted rolling SUM of daily EP, 7-day time constant.
 //   acute[i] = ep[i] + acute[i-1] * ACUTE_DECAY
@@ -1178,7 +1182,7 @@ const ACUTE_DECAY = Math.exp(-1 / ACUTE_TAU);          // ≈ 0.8669
 const ACWR_LOW = 0.8, ACWR_HIGH = 1.4;
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
-function computeAcuteChronic(sessions, chronicWeeks) {
+function computeAcuteChronic(sessions) {
   if (!sessions.length) return [];
   const DAY = 86400000;
   const key = d => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -1188,8 +1192,8 @@ function computeAcuteChronic(sessions, chronicWeeks) {
   const first = Math.min(...perDay.keys());
   const last  = Math.max(key(new Date()), Math.max(...perDay.keys()));
 
-  // Chronic EP = exponentially-weighted average of Acute EP over `chronicWeeks` weeks
-  const chronicAlpha = 1 - Math.exp(-1 / (chronicWeeks * 7));
+  // Chronic EP = exponentially-weighted average of Acute EP over CHRONIC_WEEKS weeks
+  const chronicAlpha = 1 - Math.exp(-1 / (CHRONIC_WEEKS * 7));
   const out = [];
   let acute = 0, chronic = null;
   for (let t = first; t <= last; t += DAY) {
@@ -1203,8 +1207,8 @@ function computeAcuteChronic(sessions, chronicWeeks) {
 
 function renderRollingChart(sessions) {
   // Computed over FULL history so the band is already "warmed up" at the left edge
-  const all = computeAcuteChronic(sessions, _chronicWeeks);
-  const series = all.slice(Math.max(0, all.length - VISIBLE_DAYS));
+  const all = computeAcuteChronic(sessions);
+  const series = all.slice(Math.max(0, all.length - _overloadWeeks * 7));
 
   const acute  = series.map(d => +d.acute.toFixed(1));
   const lower  = series.map(d => +(d.chronic * ACWR_LOW).toFixed(1));
@@ -1222,7 +1226,9 @@ function renderRollingChart(sessions) {
     if (t) {
       const ratio = t.chronic > 0 ? t.acute / t.chronic : 0;
       const state = ratio > ACWR_HIGH ? '⚠ spike risk' : ratio < ACWR_LOW ? '↓ detraining' : '✓ optimal';
-      noteEl.textContent = `acute ${t.acute.toFixed(0)} · chronic ${t.chronic.toFixed(0)} · ratio ${ratio.toFixed(2)} ${state}`;
+      // the time constants are named here since they're fixed and no longer pickable
+      noteEl.textContent = `acute ${t.acute.toFixed(0)} (7d) · chronic ${t.chronic.toFixed(0)} `
+        + `(${CHRONIC_WEEKS} wk) · ratio ${ratio.toFixed(2)} ${state}`;
     } else noteEl.textContent = '';
   }
 
@@ -1460,12 +1466,13 @@ function renderHrvStatus(sleepMap) {
   _bioChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
-// Progressive-overload chronic-window pills (4 / 8 / 13 wk)
-document.querySelectorAll('#chronic-pills .rpill').forEach(p => {
+// Progressive-overload VIEW scope pills (4 / 8 / 13 wk). These pan the x-axis only —
+// acute/chronic are computed over full history, so the curves don't change with scope.
+document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('#chronic-pills .rpill').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('#overload-scope-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
-    _chronicWeeks = parseInt(p.dataset.chronic);
+    _overloadWeeks = parseInt(p.dataset.weeks);
     if (_sessions.length) renderRollingChart(_sessions);
   });
 });
