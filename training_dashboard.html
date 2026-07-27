@@ -1300,10 +1300,10 @@ let _bioChart = null;
 let _hrvWeeks = 8;          // scope in weeks (4 / 8 / 13 / 26)
 
 const HRV_STATUS = [
-  { key:'BALANCED',   color:'#7f9d78' },   // sage — in range
-  { key:'UNBALANCED', color:'#bd9a4f' },   // gold — drifting
-  { key:'LOW',        color:'#b3746e' },   // rose — suppressed
-  { key:'POOR',       color:'#a5602a' },   // clay — poor
+  { key:'BALANCED',   color:'#7f9d78' },   // green  — in range
+  { key:'UNBALANCED', color:'#c08552' },   // orange — drifting
+  { key:'LOW',        color:'#ab5a52' },   // red    — suppressed
+  { key:'POOR',       color:'#8f3f38' },   // deep red — worst (escalates from LOW)
 ];
 const hrvStatusColor = s => {
   const k = String(s || '').trim().toUpperCase().replace(/\s+/g, '_');
@@ -1382,10 +1382,11 @@ function renderHrvStatus(sleepMap) {
       borderColor:'#6f97a6', borderWidth:2, borderDash:[5,4],
       pointRadius:0, pointHoverRadius:4, fill:false, tension:0.3, order:2, spanGaps:true },
     { label:'Overnight HRV', data: nights.map(n => n.hrv ?? null),
-      borderColor:'#9c8196', borderWidth:2,
-      pointRadius:3, pointHoverRadius:6,
+      borderColor:'#9c8196',                 // legend swatch colour only (no line drawn)
+      showLine:false,                        // dots only — nightly HRV is a scatter, not a trend
+      pointRadius:3.5, pointHoverRadius:6,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
-      fill:false, tension:0, order:1, spanGaps:true },
+      fill:false, order:1, spanGaps:true },
   ];
 
   const opts = chartOpts({ yLabel:'ms' });
@@ -1452,8 +1453,13 @@ const VITAL_ORDER     = ['rhr','spo2','resp'];
 const VITAL_BASE_WIN  = 30;   // trailing baseline window, in DAYS
 const VITAL_MIN_N     = 10;   // min non-null days required in that window
 const VITAL_BAND_FILL = 'rgba(157,148,136,0.28)';   // same warm grey as the other bands
-const VD_IN = '#453f37', VD_BAD = '#b3746e', VD_WORSE = '#a5602a',
-      VD_GOOD = '#7f9d78', VD_NONE = '#9d9488';
+// Dot / stat-card colours by verdict:
+//   ABOVE = off baseline in the BETTER direction · IN = within baseline · BAD = off, worse
+const VD_ABOVE = '#6f97a6',   // blue  — off baseline, better direction
+      VD_IN    = '#7f9d78',   // green — within baseline
+      VD_BAD   = '#ab5a52',   // red   — off baseline, worse direction
+      VD_WORSE = '#8f3f38',   // deep red — >2 SD off, worse
+      VD_NONE  = '#9d9488';   // grey  — no baseline yet
 
 let _vitalMode = 'rhr';     // 'rhr' | 'spo2' | 'resp' | 'all'
 let _vitalWeeks = 8;        // 4 / 8 / 13 / 26
@@ -1517,7 +1523,7 @@ function vitalSeries(sleepMap) {
 const vitalDotColor = z => z == null ? VD_NONE
   : z >  2 ? VD_WORSE
   : z >  1 ? VD_BAD
-  : z < -1 ? VD_GOOD
+  : z < -1 ? VD_ABOVE
   : VD_IN;
 
 // A "watch day" = >=2 of 3 vitals sitting >=1 SD on their bad side. null = not evaluable.
@@ -1560,8 +1566,11 @@ function renderVitals(sleepMap) {
     const n = watch.length, lastW = n ? watch[n-1] : null;
     const recent = lastW && (Date.now() - lastW.date.getTime()) < 3 * 86400000;
     wEl.textContent = scoredN ? String(n) : '—';
-    wEl.style.color = !scoredN ? 'var(--muted)'
-      : recent ? VD_BAD : n >= 3 ? '#bd9a4f' : n ? 'var(--text)' : VD_GOOD;
+    wEl.style.color = !scoredN   ? 'var(--muted)'   // nothing scored yet
+      : recent   ? VD_BAD        // red    — an ACTIVE flag in the last 3 days
+      : n >= 3   ? '#c08552'     // orange — several flags in scope
+      : n        ? 'var(--text)' // neutral — an isolated flag
+      :            VD_IN;        // green  — no flags at all
     if (wSub) wSub.textContent = scoredN
       ? `of ${scoredN} scored${lastW ? ' · last ' + dstr(lastW.date) : ''}`
       : '≥2 vitals off baseline';
@@ -1635,8 +1644,9 @@ function renderVitals(sleepMap) {
         const z = g[k+'Z'];
         if (z != null) {
           out.push(`${Math.abs(z).toFixed(1)} SD ${(v.bad*z > 0 ? 'above' : 'below')} baseline`);
-          out.push(z > 1 ? '⚠ Off baseline — worse direction'
-                 : z < -1 ? '↑ Off baseline — better direction'
+          // wording matches the dot colours: red / green / blue
+          out.push(z > 1 ? '⚠ Off baseline'
+                 : z < -1 ? '↑ Above baseline'
                  : '✓ Within baseline');
         }
         return out;
