@@ -258,7 +258,9 @@ Lookup is by header name, case-insensitive, so column order in the sheet does no
 A missing column resolves to `-1` and yields `null` values rather than an error.
 
 > The sheet also carries a **`TrainingLoad`** tab (Garmin's own acute/chronic load, ACWR,
-> training status, VO₂ max, training readiness), written by `garmin_google_sync`. The
+> training status, VO₂ max, training readiness), written by `garmin_google_sync` — which
+> *upserts* it rather than appending, because Garmin revises recent load figures for days
+> afterwards. Anything reading it must expect rows to change, not just accumulate. The
 > dashboard does **not** read it. Progressive Overload deliberately computes its own ACWR
 > from EP so the model is inspectable and trail elevation is weighted in — Garmin's figures
 > are kept alongside as an independent second opinion, not as the chart's source.
