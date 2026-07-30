@@ -36,6 +36,7 @@ same render path as real data.
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
 | Progressive Overload | Recent 8 Weeks load table |
+| Progression — Chronic EP & Ramp Rate | Chronic EP percentiles |
 | Distribution by Category | 專項訓練 Seasonality |
 
 **Recovery & Body tab**
@@ -53,7 +54,12 @@ Two metrics carry most of the weight:
   density. Every load chart is built on these.
 - **Progressive Overload** is an ACWR model: acute load is an exponentially-weighted
   7-day sum of daily EP, chronic is a 4-week average of that, and the shaded band is
-  0.8–1.4 × chronic. Above the band is spike risk, below it is detraining.
+  0.8–1.4 × chronic. Above the band is spike risk, below it is detraining. Being a ratio it
+  is **scale-free**, so it reads spike risk but cannot judge progression.
+- **Progression** supplies the two terms the ratio throws away: the *level* of chronic EP
+  against your own percentiles, and its *slope* — 28-day chronic growth in %/week, against a
+  3–7 %/wk band derived from your own recovery markers rather than the literature. See
+  [docs/PROGRESSION.md](docs/PROGRESSION.md).
 
 How the two tabs relate to each other is written up in
 [docs/RECOVERY-PATTERN.md](docs/RECOVERY-PATTERN.md). Short version: a run costs **one**
@@ -78,8 +84,10 @@ docs/
   DESIGN.md              palette, encoding rules, layout, responsive breakpoints
   SPEC.md                every derived metric and its formula
   RECOVERY-PATTERN.md    findings: how recovery responds to load
+  PROGRESSION.md         findings: defining optimal load, and VO₂max
 analysis/
   load_recovery.py       offline analysis, reproduces RECOVERY-PATTERN.md
+  progression.py         offline analysis, reproduces PROGRESSION.md
 ```
 
 `analysis/` is offline and not part of the site — a standard-library script that reads the

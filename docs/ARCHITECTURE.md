@@ -46,6 +46,25 @@ initGate()
 `loadSampleData()` bypasses the fetch entirely and synthesises three years of sessions
 plus a sleep map, then calls `renderAll` — the same path the real data takes.
 
+The **`TrainingLoad`** tab is deliberately not fetched here (see SPEC.md). The only thing
+that reads it is `analysis/progression.py`, offline, for VO₂max — the dashboard itself stays
+on its own EP-derived model.
+
+## Offline analysis
+
+`analysis/` is not part of the site and is never served. Two standard-library scripts read
+the same sheet and reuse the documented formulas, so their findings describe the metrics as
+the charts actually define them:
+
+| Script | Reproduces |
+|---|---|
+| `load_recovery.py` | `docs/RECOVERY-PATTERN.md` |
+| `progression.py` | `docs/PROGRESSION.md` |
+
+`progression.py` imports its loaders and model functions from `load_recovery.py` — same
+directory, so `sys.path[0]` resolves it with no packaging. Both take `--cache DIR` to reuse
+raw JSON instead of re-fetching.
+
 ## Data model
 
 Three structures, built once per load and held in module-level state:
@@ -86,7 +105,9 @@ constructed over a live one. Every renderer keeps its instance in a `let _xChart
 module global for exactly this reason.
 
 **Scope pills** (`.rpill`) never refilter source data. They set a module-level `_xWeeks`
-/ `_xDays` variable and re-run the renderer. Derived series that need history — rolling
+/ `_xDays` variable and re-run the renderer. `renderProgressionChart` also keeps its
+percentile panel on **full** history for the same reason: "where you sit" must not move when
+the scope changes. Derived series that need history — rolling
 baselines, EWMAs — are always computed over **full history and then sliced** to the
 visible window, so a band is already warmed up at the left edge instead of ramping from
 zero. `renderHrvStatus` is the one exception: it filters by date cutoff first.
