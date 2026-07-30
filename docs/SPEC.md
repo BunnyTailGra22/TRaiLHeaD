@@ -14,6 +14,12 @@ Every load metric in the Training tab is built on it.
 
 **EPH** = `EP / hours` — effort density, i.e. how hard a session was rather than how big.
 
+> EP measures the *size* of a run and is kept that way deliberately. It is **not** the best
+> predictor of the overnight recovery cost — duration is, by roughly 3× the explained
+> variance, because `elev / 100` under-weights climb against the clock. See
+> [RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#ep-is-not-the-best-dose-variable--duration-is).
+> Changing the divisor would break comparability with three years of history, so it stays.
+
 Only activities whose type contains `run` are counted. Type is bucketed to `trail` if the
 type string contains `trail`, otherwise `road`.
 
@@ -83,6 +89,11 @@ with the scope; only how much of them you see does.
 > of pace vs. your own recent trend" more than as load against an independent fitness
 > baseline. The 1.4 upper bound is also looser than the commonly cited 1.3. Worth knowing
 > before comparing these numbers against published thresholds.
+
+The bands do carry recovery information — watch days run at 22% above the band against 12%
+inside it — but *below* the band is not a rested state: it collects illness and travel weeks
+and has the worst RHR of the three. Measured in
+[RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#does-the-progressive-overload-band-track-recovery).
 
 ### Cumulative EP — Year-over-Year
 Running cumulative total by day-of-year, one line per year, metric switchable between
