@@ -14,6 +14,12 @@ Every load metric in the Training tab is built on it.
 
 **EPH** = `EP / hours` — effort density, i.e. how hard a session was rather than how big.
 
+> EP measures the *size* of a run and is kept that way deliberately. It is **not** the best
+> predictor of the overnight recovery cost — duration is, by roughly 3× the explained
+> variance, because `elev / 100` under-weights climb against the clock. See
+> [RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#ep-is-not-the-best-dose-variable--duration-is).
+> Changing the divisor would break comparability with three years of history, so it stays.
+
 Only activities whose type contains `run` are counted. Type is bucketed to `trail` if the
 type string contains `trail`, otherwise `road`.
 
@@ -83,6 +89,97 @@ with the scope; only how much of them you see does.
 > of pace vs. your own recent trend" more than as load against an independent fitness
 > baseline. The 1.4 upper bound is also looser than the commonly cited 1.3. Worth knowing
 > before comparing these numbers against published thresholds.
+
+The bands do carry recovery information — watch days run at 22% above the band against 12%
+inside it — but *below* the band is not a rested state: it collects illness and travel weeks
+and has the worst RHR of the three. Measured in
+[RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#does-the-progressive-overload-band-track-recovery).
+
+**This chart cannot judge progression, only spike risk.** Because chronic is a second
+smoothing of acute, the ratio is scale-free: across 2026 the episode where VO₂max fell and
+the one where it rose had the same ACWR median (1.08 vs 1.09) while their chronic EP
+differed by a third. Level and slope live in the Progression chart below instead — see
+[PROGRESSION.md](PROGRESSION.md).
+
+### 7-Day Acute Load — Against the Ceiling
+
+Garmin's own `Acute Load` (its 7-day exponentially weighted load), plotted against the
+level above which Garmin's own Recovery or Strained flag has always followed. Nothing is
+derived from EP here — this is the second opinion, sitting beside Progressive Overload.
+
+**The ceiling is computed, not a constant:**
+
+```
+CEIL_LOOKAHEAD = 14 days
+CEIL_MIN_FLAGS = 3
+FLAG_STATES    = RECOVERY | STRAINED
+ceiling = max(acute[i])  over all i where no flagged day falls in (date[i], date[i]+14d]
+```
+
+Deriving it keeps the rule honest as data accumulates instead of freezing a number that
+goes stale. The look-ahead walks **by date, not by row index**, so a gap in the sheet
+cannot silently shorten the window. With fewer than `CEIL_MIN_FLAGS` flagged days the
+ceiling is `null` and the rule is simply not drawn — a missing line, never a guessed one.
+
+On Jan–Jul 2026 it lands at **890**: the three spikes above it (1055, 921, 937) were each
+followed by Recovery within 6–11 days. Below it there is no dose-response —
+days at 400–850 get flagged 30–38% of the time. It is a threshold, not a slope.
+
+| Position | Marker | Colour |
+|---|---|---|
+| Over the ceiling | ● large | rose `#b3746e` |
+| Under | ● small | dark `#453f37` |
+
+Garmin's Recovery and Strained stretches are painted as vertical washes behind the line by
+the `_loadStatusBands` plugin — Chart.js has no band primitive on a category axis. Bands
+are passed as **plugin options**, not hung off the config object: Chart.js wraps that in
+its own `Config`, so a stray property on it never reaches the chart.
+
+**View scope** — 8 / 13 / 26 wk pills (default 26). The ceiling is derived from full
+history, so panning the view never moves the rule; only the crossing count in the header
+note changes.
+
+> Read the flag as the *trough*, not the summit. Every Recovery onset in this data landed
+> on a day when acute load had already fallen to 296–452 at ratio 0.5–0.6, after a peak in
+> the preceding fortnight. 890 is not the load that hurts — it is the load that could not
+> be held. And Training Status is not a load model: Garmin folds in HRV and sleep, which is
+> why the one Strained episode began at a below-median load of 496.
+
+### Progression — Chronic EP & Ramp Rate
+
+The two terms ACWR throws away.
+
+**Ramp** — chronic-EP growth over the trailing 28 days, as %/week:
+
+```
+RAMP_WINDOW   = 28
+RAMP_MIN_BASE = 5                       (below this the ratio is noise)
+ramp[i]       = (chronic[i] / chronic[i-28] - 1) × 100 / 4
+```
+
+`null` — a gap, never zero — for the first 28 days and wherever the base is under
+`RAMP_MIN_BASE`. A percentage against a fortnight off means nothing.
+
+**Ramp band** — `RAMP_LOW = 3`, `RAMP_HIGH = 7` %/wk. Not from the literature: it is the
+band where this athlete's own recovery markers were best (lowest watch-day rate, best RHR),
+derived in [PROGRESSION.md](PROGRESSION.md#2-slope--ramp-at-37-week). Shedding load scores
+*worst*, since a falling chronic load is usually illness or travel rather than rest.
+
+| Ramp | Marker | Colour |
+|---|---|---|
+| > 7 %/wk | ▲ triangle | red `#b3746e` |
+| 0 – 7 %/wk | ● circle | olive `#8a9a5b` |
+| < 0 %/wk | ▼ triangle down | gold `#bd9a4f` |
+
+**Level** — chronic EP reported against its own **full-history** percentiles (p10 / median /
+p90), not a target: one productive episode is not enough to prescribe a number. Percentiles
+come from full history so they do not move when the scope pill does.
+
+**View scope** — 13 / 26 wk / 1 y pills (default 26) pan the x-axis only.
+
+VO₂max is **not** an input to this chart. The load→VO₂max link is directionally supported
+but survives only at short permutation block lengths, and Garmin's VO₂max is estimated from
+pace-at-HR — see the VO₂max section of [PROGRESSION.md](PROGRESSION.md).
 
 ### Cumulative EP — Year-over-Year
 Running cumulative total by day-of-year, one line per year, metric switchable between
@@ -243,6 +340,7 @@ Google Sheet, three tabs, read via the Sheets v4 REST API.
 | Activities | `Activities!A1:L5000` | sessions, all Training-tab charts |
 | Sleep | `Sleep!A1:V5000` | sleep map, HRV, vitals, both sleep charts |
 | Biometrics | `Biometrics!A1:J3000` | body composition |
+| TrainingLoad | `TrainingLoad!A1:G1300` | 7-Day Acute Load vs the ceiling |
 
 **Activities columns** (name-mapped, configurable): Start Time, Distance (km), Elevation
 Gain (m), Duration (min), Type. `Activity Name` is read if present, for 專項 categories.
@@ -257,10 +355,18 @@ Muscle Mass (kg), Bone Mass (kg), Visceral Fat, Metabolic Age, Physique Rating.
 Lookup is by header name, case-insensitive, so column order in the sheet does not matter.
 A missing column resolves to `-1` and yields `null` values rather than an error.
 
-> The sheet also carries a **`TrainingLoad`** tab (Garmin's own acute/chronic load, ACWR,
-> training status, VO₂ max, training readiness), written by `garmin_google_sync` — which
-> *upserts* it rather than appending, because Garmin revises recent load figures for days
-> afterwards. Anything reading it must expect rows to change, not just accumulate. The
-> dashboard does **not** read it. Progressive Overload deliberately computes its own ACWR
-> from EP so the model is inspectable and trail elevation is weighted in — Garmin's figures
-> are kept alongside as an independent second opinion, not as the chart's source.
+**TrainingLoad columns** (all hardcoded): Date, Acute Load, Chronic Load, Load Ratio,
+Training Status. VO₂ Max and Training Readiness are in the tab but **not read** — see the
+Progression section for why VO₂max is kept out of the charts.
+
+> The `TrainingLoad` tab *upserts* rather than appending, because Garmin revises recent
+> load figures for days afterwards. Anything reading it must expect rows to change, not
+> just accumulate — the last week of 7-Day Acute Load can move without any new training.
+> It also starts far later than Activities (2026-01 here, against 2024-01), so the chart
+> covers a shorter window than the rest of the Training tab and **hides itself entirely**
+> when the tab is absent rather than rendering an empty frame.
+>
+> Reading it does **not** make it the source for Progressive Overload. That chart still
+> computes its own ACWR from EP, so the model stays inspectable and trail elevation is
+> weighted in. The two sit side by side deliberately: one model this repo can explain,
+> one Garmin's, as an independent second opinion.
