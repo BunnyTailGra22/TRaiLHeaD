@@ -143,17 +143,20 @@ re-analysis a re-run rather than a rebuild.
 
 ## What the dashboard shows
 
-**Progression — Chronic EP & Ramp Rate** (Training tab, row 3). Chronic EP on the left
-axis, 28-day ramp %/week on the right, with the 3–7% band shaded. Ramp markers carry state
-in shape as well as colour: ● in band, ▲ ramping hard, ▼ shedding. The paired panel gives
-the current chronic level against your own percentiles.
+**Nothing from this document.** A Progression chart carrying chronic EP and its ramp rate
+shipped briefly and was removed; the Training tab now runs Progressive Overload beside
+7-Day Acute Load, and neither claims to judge progression.
 
-Both series are computed over full history and then sliced to the scope pills (13 / 26 wk /
-1 y), so the ramp is already warm at the left edge instead of opening with a month of
-nulls. Ramp is `null` — a gap, never zero — for the first 28 days and wherever the 28-day
-base is under 5 EP, because a percentage against a fortnight off is noise.
+That is not a retraction of the findings — the tab simply doesn't chart them. The ramp
+band is a coaching conclusion rather than a reading you check daily, and it rests on one
+productive episode; a chart implies a precision the evidence here doesn't carry. Re-run
+the script when you want the numbers, and treat the 3–7 %/wk band as a planning target
+rather than a dial to watch.
 
-Progressive Overload is deliberately untouched. Two charts, two questions.
+If it is ever charted again, two properties are load-bearing: ramp must be computed over
+full history and then sliced (so it opens warm rather than with a month of nulls), and it
+must be `null` — a gap, never zero — for the first 28 days and wherever the 28-day base is
+under 5 EP, because a percentage against a fortnight off is noise.
 
 ---
 

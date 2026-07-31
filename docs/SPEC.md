@@ -71,17 +71,26 @@ band     = 0.8 × chronic  →  1.4 × chronic
 The band rides with Chronic EP, so it asks "is this week big *relative to your recent
 norm*", not against any fixed target.
 
-**Status** — each day's dot on the Acute EP line:
+**Status** — each day's dot on the Acute EP line, two states rather than three:
 
 | Position | Ratio | Colour | Meaning |
 |---|---|---|---|
-| Above band | > 1.4 | red `#b3746e` | ⚠ spike risk |
-| Inside band | 0.8 – 1.4 | dark `#453f37` | ✓ optimal |
-| Below band | < 0.8 | gold `#bd9a4f` | ↓ detraining |
+| Inside band | 0.8 – 1.4 | green `#7f9d78` | ✓ optimal |
+| Outside band | < 0.8 or > 1.4 | red `#b3746e` | ⚠ out of range |
 
-**View scope** — 4 / 8 / 13 wk pills (default 8) pan the x-axis only. Acute and chronic
-are computed over full history and then sliced, so the curves themselves never change
-with the scope; only how much of them you see does.
+Above and below still mean different things — spike risk versus detraining — and the
+tooltip names which. But the palette answers the binary question only, so the eye reads
+"in range or not" at a glance without decoding a third hue. The Acute EP **line** is green
+too; **Chronic EP is grey** `#9d9488`, dashed, along with the band fill, so the whole
+reference apparatus recedes and colour only ever means the reading.
+
+This is the shared load palette (`LOAD_IN` / `LOAD_OUT` / `LOAD_REF` in `index.html`),
+used identically by 7-Day Acute Load beside it — the pair sits side by side, so green and
+red must mean the same thing in both.
+
+**View scope** — 4 / 8 / 13 / 26 wk pills (default 8) pan the x-axis only. Acute and
+chronic are computed over full history and then sliced, so the curves themselves never
+change with the scope; only how much of them you see does.
 
 > **Deviation from the literature.** Textbook ACWR runs both windows over the same daily
 > load series. Here Chronic is a second smoothing pass over the *Acute* curve, so it
@@ -98,8 +107,8 @@ and has the worst RHR of the three. Measured in
 **This chart cannot judge progression, only spike risk.** Because chronic is a second
 smoothing of acute, the ratio is scale-free: across 2026 the episode where VO₂max fell and
 the one where it rose had the same ACWR median (1.08 vs 1.09) while their chronic EP
-differed by a third. Level and slope live in the Progression chart below instead — see
-[PROGRESSION.md](PROGRESSION.md).
+differed by a third. Nothing on the Training tab judges progression — the level and slope
+that would are worked out in [PROGRESSION.md](PROGRESSION.md) and its script, not charted.
 
 ### 7-Day Acute Load — Against the Ceiling
 
@@ -127,15 +136,20 @@ days at 400–850 get flagged 30–38% of the time. It is a threshold, not a slo
 
 | Position | Marker | Colour |
 |---|---|---|
-| Over the ceiling | ● large | rose `#b3746e` |
-| Under | ● small | dark `#453f37` |
+| Under the ceiling | ● small | green `#7f9d78` |
+| Over | ● large | red `#b3746e` |
+
+Same shared load palette as Progressive Overload, and the same grammar: the **ceiling rule
+is grey** `#9d9488` dashed, like Chronic EP is there. The dots that cross already carry the
+warning — a red rule would say it twice. Size doubles on a crossing so the reading survives
+greyscale, per the encoding rule in DESIGN.md.
 
 Garmin's Recovery and Strained stretches are painted as vertical washes behind the line by
 the `_loadStatusBands` plugin — Chart.js has no band primitive on a category axis. Bands
 are passed as **plugin options**, not hung off the config object: Chart.js wraps that in
 its own `Config`, so a stray property on it never reaches the chart.
 
-**View scope** — 8 / 13 / 26 wk pills (default 26). The ceiling is derived from full
+**View scope** — 4 / 8 / 13 / 26 wk pills (default 26). The ceiling is derived from full
 history, so panning the view never moves the rule; only the crossing count in the header
 note changes.
 
@@ -144,42 +158,6 @@ note changes.
 > the preceding fortnight. 890 is not the load that hurts — it is the load that could not
 > be held. And Training Status is not a load model: Garmin folds in HRV and sleep, which is
 > why the one Strained episode began at a below-median load of 496.
-
-### Progression — Chronic EP & Ramp Rate
-
-The two terms ACWR throws away.
-
-**Ramp** — chronic-EP growth over the trailing 28 days, as %/week:
-
-```
-RAMP_WINDOW   = 28
-RAMP_MIN_BASE = 5                       (below this the ratio is noise)
-ramp[i]       = (chronic[i] / chronic[i-28] - 1) × 100 / 4
-```
-
-`null` — a gap, never zero — for the first 28 days and wherever the base is under
-`RAMP_MIN_BASE`. A percentage against a fortnight off means nothing.
-
-**Ramp band** — `RAMP_LOW = 3`, `RAMP_HIGH = 7` %/wk. Not from the literature: it is the
-band where this athlete's own recovery markers were best (lowest watch-day rate, best RHR),
-derived in [PROGRESSION.md](PROGRESSION.md#2-slope--ramp-at-37-week). Shedding load scores
-*worst*, since a falling chronic load is usually illness or travel rather than rest.
-
-| Ramp | Marker | Colour |
-|---|---|---|
-| > 7 %/wk | ▲ triangle | red `#b3746e` |
-| 0 – 7 %/wk | ● circle | olive `#8a9a5b` |
-| < 0 %/wk | ▼ triangle down | gold `#bd9a4f` |
-
-**Level** — chronic EP reported against its own **full-history** percentiles (p10 / median /
-p90), not a target: one productive episode is not enough to prescribe a number. Percentiles
-come from full history so they do not move when the scope pill does.
-
-**View scope** — 13 / 26 wk / 1 y pills (default 26) pan the x-axis only.
-
-VO₂max is **not** an input to this chart. The load→VO₂max link is directionally supported
-but survives only at short permutation block lengths, and Garmin's VO₂max is estimated from
-pace-at-HR — see the VO₂max section of [PROGRESSION.md](PROGRESSION.md).
 
 ### Cumulative EP — Year-over-Year
 Running cumulative total by day-of-year, one line per year, metric switchable between

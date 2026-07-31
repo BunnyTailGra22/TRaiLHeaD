@@ -113,12 +113,12 @@ constructed over a live one. Every renderer keeps its instance in a `let _xChart
 module global for exactly this reason.
 
 **Scope pills** (`.rpill`) never refilter source data. They set a module-level `_xWeeks`
-/ `_xDays` variable and re-run the renderer. `renderProgressionChart` also keeps its
-percentile panel on **full** history for the same reason: "where you sit" must not move when
-the scope changes. Derived series that need history — rolling
+/ `_xDays` variable and re-run the renderer. Derived series that need history — rolling
 baselines, EWMAs — are always computed over **full history and then sliced** to the
 visible window, so a band is already warmed up at the left edge instead of ramping from
 zero. `renderHrvStatus` is the one exception: it filters by date cutoff first.
+`renderAcuteCeiling` derives its ceiling from full history for the same reason — panning
+the view must never move the rule it is judging against.
 
 **Tab switching re-renders.** A chart built while its panel is `display:none` measures
 0×0, so `switchTab()` re-runs every renderer for the panel being shown.

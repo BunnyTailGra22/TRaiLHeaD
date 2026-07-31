@@ -37,7 +37,6 @@ same render path as real data.
 | Cumulative EP | Monthly EP, road vs trail |
 | Progressive Overload | 7-Day Acute Load vs the ceiling |
 | Recent 8 Weeks load table (full width) | |
-| Progression — Chronic EP & Ramp Rate | Chronic EP percentiles |
 | Distribution by Category | 專項訓練 Seasonality |
 
 **Recovery & Body tab**
@@ -61,10 +60,12 @@ Two metrics carry most of the weight:
   a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery or
   Strained flag within 14 days. It computes from the data rather than being hardcoded, and
   isn't drawn at all until there are enough flagged days to calibrate on.
-- **Progression** supplies the two terms the ratio throws away: the *level* of chronic EP
-  against your own percentiles, and its *slope* — 28-day chronic growth in %/week, against a
-  3–7 %/wk band derived from your own recovery markers rather than the literature. See
-  [docs/PROGRESSION.md](docs/PROGRESSION.md).
+Both load charts share one two-state palette — green in range, red out, every reference
+line grey — so the pair reads the same way at a glance. See [docs/DESIGN.md](docs/DESIGN.md).
+
+Nothing on the tab judges *progression*, only spike risk: a scale-free ratio structurally
+can't. The level and slope that would are worked out in
+[docs/PROGRESSION.md](docs/PROGRESSION.md) and its script, deliberately not charted.
 
 How the two tabs relate to each other is written up in
 [docs/RECOVERY-PATTERN.md](docs/RECOVERY-PATTERN.md). Short version: a run costs **one**
