@@ -58,6 +58,12 @@ on the chart only where there is a reading to judge, never on the rule doing the
 > unambiguous in practice — it only ever appears as a continuous dashed rule or a band
 > fill, never as a marker, and markers are the only place the no-data meaning applies.
 
+Both load charts also shade Garmin's own **Recovery** `rgba(179,116,110,0.11)` and
+**Strained** `rgba(143,63,56,0.16)` stretches as vertical washes behind the curves. They
+sit far below the marker colours in weight deliberately: they are context for the reading,
+not the reading. Strained is the darker of the two because it is the rarer and more serious
+state — the same "darken rather than re-hue" move the recovery ramp makes for Poor.
+
 **Recovery status** (HRV Status, Recovery Vitals) — a heat ramp where severity should read
 before the legend does: green `#7f9d78` → orange `#c08552` → red `#ab5a52` → deep red
 `#8f3f38`. Plus blue `#6f97a6` for "off baseline in the *better* direction" — noteworthy,

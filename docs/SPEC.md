@@ -27,7 +27,7 @@ type string contains `trail`, otherwise `road`.
 
 ## Training tab
 
-### Progressive Overload — Acute EP vs Optimal Range
+### Progressive Overload — Acute EP for Stimulation
 
 An ACWR (acute:chronic workload ratio) model over a **gap-free daily EP series**: sessions
 summed per calendar day, from the first session through `max(today, last session)`, with
@@ -58,8 +58,10 @@ chronic[0]    = acute[0]                           (seed)
 The 4-week window is **fixed by design**. It is the model's definition of "what you are
 accustomed to", not a view preference — if it moved, the optimal range would move
 underneath the very reading it is meant to judge, and two sessions could not be compared.
-The header note names both time constants (`acute … (7d) · chronic … (4 wk)`) so the
-fixed windows stay visible now that there is no pill showing them.
+The header note and the legend both name it as an **exponential** weighting over 4 weeks
+(`chronic … (4 wk exp.)`), so the smoothing is visible in the chart rather than only here:
+it is an EWMA, not a flat 28-day mean, and the distinction matters when reading how fast
+the band chases a change of pace.
 
 **Optimal Range** — the shaded band:
 
@@ -87,6 +89,22 @@ reference apparatus recedes and colour only ever means the reading.
 This is the shared load palette (`LOAD_IN` / `LOAD_OUT` / `LOAD_REF` in `index.html`),
 used identically by 7-Day Acute Load beside it — the pair sits side by side, so green and
 red must mean the same thing in both.
+
+**Header note** — `acute N (7d exp.) · chronic N (4 wk exp.)`. The ratio and its verdict
+are deliberately **not** shown. The dots already say in-range or not, and a headline number
+invited reading the ratio as a score when it self-centres near 1.0 by construction (see the
+deviation note below). The figure is still in the per-day tooltip.
+
+**Garmin Recovery / Strained** are painted as vertical washes behind the curves, the same
+`_loadStatusBands` plugin and the same colours as on 7-Day Acute Load beside it — so a bad
+stretch lines up visually across both models.
+
+They are joined **by date key, not by index**: this series starts with the first activity
+(2024-01 here) while the TrainingLoad tab starts 2026-01, so index alignment would be
+meaningless. Days with no TrainingLoad row simply carry no band. The key is built from
+**local** date fields (`localDayKey`), because the EP grid keys on local midnight while the
+sheet's date strings parse as UTC — comparing `Date` objects directly slips a day in any
+timezone behind UTC.
 
 **View scope** — 4 / 8 / 13 / 26 wk pills (default 8) pan the x-axis only. Acute and
 chronic are computed over full history and then sliced, so the curves themselves never

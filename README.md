@@ -35,7 +35,7 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| Progressive Overload | 7-Day Acute Load vs the ceiling |
+| Progressive Overload — Acute EP for stimulation | 7-Day Acute Load vs the ceiling |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 
@@ -52,16 +52,20 @@ Two metrics carry most of the weight:
 - **EP (Effort Points)** = `distance_km + elevation_m/100` — one number for the size of a
   run that treats 100 m of climb as equivalent to 1 km flat. **EPH** = `EP/hours` is its
   density. Every load chart is built on these.
-- **Progressive Overload** is an ACWR model: acute load is an exponentially-weighted
-  7-day sum of daily EP, chronic is a 4-week average of that, and the shaded band is
-  0.8–1.4 × chronic. Above the band is spike risk, below it is detraining. Being a ratio it
-  is **scale-free**, so it reads spike risk but cannot judge progression.
+- **Progressive Overload** is an ACWR model: acute EP is an exponentially-weighted
+  7-day sum of daily EP, chronic is an exponentially-weighted 4-week average of that, and
+  the shaded band is 0.8–1.4 × chronic. Above the band is spike risk, below it is
+  detraining. Being a ratio it is **scale-free**, so it reads spike risk but cannot judge
+  progression — which is why the ratio itself is not shown as a headline figure.
 - **7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted against
   a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery or
   Strained flag within 14 days. It computes from the data rather than being hardcoded, and
   isn't drawn at all until there are enough flagged days to calibrate on.
+
 Both load charts share one two-state palette — green in range, red out, every reference
-line grey — so the pair reads the same way at a glance. See [docs/DESIGN.md](docs/DESIGN.md).
+line grey — and both shade Garmin's own Recovery and Strained stretches behind the curves,
+so a bad patch lines up across the two models at a glance. See
+[docs/DESIGN.md](docs/DESIGN.md).
 
 Nothing on the tab judges *progression*, only spike risk: a scale-free ratio structurally
 can't. The level and slope that would are worked out in
