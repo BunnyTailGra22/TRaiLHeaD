@@ -35,7 +35,8 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| Progressive Overload | Recent 8 Weeks load table |
+| Progressive Overload | 7-Day Acute Load vs the ceiling |
+| Recent 8 Weeks load table (full width) | |
 | Progression — Chronic EP & Ramp Rate | Chronic EP percentiles |
 | Distribution by Category | 專項訓練 Seasonality |
 
@@ -56,6 +57,10 @@ Two metrics carry most of the weight:
   7-day sum of daily EP, chronic is a 4-week average of that, and the shaded band is
   0.8–1.4 × chronic. Above the band is spike risk, below it is detraining. Being a ratio it
   is **scale-free**, so it reads spike risk but cannot judge progression.
+- **7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted against
+  a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery or
+  Strained flag within 14 days. It computes from the data rather than being hardcoded, and
+  isn't drawn at all until there are enough flagged days to calibrate on.
 - **Progression** supplies the two terms the ratio throws away: the *level* of chronic EP
   against your own percentiles, and its *slope* — 28-day chronic growth in %/week, against a
   3–7 %/wk band derived from your own recovery markers rather than the literature. See
