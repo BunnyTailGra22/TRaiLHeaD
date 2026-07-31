@@ -100,10 +100,10 @@ main { padding: 20px 24px; }
 .chart-box > canvas { width: 100% !important; height: 100% !important; display: block; }
 .grid-2x2 .chart-box { height: 220px; }
 /* Training tab: paired rows share a height so each two-col row aligns */
-#cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 280px; }
-/* Acute-vs-ceiling is paired with Progressive Overload and carries a shape key above
-   its chart, so it gives back that key's height to keep the two plot areas level. */
-#acuteceil-box { height: 260px; }
+#cumul-box, #monthly-box, #box-box, #focus-box { height: 280px; }
+/* The two load charts are paired and BOTH now carry a shape key above the plot, so
+   they give back the same height and their plot areas stay level with each other. */
+#rolling-box, #acuteceil-box { height: 260px; }
 /* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
    its chart, so bio-box gets that height back to keep the two plot areas level. */
 #bio-box   { height: 330px; }
@@ -356,7 +356,7 @@ main { padding: 20px 24px; }
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">Progressive Overload — Acute EP vs Optimal Range</div>
+        <div class="section-title" style="margin:0">Progressive Overload — Acute EP for Stimulation</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
           <!-- view scope only — the chronic window itself is fixed at 4 wk -->
@@ -367,6 +367,12 @@ main { padding: 20px 24px; }
             <div class="rpill" data-weeks="26">26 wk</div>
           </div>
         </div>
+      </div>
+      <div class="shape-key" style="margin-bottom:8px">
+        <span><i style="color:#7f9d78">●</i> in range</span>
+        <span><i style="color:#b3746e">●</i> out of range</span>
+        <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
+        <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
       </div>
       <div class="chart-box" id="rolling-box"><canvas id="rolling-chart"></canvas></div>
     </div>
@@ -839,6 +845,10 @@ function parseTrainingLoad(rows) {
     if (!dk) continue;
     out.push({
       date:    new Date(dk),
+      // Raw 'YYYY-MM-DD' kept for joining onto other series. `date` above is UTC
+      // midnight while the EP grid keys on LOCAL midnight, so comparing the two Date
+      // objects would slip a day in any timezone behind UTC. Join on this instead.
+      key:     dk,
       acute:   iAcute   >= 0 ? num(r[iAcute])   : null,
       chronic: iChronic >= 0 ? num(r[iChronic]) : null,
       ratio:   iRatio   >= 0 ? num(r[iRatio])   : null,
@@ -854,6 +864,19 @@ function parseTrainingLoad(rows) {
 function ci(headers, name) {
   if (!name) return -1;
   return headers.findIndex(h => h.trim().toLowerCase() === name.trim().toLowerCase());
+}
+
+// 'YYYY-MM-DD' from a Date's LOCAL fields. Series built from activity timestamps key on
+// local midnight, so this is what joins them to the sheet's plain date strings.
+// toISOString() would be wrong here — it shifts to UTC and slips a day.
+function localDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+       + `-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// STRAINED → Strained, for display.
+function titleCase(s) {
+  return s ? s.charAt(0) + s.slice(1).toLowerCase() : s;
 }
 
 function num(v) {
@@ -1300,18 +1323,34 @@ function renderRollingChart(sessions) {
   const IN = LOAD_IN, OUT = LOAD_OUT;
   const dotColors = acute.map((v, i) => (v > upper[i] || v < lower[i]) ? OUT : IN);
 
-  // Header note: today's acute / chronic / ratio
+  // Header note: today's acute and chronic. The ratio and its verdict are deliberately
+  // NOT here — the dots already say in-range or not, and a headline number invited
+  // reading the ratio as a score when it self-centres near 1.0 by construction. Still
+  // in the tooltip for anyone who wants the figure for a specific day.
   const noteEl = document.getElementById('overload-note');
   if (noteEl) {
     const t = series[series.length - 1];
-    if (t) {
-      const ratio = t.chronic > 0 ? t.acute / t.chronic : 0;
-      const state = ratio > ACWR_HIGH ? '⚠ spike risk' : ratio < ACWR_LOW ? '↓ detraining' : '✓ optimal';
-      // the time constants are named here since they're fixed and no longer pickable
-      noteEl.textContent = `acute ${t.acute.toFixed(0)} (7d) · chronic ${t.chronic.toFixed(0)} `
-        + `(${CHRONIC_WEEKS} wk) · ratio ${ratio.toFixed(2)} ${state}`;
-    } else noteEl.textContent = '';
+    // the time constants are named here since they're fixed and no longer pickable
+    noteEl.textContent = t
+      ? `acute ${t.acute.toFixed(0)} (7d exp.) · chronic ${t.chronic.toFixed(0)} `
+        + `(${CHRONIC_WEEKS} wk exp.)`
+      : '';
   }
+
+  // Garmin's Recovery/Strained stretches, joined onto the EP grid BY DATE KEY — this
+  // series starts in 2024 and the TrainingLoad tab in 2026, so index alignment would be
+  // meaningless. Days with no TrainingLoad row simply carry no band.
+  const statusByKey = {};
+  _trainingLoad.forEach(d => { if (FLAG_STATES.includes(d.status)) statusByKey[d.key] = d.status; });
+  const garminStatusOn = date => statusByKey[localDayKey(date)] || null;
+  const bands = [];
+  series.forEach((d, i) => {
+    const st = garminStatusOn(d.date);
+    if (!st) return;
+    const last = bands[bands.length - 1];
+    if (last && last.s === st && last.b === i - 1) last.b = i;
+    else bands.push({ s: st, a: i, b: i });
+  });
 
   const datasets = [
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
@@ -1319,7 +1358,7 @@ function renderRollingChart(sessions) {
     { label: 'Optimal Range', data: lower, borderColor: 'transparent',
       backgroundColor: 'rgba(157,148,136,0.28)', pointRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
-    { label: 'Chronic EP', data: series.map(d => +d.chronic.toFixed(1)),
+    { label: `Chronic EP (${CHRONIC_WEEKS} wk exp.)`, data: series.map(d => +d.chronic.toFixed(1)),
       borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
       pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2 },
     { label: 'Acute EP', data: acute, borderColor: IN, borderWidth: 2,
@@ -1346,13 +1385,18 @@ function renderRollingChart(sessions) {
         'Ratio: ' + ratio.toFixed(2),
         'Optimal: ' + lower[i].toFixed(0) + '–' + upper[i].toFixed(0) + ' EP',
         status,
+        ...(garminStatusOn(d.date) ? ['Garmin: ' + titleCase(garminStatusOn(d.date))] : []),
       ];
     },
   };
 
+  opts.plugins.loadStatusBands = { bands };
+
   const ctx = document.getElementById('rolling-chart').getContext('2d');
   if (_rollingChart) _rollingChart.destroy();
-  _rollingChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
+  _rollingChart = new Chart(ctx, {
+    type:'line', data:{ labels, datasets }, options: opts, plugins: [_loadStatusBands],
+  });
 }
 
 // ── 7-DAY ACUTE LOAD vs CEILING ───────────────────────────────────────────────
