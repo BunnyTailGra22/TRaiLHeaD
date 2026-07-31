@@ -101,11 +101,8 @@ main { padding: 20px 24px; }
 .grid-2x2 .chart-box { height: 220px; }
 /* Training tab: paired rows share a height so each two-col row aligns */
 #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 280px; }
-/* Progression carries a shape key above its chart, so it loses that height to keep
-   its plot area level with the stat panel it is paired with. */
-#progression-box { height: 258px; }
-/* Acute-vs-ceiling is paired with Progressive Overload and also carries a shape key,
-   so it gives back that key's height to keep the two plot areas level. */
+/* Acute-vs-ceiling is paired with Progressive Overload and carries a shape key above
+   its chart, so it gives back that key's height to keep the two plot areas level. */
 #acuteceil-box { height: 260px; }
 /* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
    its chart, so bio-box gets that height back to keep the two plot areas level. */
@@ -367,6 +364,7 @@ main { padding: 20px 24px; }
             <div class="rpill" data-weeks="4">4 wk</div>
             <div class="rpill active" data-weeks="8">8 wk</div>
             <div class="rpill" data-weeks="13">13 wk</div>
+            <div class="rpill" data-weeks="26">26 wk</div>
           </div>
         </div>
       </div>
@@ -380,6 +378,7 @@ main { padding: 20px 24px; }
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="acuteceil-note" style="font-size:11px;color:var(--muted)"></div>
           <div class="range-pills" id="acuteceil-scope-pills">
+            <div class="rpill" data-weeks="4">4 wk</div>
             <div class="rpill" data-weeks="8">8 wk</div>
             <div class="rpill" data-weeks="13">13 wk</div>
             <div class="rpill active" data-weeks="26">26 wk</div>
@@ -387,7 +386,7 @@ main { padding: 20px 24px; }
         </div>
       </div>
       <div class="shape-key" style="margin-bottom:8px">
-        <span><i style="color:#453f37">●</i> under ceiling</span>
+        <span><i style="color:#7f9d78">●</i> under ceiling</span>
         <span><i style="color:#b3746e">●</i> over</span>
         <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
         <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
@@ -407,42 +406,7 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 4: Progression — the question Progressive Overload structurally can't answer.
-       ACWR is scale-free (chronic is a second smoothing of acute, so the ratio
-       self-centres near 1.0), so it reads spike risk but not progression. Level and
-       slope live here instead. See docs/PROGRESSION.md. -->
-  <div class="two-col">
-    <div class="chart-card">
-      <div class="chart-header">
-        <div class="section-title" style="margin:0">Progression — Chronic EP &amp; Ramp Rate</div>
-        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div id="progression-note" style="font-size:11px;color:var(--muted)"></div>
-          <div class="range-pills" id="progression-scope-pills">
-            <div class="rpill" data-weeks="13">13 wk</div>
-            <div class="rpill active" data-weeks="26">26 wk</div>
-            <div class="rpill" data-weeks="52">1 y</div>
-          </div>
-        </div>
-      </div>
-      <div class="shape-key" id="progression-key" style="margin-bottom:8px">
-        <span><i style="color:#8a9a5b">●</i> in ramp band</span>
-        <span><i style="color:#b3746e">▲</i> ramping hard</span>
-        <span><i style="color:#bd9a4f">▼</i> shedding load</span>
-      </div>
-      <div class="chart-box" id="progression-box"><canvas id="progression-chart"></canvas></div>
-    </div>
-
-    <div class="chart-card">
-      <div class="chart-header">
-        <div class="section-title" style="margin:0">Chronic EP — Where You Sit</div>
-      </div>
-      <div id="progression-stats" style="height:280px;overflow-y:auto">
-        <div class="empty">No data loaded.</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ROW 5: Distribution by Category | 專項訓練 Seasonality -->
+  <!-- ROW 4: Distribution by Category | 專項訓練 Seasonality -->
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
@@ -960,7 +924,6 @@ function renderAll(sessions, sleepMap) {
   buildMonthlyYearPills(sessions);
   renderRollingChart(sessions);
   renderAcuteCeiling();
-  renderProgressionChart(sessions);
   buildCumulChart(sessions, _activeCumulMetric);
   renderFocusChart(sessions);   // running activities only
   renderBoxChart(sessions);
@@ -1277,7 +1240,7 @@ let _rollingChart = null;
 // "what you're accustomed to", not a view setting, so it must not move underneath the
 // optimal range. The pills now scope the VIEW instead (see _overloadWeeks).
 const CHRONIC_WEEKS = 4;
-let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13), daily resolution
+let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13 / 26), daily resolution
 
 // Acute EP  — exponentially-weighted rolling SUM of daily EP, 7-day time constant.
 //   acute[i] = ep[i] + acute[i-1] * ACUTE_DECAY
@@ -1287,6 +1250,14 @@ const ACUTE_TAU   = 7;
 const ACUTE_DECAY = Math.exp(-1 / ACUTE_TAU);          // ≈ 0.8669
 // Optimal range = 0.8–1.4 × Chronic EP (acute:chronic workload ratio sweet spot)
 const ACWR_LOW = 0.8, ACWR_HIGH = 1.4;
+
+// Shared palette for BOTH load charts — Progressive Overload and 7-Day Acute Load —
+// so "in range" and "out of range" read identically across the pair sitting side by
+// side. Green is the state you want, red is the deviation (DESIGN.md status family);
+// the reference lines stay grey so nothing competes with the reading.
+const LOAD_IN  = '#7f9d78';   // in range — sage green
+const LOAD_OUT = '#b3746e';   // out of range — dusty rose
+const LOAD_REF = '#9d9488';   // chronic / ceiling reference lines — warm grey
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
 function computeAcuteChronic(sessions) {
@@ -1322,9 +1293,12 @@ function renderRollingChart(sessions) {
   const upper  = series.map(d => +(d.chronic * ACWR_HIGH).toFixed(1));
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
-  // Colour each day by where Acute EP sits vs the band
-  const IN = '#453f37', HI = '#b3746e', LO = '#bd9a4f';   // text / red / yellow
-  const dotColors = acute.map((v, i) => v > upper[i] ? HI : (v < lower[i] ? LO : IN));
+  // Colour each day by where Acute EP sits vs the band. Two states, not three: green
+  // in the band, red outside it either way. Above and below mean different things
+  // (spike risk vs detraining) and the tooltip still says which — but the chart's job
+  // here is the binary "in range or not", so the palette answers that question only.
+  const IN = LOAD_IN, OUT = LOAD_OUT;
+  const dotColors = acute.map((v, i) => (v > upper[i] || v < lower[i]) ? OUT : IN);
 
   // Header note: today's acute / chronic / ratio
   const noteEl = document.getElementById('overload-note');
@@ -1346,10 +1320,10 @@ function renderRollingChart(sessions) {
       backgroundColor: 'rgba(157,148,136,0.28)', pointRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
     { label: 'Chronic EP', data: series.map(d => +d.chronic.toFixed(1)),
-      borderColor: '#8a9a5b', borderWidth: 1.5, borderDash: [4,3],
+      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
       pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2 },
     { label: 'Acute EP', data: acute, borderColor: IN, borderWidth: 2,
-      pointRadius: 1.5, pointHoverRadius: 5,
+      pointRadius: 2, pointHoverRadius: 5,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.25, order: 1 },
   ];
@@ -1426,9 +1400,9 @@ function renderAcuteCeiling() {
   const acute  = series.map(d => d.acute);
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
-  const OVER = '#b3746e', UNDER = '#453f37';
+  const OVER = LOAD_OUT, UNDER = LOAD_IN;
   const dotColors = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? OVER : UNDER);
-  const dotRadii  = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? 3.5 : 1.5);
+  const dotRadii  = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? 4 : 2);
 
   const crossings = acute.filter(v => ceiling !== null && v !== null && v > ceiling).length;
   const noteEl = document.getElementById('acuteceil-note');
@@ -1446,9 +1420,12 @@ function renderAcuteCeiling() {
     spanGaps: false, fill: false, tension: 0.25, order: 1,
   }];
   if (ceiling !== null) {
+    // Grey, like Chronic EP on the chart beside it: the reference apparatus is grey on
+    // both, so green/red always means the reading rather than the rule. The dots that
+    // cross already carry the warning — a red rule would say it twice.
     datasets.push({
       label: `Ceiling ${ceiling.toFixed(0)}`, data: acute.map(() => ceiling),
-      borderColor: OVER, borderWidth: 1.5, borderDash: [5, 4],
+      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [5, 4],
       pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2,
     });
   }
@@ -1509,137 +1486,6 @@ const _loadStatusBands = {
     ctx.restore();
   },
 };
-
-// ── PROGRESSION ───────────────────────────────────────────────────────────────
-// Progressive Overload answers "am I spiking?". It cannot answer "am I progressing?",
-// because ACWR is scale-free by construction: chronic is a second smoothing pass over
-// acute, so the ratio self-centres near 1.0 whether you're running 39 or 53 EP a week.
-// Progression needs the two terms the ratio throws away — the LEVEL of chronic EP and
-// its SLOPE. Measured in docs/PROGRESSION.md.
-let _progressionChart = null;
-let _progressionWeeks = 26;          // x-axis scope in weeks (13 / 26 / 52)
-
-// Ramp is chronic growth over 28 days expressed as %/week, so it's comparable to the
-// familiar "add 5–10% a week" heuristic. Below RAMP_MIN_BASE the ratio is meaningless —
-// 5 EP of chronic load is a fortnight off, and every percentage against it is noise.
-const RAMP_WINDOW = 28, RAMP_MIN_BASE = 5;
-// 3–7 %/wk is not imported from the literature: it's the band that carried the LOWEST
-// watch-day rate and the best RHR in this athlete's own history (PROGRESSION.md §B).
-const RAMP_LOW = 3, RAMP_HIGH = 7;
-
-// Chronic growth per week over the trailing RAMP_WINDOW. null (not 0) until the window
-// is full or when the base is too small — a gap, so nothing reads "unknown" as "flat".
-function computeRamp(series) {
-  return series.map((d, i) => {
-    if (i < RAMP_WINDOW) return null;
-    const base = series[i - RAMP_WINDOW].chronic;
-    if (!(base >= RAMP_MIN_BASE)) return null;
-    return (d.chronic / base - 1) * 100 / (RAMP_WINDOW / 7);
-  });
-}
-
-function renderProgressionChart(sessions) {
-  // Full history first: the ramp needs 28 days of run-up, so slicing afterwards leaves
-  // the series already warm at the left edge instead of opening with a month of nulls.
-  const all = computeAcuteChronic(sessions);
-  if (!all.length) return;
-  const rampAll = computeRamp(all);
-  const cut = Math.max(0, all.length - _progressionWeeks * 7);
-  const series = all.slice(cut), ramp = rampAll.slice(cut);
-
-  const chronic = series.map(d => +d.chronic.toFixed(1));
-  const labels  = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-
-  const IN = '#8a9a5b', HI = '#b3746e', LO = '#bd9a4f';   // olive / red / gold
-  // Shape carries the state as well as colour (DESIGN.md): ▲ ramping hard, ▼ shedding.
-  const rampStyle = ramp.map(v => v === null ? 'circle' : v > RAMP_HIGH ? 'triangle'
-                                 : v < 0 ? 'triangle' : 'circle');
-  const rampRot   = ramp.map(v => (v !== null && v < 0) ? 180 : 0);
-  const rampCol   = ramp.map(v => v === null ? 'transparent'
-                                : v > RAMP_HIGH ? HI : v < 0 ? LO : IN);
-
-  // Percentiles come from FULL history, not the visible slice — "where you sit" is a
-  // claim about your whole record, and it must not move when the scope pill does.
-  const sortedCh = all.map(d => d.chronic).sort((a,b) => a-b);
-  const pct = f => sortedCh[Math.min(sortedCh.length-1, Math.floor(f*sortedCh.length))];
-  const now = all[all.length-1].chronic;
-  const nowPct = 100 * sortedCh.filter(c => c <= now).length / sortedCh.length;
-  const nowRamp = rampAll[rampAll.length-1];
-
-  const noteEl = document.getElementById('progression-note');
-  if (noteEl) {
-    const state = nowRamp === null ? '—'
-                : nowRamp > RAMP_HIGH ? '⚠ ramping hard'
-                : nowRamp < 0 ? '↓ shedding' : '✓ in band';
-    noteEl.textContent = `chronic ${now.toFixed(0)} EP (p${nowPct.toFixed(0)}) · ramp `
-      + (nowRamp === null ? 'n/a' : `${nowRamp >= 0 ? '+' : ''}${nowRamp.toFixed(1)}%/wk`)
-      + ` ${state}`;
-  }
-
-  const statsEl = document.getElementById('progression-stats');
-  if (statsEl) {
-    const rows = [
-      ['Chronic EP now', now.toFixed(1), `${nowPct.toFixed(0)}th pct of your history`],
-      ['Ramp (28d)', nowRamp === null ? '—' : `${nowRamp >= 0 ? '+' : ''}${nowRamp.toFixed(1)} %/wk`,
-        `band ${RAMP_LOW}–${RAMP_HIGH} %/wk`],
-      ['Your p90 chronic', pct(0.90).toFixed(0), 'the level you have held'],
-      ['Your median', pct(0.50).toFixed(0), 'typical chronic EP'],
-      ['Your p10', pct(0.10).toFixed(0), 'time off / rebuilding'],
-    ];
-    statsEl.innerHTML = '<table class="load-table"><tbody>'
-      + rows.map(r => `<tr><td style="color:var(--muted)">${r[0]}</td>`
-          + `<td style="font-weight:700">${r[1]}</td>`
-          + `<td style="color:var(--muted);font-size:11px">${r[2]}</td></tr>`).join('')
-      + '</tbody></table>'
-      + '<p style="font-size:11px;color:var(--muted);padding:10px;line-height:1.5">'
-      + 'Percentiles, not targets. The ramp band is where this athlete\'s own recovery '
-      + 'markers were best — see docs/PROGRESSION.md. Shedding load scores worst, because '
-      + 'a falling chronic load is usually illness or travel rather than rest.</p>';
-  }
-
-  const datasets = [
-    // Band as an invisible upper bound plus a lower bound filling back to it — same
-    // two-dataset trick as the Optimal Range, and 'upper' is hidden from the legend.
-    { label:'upper', data: ramp.map(() => RAMP_HIGH), yAxisID:'y1', borderColor:'transparent',
-      pointRadius:0, fill:false, order:4 },
-    { label:`Ramp band ${RAMP_LOW}–${RAMP_HIGH}%/wk`, data: ramp.map(() => RAMP_LOW),
-      yAxisID:'y1', borderColor:'transparent', backgroundColor:'rgba(138,154,91,0.16)',
-      pointRadius:0, fill:'-1', order:4 },
-    { label:'Ramp %/wk', data: ramp, yAxisID:'y1', borderColor:'rgba(107,99,88,0.45)',
-      borderWidth:1.5, pointRadius:2.5, pointHoverRadius:5,
-      pointStyle:rampStyle, pointRotation:rampRot,
-      pointBackgroundColor:rampCol, pointBorderColor:rampCol,
-      spanGaps:false, fill:false, tension:0.25, order:2 },   // never bridge a null
-    { label:'Chronic EP', data: chronic, yAxisID:'y', borderColor:'#453f37',
-      borderWidth:2, pointRadius:0, pointHoverRadius:4, fill:false, tension:0.3, order:1 },
-  ];
-
-  const opts = chartOpts({ yLabel:'Chronic EP' });
-  opts.plugins.legend.labels.filter = (item) => item.text !== 'upper';
-  opts.scales.y1 = darkScale({
-    position:'right',
-    grid:{ drawOnChartArea:false },      // one grid is enough; two is visual noise
-    ticks:{ color:'#6f675c', font:{size: isPhone()?10:11}, callback: v => v + '%' },
-    title: isPhone() ? undefined : {display:true,text:'Ramp %/wk',color:'#6f675c',font:{size:11}},
-  });
-  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Chronic EP';
-  opts.plugins.tooltip.callbacks = {
-    title: (items) => series[items[0].dataIndex].date
-      .toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }),
-    label: (item) => 'Chronic EP: ' + item.parsed.y.toFixed(1),
-    afterBody: (items) => {
-      const v = ramp[items[0].dataIndex];
-      if (v === null) return ['Ramp: n/a (window not full)'];
-      const state = v > RAMP_HIGH ? '⚠ Ramping hard'
-                  : v < 0 ? '↓ Shedding load' : '✓ In ramp band';
-      return ['Ramp: ' + (v >= 0 ? '+' : '') + v.toFixed(1) + ' %/wk', state];
-    },
-  };
-
-  const ctx = document.getElementById('progression-chart').getContext('2d');
-  if (_progressionChart) _progressionChart.destroy();
-  _progressionChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
-}
 
 // ── CUMULATIVE YoY ────────────────────────────────────────────────────────────
 let _cumulChart = null;
@@ -1833,7 +1679,7 @@ function renderHrvStatus(sleepMap) {
   _bioChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
-// Progressive-overload VIEW scope pills (4 / 8 / 13 wk). These pan the x-axis only —
+// Progressive-overload VIEW scope pills (4 / 8 / 13 / 26 wk). These pan the x-axis only —
 // acute/chronic are computed over full history, so the curves don't change with scope.
 document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
@@ -1844,7 +1690,7 @@ document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   });
 });
 
-// Acute-vs-ceiling VIEW scope pills (8 / 13 / 26 wk). The ceiling itself is derived
+// Acute-vs-ceiling VIEW scope pills (4 / 8 / 13 / 26 wk). The ceiling itself is derived
 // from FULL history, so panning the view never moves the rule.
 document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
@@ -1852,17 +1698,6 @@ document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(p => {
     p.classList.add('active');
     _acuteCeilWeeks = parseInt(p.dataset.weeks);
     renderAcuteCeiling();
-  });
-});
-
-// Progression VIEW scope pills (13 / 26 / 52 wk). Same contract as the overload pills:
-// chronic and ramp are computed over full history, so these pan the x-axis only.
-document.querySelectorAll('#progression-scope-pills .rpill').forEach(p => {
-  p.addEventListener('click', () => {
-    document.querySelectorAll('#progression-scope-pills .rpill').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
-    _progressionWeeks = parseInt(p.dataset.weeks);
-    if (_sessions.length) renderProgressionChart(_sessions);
   });
 });
 
