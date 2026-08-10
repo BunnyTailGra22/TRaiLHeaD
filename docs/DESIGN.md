@@ -79,10 +79,8 @@ training chart.
 
 **Colour is never the only carrier of meaning on the recovery charts.** Every status is
 encoded twice — once in colour, once in marker shape — so the reading survives greyscale
-and colour-blind vision:
-
-The two channels carry different things, and keeping them separate is what makes the
-system work:
+and colour-blind vision. The two channels carry different things, and keeping them separate
+is what makes the system work:
 
 - **Shape = position on the metric's own scale.** ● top tier · ■ middle tier · ▲ bottom
   tier. Purely ordinal, no judgement.
