@@ -33,18 +33,44 @@ initGate()
    └─ password ok / already stored
         └─ loadConfig()          localStorage → cfg  (hardcoded sheet id + key win)
              └─ loadData()
-                  ├─ fetchRange(Activities!A1:L5000)   ─┐
-                  ├─ fetchRange(Sleep!A1:V5000)         ├─ Promise.all, Sheets v4 REST
-                  └─ fetchRange(Biometrics!A1:J3000)   ─┘
-                       ├─ parseSleepRows()   → sleepMap  { 'YYYY-MM-DD': {...} }
-                       ├─ parseBiometrics()  → _bodyComp [ {date, weight, ...} ]
-                       └─ processSessions()  → sessions  [ {date, dist, elev, ep, ...} ]
+                  ├─ fetchRange(Activities!A1:L5000)    ─┐
+                  ├─ fetchRange(Sleep!A1:V5000)          ├─ Promise.all, Sheets v4 REST
+                  ├─ fetchRange(Biometrics!A1:J3000)     │
+                  └─ fetchRange(TrainingLoad!A1:G1300)  ─┘
+                       ├─ parseSleepRows()    → sleepMap  { 'YYYY-MM-DD': {...} }
+                       ├─ parseBiometrics()   → _bodyComp [ {date, weight, ...} ]
+                       ├─ parseTrainingLoad() → _trainingLoad [ {date, acute, ...} ]
+                       └─ processSessions()   → sessions  [ {date, dist, elev, ep, ...} ]
                             └─ renderAll(sessions, sleepMap)
                                  └─ every chart renderer, in order
 ```
 
 `loadSampleData()` bypasses the fetch entirely and synthesises three years of sessions
 plus a sleep map, then calls `renderAll` — the same path the real data takes.
+
+The **`TrainingLoad`** fetch is optional: it `.catch(() => [])` like Sleep and Biometrics,
+and `renderAcuteCeiling` hides its whole card when the tab is missing rather than drawing an
+empty frame. `loadSampleData` clears `_trainingLoad` for the same reason — nothing there
+synthesises Garmin's load model, and a made-up ceiling would be worse than no chart.
+
+Reading that tab does not change what Progressive Overload is built on; it still derives its
+own ACWR from EP. `analysis/progression.py` reads the same tab offline for VO₂max, which the
+dashboard still does not plot.
+
+## Offline analysis
+
+`analysis/` is not part of the site and is never served. Two standard-library scripts read
+the same sheet and reuse the documented formulas, so their findings describe the metrics as
+the charts actually define them:
+
+| Script | Reproduces |
+|---|---|
+| `load_recovery.py` | `docs/RECOVERY-PATTERN.md` |
+| `progression.py` | `docs/PROGRESSION.md` |
+
+`progression.py` imports its loaders and model functions from `load_recovery.py` — same
+directory, so `sys.path[0]` resolves it with no packaging. Both take `--cache DIR` to reuse
+raw JSON instead of re-fetching.
 
 ## Data model
 
@@ -55,6 +81,7 @@ Three structures, built once per load and held in module-level state:
 | `_sessions` | array of session objects, date-ascending | `processSessions()` |
 | `_sleepMap` | object keyed `YYYY-MM-DD` | `parseSleepRows()` |
 | `_bodyComp` | array of body-composition records, date-ascending | `parseBiometrics()` |
+| `_trainingLoad` | array of Garmin load records, date-ascending | `parseTrainingLoad()` |
 
 A **session** carries `date, dist, elev, hrs, type ('road'|'trail'), ep, name, year,
 month, week` plus that day's sleep fields joined in by date key. Only rows whose activity
@@ -90,6 +117,8 @@ module global for exactly this reason.
 baselines, EWMAs — are always computed over **full history and then sliced** to the
 visible window, so a band is already warmed up at the left edge instead of ramping from
 zero. `renderHrvStatus` is the one exception: it filters by date cutoff first.
+`renderAcuteCeiling` derives its ceiling from full history for the same reason — panning
+the view must never move the rule it is judging against.
 
 **Tab switching re-renders.** A chart built while its panel is `display:none` measures
 0×0, so `switchTab()` re-runs every renderer for the panel being shown.

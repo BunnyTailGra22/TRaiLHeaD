@@ -35,7 +35,8 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| Progressive Overload | Recent 8 Weeks load table |
+| Progressive Overload — Acute EP for stimulation | 7-Day Acute Load vs the ceiling |
+| Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 
 **Recovery & Body tab**
@@ -51,9 +52,30 @@ Two metrics carry most of the weight:
 - **EP (Effort Points)** = `distance_km + elevation_m/100` — one number for the size of a
   run that treats 100 m of climb as equivalent to 1 km flat. **EPH** = `EP/hours` is its
   density. Every load chart is built on these.
-- **Progressive Overload** is an ACWR model: acute load is an exponentially-weighted
-  7-day sum of daily EP, chronic is a 4-week average of that, and the shaded band is
-  0.8–1.4 × chronic. Above the band is spike risk, below it is detraining.
+- **Progressive Overload** is an ACWR model: acute EP is an exponentially-weighted
+  7-day sum of daily EP, chronic is an exponentially-weighted 4-week average of that, and
+  the shaded band is 0.8–1.4 × chronic. Above the band is spike risk, below it is
+  detraining. Being a ratio it is **scale-free**, so it reads spike risk but cannot judge
+  progression — which is why the ratio itself is not shown as a headline figure.
+- **7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted against
+  a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery or
+  Strained flag within 14 days. It computes from the data rather than being hardcoded, and
+  isn't drawn at all until there are enough flagged days to calibrate on.
+
+Both load charts share one two-state palette — green in range, red out, every reference
+line grey — and both shade Garmin's own Recovery and Strained stretches behind the curves,
+so a bad patch lines up across the two models at a glance. See
+[docs/DESIGN.md](docs/DESIGN.md).
+
+Nothing on the tab judges *progression*, only spike risk: a scale-free ratio structurally
+can't. The level and slope that would are worked out in
+[docs/PROGRESSION.md](docs/PROGRESSION.md) and its script, deliberately not charted.
+
+How the two tabs relate to each other is written up in
+[docs/RECOVERY-PATTERN.md](docs/RECOVERY-PATTERN.md). Short version: a run costs **one**
+night of elevated resting HR and suppressed HRV and is back by the second, the effect is
+about 1 bpm after a long day, and **duration predicts that cost roughly three times better
+than EP does** — worth knowing before reading too much into a single EP number.
 
 **Recovery Vitals** judges Resting HR, SpO₂ and respiration against your *own* 30-day
 rolling baseline rather than absolute numbers, because 48 bpm or 95% means nothing without
@@ -71,7 +93,16 @@ docs/
   ARCHITECTURE.md        how it's put together, data flow, rendering pattern
   DESIGN.md              palette, encoding rules, layout, responsive breakpoints
   SPEC.md                every derived metric and its formula
+  RECOVERY-PATTERN.md    findings: how recovery responds to load
+  PROGRESSION.md         findings: defining optimal load, and VO₂max
+analysis/
+  load_recovery.py       offline analysis, reproduces RECOVERY-PATTERN.md
+  progression.py         offline analysis, reproduces PROGRESSION.md
 ```
+
+`analysis/` is offline and not part of the site — a standard-library script that reads the
+same sheet and reuses the formulas in SPEC.md, so the findings describe the metrics as the
+charts actually define them.
 
 `index.html` is what GitHub Pages serves. **The two HTML files must stay identical** —
 nothing enforces it, so `cp index.html training_dashboard.html` on every commit that

@@ -38,9 +38,31 @@ sage `#7f9d78`, RHR dusty rose `#b3746e`, respiration slate `#7e8aa2`, weight oc
 Two status families, because they answer different questions.
 
 **Load & sleep quality** — a graded scale where both ends are informative:
-green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`. Progressive Overload's
-dots use dark `#453f37` for "inside the band" rather than green, because in-range is the
-unremarkable case there and the eye should go to the deviations.
+green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
+
+**Load charts** (Progressive Overload, 7-Day Acute Load) share one two-state palette, so
+the pair sitting side by side reads identically:
+
+| Role | Token | Colour |
+|---|---|---|
+| In range | `LOAD_IN` | green `#7f9d78` |
+| Out of range | `LOAD_OUT` | red `#b3746e` |
+| Reference line (chronic, ceiling, band fill) | `LOAD_REF` | grey `#9d9488` |
+
+Only two states, though *above* and *below* the band mean opposite things — spike risk and
+detraining. The tooltip names which; the palette answers "in range or not" so that reading
+survives a glance. Keeping every reference line grey is what makes it work: colour appears
+on the chart only where there is a reading to judge, never on the rule doing the judging.
+
+> Grey doubles as "no data / not scored" on the recovery charts. On the load charts it is
+> unambiguous in practice — it only ever appears as a continuous dashed rule or a band
+> fill, never as a marker, and markers are the only place the no-data meaning applies.
+
+Both load charts also shade Garmin's own **Recovery** `rgba(179,116,110,0.11)` and
+**Strained** `rgba(143,63,56,0.16)` stretches as vertical washes behind the curves. They
+sit far below the marker colours in weight deliberately: they are context for the reading,
+not the reading. Strained is the darker of the two because it is the rarer and more serious
+state — the same "darken rather than re-hue" move the recovery ramp makes for Poor.
 
 **Recovery status** (HRV Status, Recovery Vitals) — a heat ramp where severity should read
 before the legend does: green `#7f9d78` → orange `#c08552` → red `#ab5a52` → deep red

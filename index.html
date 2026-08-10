@@ -100,7 +100,10 @@ main { padding: 20px 24px; }
 .chart-box > canvas { width: 100% !important; height: 100% !important; display: block; }
 .grid-2x2 .chart-box { height: 220px; }
 /* Training tab: paired rows share a height so each two-col row aligns */
-#cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 280px; }
+#cumul-box, #monthly-box, #box-box, #focus-box { height: 280px; }
+/* The two load charts are paired and BOTH now carry a shape key above the plot, so
+   they give back the same height and their plot areas stay level with each other. */
+#rolling-box, #acuteceil-box { height: 260px; }
 /* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
    its chart, so bio-box gets that height back to keep the two plot areas level. */
 #bio-box   { height: 330px; }
@@ -348,11 +351,12 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 2: Progressive Overload | Recent 8 Weeks Load Summary -->
+  <!-- ROW 2: the two load models side by side — this dashboard's own ACWR over EP,
+       and Garmin's raw Acute Load against the level its Recovery flag always follows. -->
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">Progressive Overload — Acute EP vs Optimal Range</div>
+        <div class="section-title" style="margin:0">Progressive Overload — Acute EP for Stimulation</div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
           <!-- view scope only — the chronic window itself is fixed at 4 wk -->
@@ -360,23 +364,55 @@ main { padding: 20px 24px; }
             <div class="rpill" data-weeks="4">4 wk</div>
             <div class="rpill active" data-weeks="8">8 wk</div>
             <div class="rpill" data-weeks="13">13 wk</div>
+            <div class="rpill" data-weeks="26">26 wk</div>
           </div>
         </div>
+      </div>
+      <div class="shape-key" style="margin-bottom:8px">
+        <span><i style="color:#7f9d78">●</i> in range</span>
+        <span><i style="color:#b3746e">●</i> out of range</span>
+        <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
+        <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
       </div>
       <div class="chart-box" id="rolling-box"><canvas id="rolling-chart"></canvas></div>
     </div>
 
-    <div class="chart-card">
+    <!-- hidden by the renderer when the TrainingLoad tab is missing -->
+    <div class="chart-card" id="acuteceil-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
+        <div class="section-title" style="margin:0">7-Day Acute Load — Against the Ceiling</div>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <div id="acuteceil-note" style="font-size:11px;color:var(--muted)"></div>
+          <div class="range-pills" id="acuteceil-scope-pills">
+            <div class="rpill" data-weeks="4">4 wk</div>
+            <div class="rpill" data-weeks="8">8 wk</div>
+            <div class="rpill" data-weeks="13">13 wk</div>
+            <div class="rpill active" data-weeks="26">26 wk</div>
+          </div>
+        </div>
       </div>
-      <div class="table-scroll" style="height:280px;overflow-y:auto;">
-        <div id="load-table-wrap"><div class="empty">No data loaded.</div></div>
+      <div class="shape-key" style="margin-bottom:8px">
+        <span><i style="color:#7f9d78">●</i> under ceiling</span>
+        <span><i style="color:#b3746e">●</i> over</span>
+        <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
+        <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
       </div>
+      <div class="chart-box" id="acuteceil-box"><canvas id="acuteceil-chart"></canvas></div>
     </div>
   </div>
 
-  <!-- ROW 3: Distribution by Category | 專項訓練 Seasonality -->
+  <!-- ROW 3: the weekly table, full width — it has eight columns and was scrolling
+       sideways inside a half-width card. -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Recent 8 Weeks — Load Summary</div>
+    </div>
+    <div class="table-scroll">
+      <div id="load-table-wrap"><div class="empty">No data loaded.</div></div>
+    </div>
+  </div>
+
+  <!-- ROW 4: Distribution by Category | 專項訓練 Seasonality -->
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
@@ -580,6 +616,7 @@ function defaultCfg() {
     actRange:   'Activities!A1:L5000',
     sleepRange: 'Sleep!A1:V5000',
     bioRange:   'Biometrics!A1:J3000',
+    tlRange:    'TrainingLoad!A1:G1300',
     colDate:      'Start Time',
     colDist:      'Distance (km)',
     colElev:      'Elevation Gain (m)',
@@ -642,6 +679,7 @@ function saveConfig() {
     actRange:     get('cfg-act-range')   || 'Activities!A1:L5000',
     sleepRange:   get('cfg-sleep-range') || 'Sleep!A1:V5000',
     bioRange:     cfg.bioRange || 'Biometrics!A1:J3000',
+    tlRange:      cfg.tlRange  || 'TrainingLoad!A1:G1300',
     colDate:      get('col-date'),
     colDist:      get('col-dist'),
     colElev:      get('col-elev'),
@@ -678,14 +716,16 @@ async function loadData() {
   if (!cfg.sheetId || !cfg.apiKey) { setStatus('#bb7d77', 'Config missing — open ⚙'); return; }
   setStatus('#c4a86f', 'Loading…');
   try {
-    const [actRows, sleepRows, bioRows] = await Promise.all([
+    const [actRows, sleepRows, bioRows, tlRows] = await Promise.all([
       fetchRange(cfg.actRange),
       fetchRange(cfg.sleepRange).catch(() => []),
       fetchRange(cfg.bioRange).catch(() => []),
+      fetchRange(cfg.tlRange).catch(() => []),      // optional — chart hides if absent
     ]);
     if (actRows.length < 2) throw new Error('Activities tab appears empty');
     const sleepMap = parseSleepRows(sleepRows);
     _bodyComp = parseBiometrics(bioRows);
+    _trainingLoad = parseTrainingLoad(tlRows);
     processSessions(actRows, sleepMap);
     renderBodyComp();
     setStatus('#93a77f', `Loaded ${actRows.length - 1} activities · ${Object.keys(sleepMap).length} sleep · ${_bodyComp.length} body records`);
@@ -782,9 +822,61 @@ function toDateKey(v) {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null;
 }
 
+// ── PARSE TRAINING LOAD ───────────────────────────────────────────────────────
+// Garmin's OWN load model, not the EP one. Acute Load is its 7-day exponentially
+// weighted load; Chronic Load is the 28-day figure, expressed as a weekly-equivalent
+// average (verified: it tracks the 28-day mean of Acute). Kept deliberately separate
+// from Progressive Overload, which computes its own ACWR from EP.
+//
+// This tab UPSERTS rather than appends — Garmin revises recent rows for days
+// afterwards — so the last week of this series can move without any new training.
+let _trainingLoad = [];
+function parseTrainingLoad(rows) {
+  if (!rows || rows.length < 2) return [];
+  const h = rows[0];
+  const iDate = ci(h, 'Date'), iAcute = ci(h, 'Acute Load');
+  const iChronic = ci(h, 'Chronic Load'), iRatio = ci(h, 'Load Ratio');
+  const iStatus = ci(h, 'Training Status');
+  if (iDate < 0 || iAcute < 0) return [];
+  const out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const dk = toDateKey(r[iDate]);
+    if (!dk) continue;
+    out.push({
+      date:    new Date(dk),
+      // Raw 'YYYY-MM-DD' kept for joining onto other series. `date` above is UTC
+      // midnight while the EP grid keys on LOCAL midnight, so comparing the two Date
+      // objects would slip a day in any timezone behind UTC. Join on this instead.
+      key:     dk,
+      acute:   iAcute   >= 0 ? num(r[iAcute])   : null,
+      chronic: iChronic >= 0 ? num(r[iChronic]) : null,
+      ratio:   iRatio   >= 0 ? num(r[iRatio])   : null,
+      // Garmin suffixes a feedback-phrase index onto the status (STRAINED_4); the
+      // family before the underscore is the part that means anything here.
+      status: (iStatus >= 0 ? String(r[iStatus] || '') : '').trim().toUpperCase().split('_')[0],
+    });
+  }
+  out.sort((a, b) => a.date - b.date);
+  return out;
+}
+
 function ci(headers, name) {
   if (!name) return -1;
   return headers.findIndex(h => h.trim().toLowerCase() === name.trim().toLowerCase());
+}
+
+// 'YYYY-MM-DD' from a Date's LOCAL fields. Series built from activity timestamps key on
+// local midnight, so this is what joins them to the sheet's plain date strings.
+// toISOString() would be wrong here — it shifts to UTC and slips a day.
+function localDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+       + `-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// STRAINED → Strained, for display.
+function titleCase(s) {
+  return s ? s.charAt(0) + s.slice(1).toLowerCase() : s;
 }
 
 function num(v) {
@@ -854,6 +946,7 @@ function renderAll(sessions, sleepMap) {
   renderSummaryCards(sessions);
   buildMonthlyYearPills(sessions);
   renderRollingChart(sessions);
+  renderAcuteCeiling();
   buildCumulChart(sessions, _activeCumulMetric);
   renderFocusChart(sessions);   // running activities only
   renderBoxChart(sessions);
@@ -1170,7 +1263,7 @@ let _rollingChart = null;
 // "what you're accustomed to", not a view setting, so it must not move underneath the
 // optimal range. The pills now scope the VIEW instead (see _overloadWeeks).
 const CHRONIC_WEEKS = 4;
-let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13), daily resolution
+let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13 / 26), daily resolution
 
 // Acute EP  — exponentially-weighted rolling SUM of daily EP, 7-day time constant.
 //   acute[i] = ep[i] + acute[i-1] * ACUTE_DECAY
@@ -1180,6 +1273,14 @@ const ACUTE_TAU   = 7;
 const ACUTE_DECAY = Math.exp(-1 / ACUTE_TAU);          // ≈ 0.8669
 // Optimal range = 0.8–1.4 × Chronic EP (acute:chronic workload ratio sweet spot)
 const ACWR_LOW = 0.8, ACWR_HIGH = 1.4;
+
+// Shared palette for BOTH load charts — Progressive Overload and 7-Day Acute Load —
+// so "in range" and "out of range" read identically across the pair sitting side by
+// side. Green is the state you want, red is the deviation (DESIGN.md status family);
+// the reference lines stay grey so nothing competes with the reading.
+const LOAD_IN  = '#7f9d78';   // in range — sage green
+const LOAD_OUT = '#b3746e';   // out of range — dusty rose
+const LOAD_REF = '#9d9488';   // chronic / ceiling reference lines — warm grey
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
 function computeAcuteChronic(sessions) {
@@ -1215,22 +1316,41 @@ function renderRollingChart(sessions) {
   const upper  = series.map(d => +(d.chronic * ACWR_HIGH).toFixed(1));
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
-  // Colour each day by where Acute EP sits vs the band
-  const IN = '#453f37', HI = '#b3746e', LO = '#bd9a4f';   // text / red / yellow
-  const dotColors = acute.map((v, i) => v > upper[i] ? HI : (v < lower[i] ? LO : IN));
+  // Colour each day by where Acute EP sits vs the band. Two states, not three: green
+  // in the band, red outside it either way. Above and below mean different things
+  // (spike risk vs detraining) and the tooltip still says which — but the chart's job
+  // here is the binary "in range or not", so the palette answers that question only.
+  const IN = LOAD_IN, OUT = LOAD_OUT;
+  const dotColors = acute.map((v, i) => (v > upper[i] || v < lower[i]) ? OUT : IN);
 
-  // Header note: today's acute / chronic / ratio
+  // Header note: today's acute and chronic. The ratio and its verdict are deliberately
+  // NOT here — the dots already say in-range or not, and a headline number invited
+  // reading the ratio as a score when it self-centres near 1.0 by construction. Still
+  // in the tooltip for anyone who wants the figure for a specific day.
   const noteEl = document.getElementById('overload-note');
   if (noteEl) {
     const t = series[series.length - 1];
-    if (t) {
-      const ratio = t.chronic > 0 ? t.acute / t.chronic : 0;
-      const state = ratio > ACWR_HIGH ? '⚠ spike risk' : ratio < ACWR_LOW ? '↓ detraining' : '✓ optimal';
-      // the time constants are named here since they're fixed and no longer pickable
-      noteEl.textContent = `acute ${t.acute.toFixed(0)} (7d) · chronic ${t.chronic.toFixed(0)} `
-        + `(${CHRONIC_WEEKS} wk) · ratio ${ratio.toFixed(2)} ${state}`;
-    } else noteEl.textContent = '';
+    // the time constants are named here since they're fixed and no longer pickable
+    noteEl.textContent = t
+      ? `acute ${t.acute.toFixed(0)} (7d exp.) · chronic ${t.chronic.toFixed(0)} `
+        + `(${CHRONIC_WEEKS} wk exp.)`
+      : '';
   }
+
+  // Garmin's Recovery/Strained stretches, joined onto the EP grid BY DATE KEY — this
+  // series starts in 2024 and the TrainingLoad tab in 2026, so index alignment would be
+  // meaningless. Days with no TrainingLoad row simply carry no band.
+  const statusByKey = {};
+  _trainingLoad.forEach(d => { if (FLAG_STATES.includes(d.status)) statusByKey[d.key] = d.status; });
+  const garminStatusOn = date => statusByKey[localDayKey(date)] || null;
+  const bands = [];
+  series.forEach((d, i) => {
+    const st = garminStatusOn(d.date);
+    if (!st) return;
+    const last = bands[bands.length - 1];
+    if (last && last.s === st && last.b === i - 1) last.b = i;
+    else bands.push({ s: st, a: i, b: i });
+  });
 
   const datasets = [
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
@@ -1238,11 +1358,11 @@ function renderRollingChart(sessions) {
     { label: 'Optimal Range', data: lower, borderColor: 'transparent',
       backgroundColor: 'rgba(157,148,136,0.28)', pointRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
-    { label: 'Chronic EP', data: series.map(d => +d.chronic.toFixed(1)),
-      borderColor: '#8a9a5b', borderWidth: 1.5, borderDash: [4,3],
+    { label: `Chronic EP (${CHRONIC_WEEKS} wk exp.)`, data: series.map(d => +d.chronic.toFixed(1)),
+      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
       pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2 },
     { label: 'Acute EP', data: acute, borderColor: IN, borderWidth: 2,
-      pointRadius: 1.5, pointHoverRadius: 5,
+      pointRadius: 2, pointHoverRadius: 5,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.25, order: 1 },
   ];
@@ -1265,14 +1385,151 @@ function renderRollingChart(sessions) {
         'Ratio: ' + ratio.toFixed(2),
         'Optimal: ' + lower[i].toFixed(0) + '–' + upper[i].toFixed(0) + ' EP',
         status,
+        ...(garminStatusOn(d.date) ? ['Garmin: ' + titleCase(garminStatusOn(d.date))] : []),
       ];
     },
   };
 
+  opts.plugins.loadStatusBands = { bands };
+
   const ctx = document.getElementById('rolling-chart').getContext('2d');
   if (_rollingChart) _rollingChart.destroy();
-  _rollingChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
+  _rollingChart = new Chart(ctx, {
+    type:'line', data:{ labels, datasets }, options: opts, plugins: [_loadStatusBands],
+  });
 }
+
+// ── 7-DAY ACUTE LOAD vs CEILING ───────────────────────────────────────────────
+// Garmin's own Acute Load against the level above which its Recovery/Strained flag
+// has always followed. The ceiling is DERIVED, not a constant: it is the highest
+// acute load never followed by a flag within CEIL_LOOKAHEAD days. Deriving it keeps
+// the chart honest as data accumulates instead of freezing a number that goes stale.
+// On this athlete's Jan–Jul 2026 data it lands at 890, and the three spikes above it
+// were each followed by Recovery within 6–11 days. See docs/PROGRESSION.md.
+let _acuteCeilChart = null;
+let _acuteCeilWeeks = 26;                  // x-axis scope (8 / 13 / 26 wk)
+const CEIL_LOOKAHEAD = 14;                 // days a spike gets to produce a flag
+const CEIL_MIN_FLAGS = 3;                  // below this there is nothing to calibrate on
+const FLAG_STATES = ['RECOVERY', 'STRAINED'];
+
+// Highest acute load never followed by a flag inside the lookahead. null when the
+// history is too thin to support the claim — a missing rule, not a guessed one.
+function computeLoadCeiling(tl) {
+  const flagged = tl.map(d => FLAG_STATES.includes(d.status));
+  if (flagged.filter(Boolean).length < CEIL_MIN_FLAGS) return null;
+  const dayMs = 86400000;
+  let ceiling = null;
+  tl.forEach((d, i) => {
+    if (d.acute === null) return;
+    // Look ahead by DATE, not by index — a gap in the sheet must not shorten the window.
+    const until = d.date.getTime() + CEIL_LOOKAHEAD * dayMs;
+    let hit = false;
+    for (let j = i + 1; j < tl.length && tl[j].date.getTime() <= until; j++) {
+      if (flagged[j]) { hit = true; break; }
+    }
+    if (!hit && (ceiling === null || d.acute > ceiling)) ceiling = d.acute;
+  });
+  return ceiling;
+}
+
+function renderAcuteCeiling() {
+  const card = document.getElementById('acuteceil-card');
+  const tl = _trainingLoad;
+  // The TrainingLoad tab starts far later than Activities, and may be absent entirely.
+  if (!tl.length) { if (card) card.style.display = 'none'; return; }
+  if (card) card.style.display = '';
+
+  const ceiling = computeLoadCeiling(tl);
+  const series = tl.slice(Math.max(0, tl.length - _acuteCeilWeeks * 7));
+  const acute  = series.map(d => d.acute);
+  const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+
+  const OVER = LOAD_OUT, UNDER = LOAD_IN;
+  const dotColors = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? OVER : UNDER);
+  const dotRadii  = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? 4 : 2);
+
+  const crossings = acute.filter(v => ceiling !== null && v !== null && v > ceiling).length;
+  const noteEl = document.getElementById('acuteceil-note');
+  if (noteEl) {
+    const t = series[series.length - 1];
+    noteEl.textContent = `acute ${t.acute === null ? '—' : t.acute.toFixed(0)} (7d)`
+      + (ceiling === null ? ' · ceiling n/a' : ` · ceiling ${ceiling.toFixed(0)}`)
+      + ` · ${crossings} crossing${crossings === 1 ? '' : 's'} in view`;
+  }
+
+  const datasets = [{
+    label: 'Acute Load', data: acute, borderColor: UNDER, borderWidth: 2,
+    pointRadius: dotRadii, pointHoverRadius: 5,
+    pointBackgroundColor: dotColors, pointBorderColor: dotColors,
+    spanGaps: false, fill: false, tension: 0.25, order: 1,
+  }];
+  if (ceiling !== null) {
+    // Grey, like Chronic EP on the chart beside it: the reference apparatus is grey on
+    // both, so green/red always means the reading rather than the rule. The dots that
+    // cross already carry the warning — a red rule would say it twice.
+    datasets.push({
+      label: `Ceiling ${ceiling.toFixed(0)}`, data: acute.map(() => ceiling),
+      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [5, 4],
+      pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2,
+    });
+  }
+
+  const opts = chartOpts({ yLabel: 'Garmin load' });
+  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute Load';
+  opts.plugins.tooltip.callbacks = {
+    title: (items) => series[items[0].dataIndex].date
+      .toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }),
+    label: (item) => 'Acute Load: ' + item.parsed.y.toFixed(0),
+    afterBody: (items) => {
+      const d = series[items[0].dataIndex], out = [];
+      if (d.chronic !== null) out.push('Chronic (28d): ' + d.chronic.toFixed(0));
+      if (d.ratio !== null)   out.push('Ratio: ' + d.ratio.toFixed(2));
+      if (d.status) out.push('Status: ' + d.status.charAt(0) + d.status.slice(1).toLowerCase());
+      if (ceiling !== null && d.acute !== null && d.acute > ceiling) out.push('⚠ Above the ceiling');
+      return out;
+    },
+  };
+
+  // Contiguous Recovery/Strained stretches, as index ranges into the visible slice.
+  const bands = [];
+  series.forEach((d, i) => {
+    if (!FLAG_STATES.includes(d.status)) return;
+    const last = bands[bands.length - 1];
+    if (last && last.s === d.status && last.b === i - 1) last.b = i;
+    else bands.push({ s: d.status, a: i, b: i });
+  });
+
+  opts.plugins.loadStatusBands = { bands };
+
+  const ctx = document.getElementById('acuteceil-chart').getContext('2d');
+  if (_acuteCeilChart) _acuteCeilChart.destroy();
+  _acuteCeilChart = new Chart(ctx, {
+    type: 'line', data: { labels, datasets }, options: opts, plugins: [_loadStatusBands],
+  });
+}
+
+// Garmin's Recovery/Strained stretches as vertical washes behind the line. Chart.js has
+// no band primitive on the category axis, so this paints them directly — same approach
+// as _boxPlugin and _rasterMedianLines.
+const _loadStatusBands = {
+  id: 'loadStatusBands',
+  // Bands arrive as plugin options (options.plugins.loadStatusBands). They cannot be
+  // hung off the config object passed to the constructor — Chart.js wraps that in its
+  // own Config, so a stray property on it never reaches the chart.
+  beforeDatasetsDraw(chart, args, pluginOpts) {
+    const bands = pluginOpts && pluginOpts.bands;
+    if (!bands || !bands.length) return;
+    const { ctx, chartArea: a, scales: { x } } = chart;
+    ctx.save();
+    bands.forEach(b => {
+      const x0 = x.getPixelForValue(b.a);
+      const x1 = x.getPixelForValue(Math.min(b.b + 1, x.max));
+      ctx.fillStyle = b.s === 'STRAINED' ? 'rgba(143,63,56,0.16)' : 'rgba(179,116,110,0.11)';
+      ctx.fillRect(x0, a.top, Math.max(x1 - x0, 2), a.bottom - a.top);
+    });
+    ctx.restore();
+  },
+};
 
 // ── CUMULATIVE YoY ────────────────────────────────────────────────────────────
 let _cumulChart = null;
@@ -1466,7 +1723,7 @@ function renderHrvStatus(sleepMap) {
   _bioChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
-// Progressive-overload VIEW scope pills (4 / 8 / 13 wk). These pan the x-axis only —
+// Progressive-overload VIEW scope pills (4 / 8 / 13 / 26 wk). These pan the x-axis only —
 // acute/chronic are computed over full history, so the curves don't change with scope.
 document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
@@ -1474,6 +1731,17 @@ document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
     p.classList.add('active');
     _overloadWeeks = parseInt(p.dataset.weeks);
     if (_sessions.length) renderRollingChart(_sessions);
+  });
+});
+
+// Acute-vs-ceiling VIEW scope pills (4 / 8 / 13 / 26 wk). The ceiling itself is derived
+// from FULL history, so panning the view never moves the rule.
+document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _acuteCeilWeeks = parseInt(p.dataset.weeks);
+    renderAcuteCeiling();
   });
 });
 
@@ -2173,6 +2441,9 @@ function loadSampleData() {
     }
   });
   sessions.sort((a,b)=>a.date-b.date);
+  // Nothing here synthesises Garmin's own load model, so the acute-vs-ceiling card
+  // hides itself rather than showing a made-up ceiling.
+  _trainingLoad = [];
   renderAll(sessions, sleepMap);
   setStatus('#93a77f', `Sample · ${sessions.length} sessions · ${Object.keys(sleepMap).length} sleep nights`);
 }
