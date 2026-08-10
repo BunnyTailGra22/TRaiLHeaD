@@ -85,6 +85,14 @@ status.
 continuity the data does not have. Lines are reserved for genuinely continuous or smoothed
 series — 7-day averages, 30-day medians, EWMA curves.
 
+*One scoped exception:* the **trail** on Sleep Duration → Score joins the last four nights
+in date order. It is allowed because that chart's axes are duration and score — neither is
+time — so the quality-band datasets scatter consecutive nights far apart and the recent
+trajectory is otherwise unreadable. The line is the change; that is the whole point of it.
+It stays honest by being strictly bounded: four nights, one chart, drawn behind the dots in
+neutral grey, and faded oldest → newest (`segment.borderColor`) so direction reads without
+an arrowhead. It is not a licence to connect nights anywhere else.
+
 **Baseline bands are light warm grey** (`rgba(157,148,136,0.28)`), never coloured. The
 band is context; the marks are the data. All three banded charts use the same fill so a
 grey band always means "the range you are being judged against".

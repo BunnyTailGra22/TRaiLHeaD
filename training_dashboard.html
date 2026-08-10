@@ -1995,6 +1995,7 @@ document.querySelectorAll('#raster-range-pills .rpill').forEach(p => {
 // Regression line + Pearson r show how strongly duration predicts score.
 let _perfChart = null;
 let _perfScope = 30;    // trailing days
+const TRAIL_NIGHTS = 4; // how many recent nights the connecting trail spans
 function linreg(xs, ys) {
   const n = xs.length; if (n < 2) return null;
   const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
@@ -2019,7 +2020,7 @@ function renderSleepPerf(sleepMap) {
     if (reg) {
       const s = Math.abs(reg.r) < 0.2 ? 'negligible' : Math.abs(reg.r) < 0.4 ? 'weak'
         : Math.abs(reg.r) < 0.6 ? 'moderate' : 'strong';
-      noteEl.textContent = `${nights.length} nights · r = ${reg.r.toFixed(2)} (${s} ${reg.r>=0?'↑':'↓'}) · avg ${(nights.reduce((a,n)=>a+n.hours,0)/nights.length).toFixed(1)} h`;
+      noteEl.textContent = `${nights.length} nights · r = ${reg.r.toFixed(2)} (${s} ${reg.r>=0?'↑':'↓'}) · avg ${(nights.reduce((a,n)=>a+n.hours,0)/nights.length).toFixed(1)} h · line = last ${TRAIL_NIGHTS} nights`;
     } else noteEl.textContent = nights.length ? `${nights.length} nights` : 'No sleep score / duration data in scope';
   }
 
@@ -2045,11 +2046,34 @@ function renderSleepPerf(sleepMap) {
     borderColor: c.color, borderWidth:1,
   }));
 
+  // Trail through the last 4 nights, oldest → newest. The quality datasets group by
+  // band, so consecutive nights land in different datasets and the recent trajectory
+  // is invisible; this re-joins them in date order to show which way things are moving.
+  // A deliberate exception to "nightly series are dots, not lines" — it connects only
+  // 4 consecutive nights and the point of it IS the change between them.
+  const trail = nights.slice(-TRAIL_NIGHTS);
+  if (trail.length >= 2) {
+    datasets.push({
+      label: 'trail',
+      data: trail.map(n => ({ x:n.hours, y:n.score, _n:n })),
+      showLine: true, fill:false, tension:0,
+      borderColor: 'rgba(111,103,92,0.5)', borderWidth: 1.5,
+      // Fade oldest→newest so the line reads directionally without needing an arrowhead;
+      // the latest night's hollow ring already marks where it ends up.
+      segment: { borderColor: ctx => `rgba(111,103,92,${0.28 + 0.22 * ctx.p0DataIndex})` },
+      pointRadius: 0, pointHoverRadius: 0,   // dots are drawn by the quality datasets
+      order: 99,                             // higher order = drawn first = behind the dots
+    });
+  }
+
   const opts = chartOpts({});
   opts.interaction = { mode:'nearest', intersect:true };
   opts.plugins.legend.display = true;
   opts.plugins.legend.position = phone ? 'bottom' : 'top';
-  opts.plugins.legend.labels = { ...(opts.plugins.legend.labels||{}), filter: it => it.text !== 'trend' };
+  // 'trail' is explained in the header note, not the legend — a point-style legend key
+  // would render it as a dot, which is exactly what it isn't.
+  opts.plugins.legend.labels = { ...(opts.plugins.legend.labels||{}),
+    filter: it => it.text !== 'trend' && it.text !== 'trail' };
   opts.plugins.tooltip.callbacks = {
     title: (it) => it[0].raw._n ? it[0].raw._n.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}) : '',
     label: (it) => { const n = it.raw._n; if (!n) return null;

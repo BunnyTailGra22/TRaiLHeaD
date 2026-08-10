@@ -224,6 +224,16 @@ edges mean a consistent schedule. Scope 30 / 60 / 90 d.
 ### Sleep Duration → Score
 Scatter, x = duration (h), y = sleep score, colour = shared quality scale, one dataset per
 band so the legend is interactive. The most recent night is drawn as a large hollow ring.
+
+A **trail** connects the last `TRAIL_NIGHTS` (4) nights *in scope*, oldest → newest, as a
+fifth dataset with `showLine:true`. Because the band datasets group by quality rather than
+by date, consecutive nights land in different datasets and the recent trajectory is
+invisible without it; the trail re-joins them so you can see which way duration and score
+are moving together. Segment opacity ramps 0.28 → 0.72 toward the newest night, and the
+line carries `order: 99` so it paints behind the dots (Chart.js draws its sorted metasets
+back-to-front, so a higher `order` sits further back). Fewer than 2 in-scope nights → no
+trail. Excluded from the legend and named in the header note instead, since a point-style
+legend key would draw it as a dot.
 Pearson **r** and the regression are computed on duration vs score and reported in the
 header, with |r| bucketed as negligible (<0.2) / weak (<0.4) / moderate (<0.6) / strong.
 Scope 30 / 60 / 90 / 180 / 365 d.
