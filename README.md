@@ -4,7 +4,10 @@ A personal trail-running and recovery dashboard. Reads a Google Sheet of Garmin 
 renders it as Chart.js visualisations — training load on one tab, sleep and recovery on the
 other.
 
-**Live:** https://bunnytailgra22.github.io/trailhead/
+**Live:** https://bunnytailgra22.github.io/TRaiLHeaD/
+
+The path is **case-sensitive** — it must match the repo name exactly. The old lowercase
+`/trailhead/` URL 404s since the repo was renamed.
 
 ```
 Garmin Connect  ──►  garmin_google_sync  ──►  Google Sheet  ──►  TRaiLHEAD
