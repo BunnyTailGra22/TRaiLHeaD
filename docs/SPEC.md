@@ -337,16 +337,17 @@ Evaluated top-down; the first match wins.
 | **異常反彈 Abnormal rebound** ★ | RHR dropped, then jumped > 10 bpm off that low | Infection or inflammation | Pause training, watch temperature and symptoms |
 | **中度警訊 Moderate** ▲ | RHR up 5–8 bpm on 5 consecutive days | Early sympathetic overtraining | 2–3 days complete rest, then active recovery |
 | **輕度警訊 Mild** ▲ | RHR up 3–4 bpm on 3 consecutive days | Fatigue accumulating | Cut volume 20–30%, add an hour of sleep |
-| **趨勢上升 Trend up** ▲ | Δ7 ≥ +2 bpm, no consecutive-day rule tripped | Drifting, no pattern yet | Hold the plan and watch it |
-| **正常波動 Normal** ■ | \|Δ7\| < 2 bpm | Normal training adaptation | Keep the current plan |
+| **正常波動 Normal** ■ | nothing above tripped | Normal training adaptation | Keep the current plan |
 | **低於基線 Below baseline** ● | Δ7 ≤ −2 bpm | Well recovered, or adapting | Keep the current plan |
 
 Three details are ours, not the article's:
 
-- **Trend up** is not in the table. It has to exist because normal is defined on the
-  *7-day average* while every warning tier is defined on *consecutive days*: a week whose
-  average has climbed 2–3 bpm without any single run crossing +3 satisfies neither, and
-  calling that 正常波動 would contradict the rule it is named for.
+- **Normal is the residual**, not a band. The article defines 正常波動 as \|Δ7\| < 2 bpm,
+  but normal is the only tier left once the warnings and Below baseline have had their
+  turn — so a week that has drifted up 2–3 bpm without any run of days crossing +3 lands
+  here too, since the warning tiers are all defined on *consecutive days* and none of them
+  catches it. The panel prints Δ7 next to the tier for exactly this reason: the tier says
+  no rule fired, the number says whether the week is actually flat.
 - **Below baseline** separates a quiet week from a normal one. A falling RHR is usually
   adaptation; only a sustained drop under 35 bpm with flat exercise HR is the warning, and
   that is Severe's job.
@@ -355,9 +356,9 @@ Three details are ours, not the article's:
   confirmation before acting on it.
 
 Severe is checked before the baseline exists, because it is an absolute threshold and needs
-no history. Every other tier waits for both windows. Normal, Trend up and Below baseline
-additionally require `rhr7` — a lone night in a sparse week is not a week's trend, so it
-scores as *not scored* rather than as normal.
+no history. Every other tier waits for both windows. Normal and Below baseline additionally
+require `rhr7` — a lone night in a sparse week is not a week's trend, so it scores as *not
+scored* rather than as normal.
 
 #### What is drawn
 

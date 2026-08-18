@@ -1858,46 +1858,40 @@ const RHR_REBOUND_JUMP = 10, RHR_REBOUND_WIN = 7; // dip, then >10 bpm .. infect
 // (● below baseline · ■ within · ▲ above). Rebound is an EVENT, not a position on that
 // scale, so it takes a marker of its own (★) rather than borrowing an ordinal one.
 const RHR_LEVELS = {
-  severe:   { key:'severe',   rank:5, color:'#8f3f38', shape:'circle',   marker:'●',
+  severe:   { key:'severe',   rank:4, color:'#8f3f38', shape:'circle',   marker:'●',
               label:'重度警訊 Severe',
               rule:`RHR < ${RHR_LOW_ABS} bpm for ${RHR_LOW_DAYS} days running, and exercise HR will not lift`,
               cause:'副交感型過度訓練 — parasympathetic OTS',
               action:'立即停止高強度訓練，尋求運動醫學評估 — stop high-intensity work now and get a sports-medicine assessment.',
               caveat:'The sheet carries no workout HR, so only the RHR half of this is checked here — confirm the exercise-HR half yourself before acting.' },
-  rebound:  { key:'rebound',  rank:5, color:'#8f3f38', shape:'star',     marker:'★',
+  rebound:  { key:'rebound',  rank:4, color:'#8f3f38', shape:'star',     marker:'★',
               label:'異常反彈 Abnormal rebound',
               rule:`RHR dropped, then jumped more than ${RHR_REBOUND_JUMP} bpm off that low`,
               cause:'感染或發炎反應 — infection or inflammatory response',
               action:'暫停訓練，監測體溫與症狀 — pause training, watch temperature and symptoms.' },
-  moderate: { key:'moderate', rank:4, color:'#ab5a52', shape:'triangle', marker:'▲',
+  moderate: { key:'moderate', rank:3, color:'#ab5a52', shape:'triangle', marker:'▲',
               label:'中度警訊 Moderate',
               rule:`RHR up ${RHR_MOD_RISE}–8 bpm on ${RHR_MOD_DAYS} consecutive days`,
               cause:'交感型過度訓練前期 — early sympathetic overtraining',
               action:'完全休息 2–3 天，進行主動恢復 — 2–3 days complete rest, then active recovery only.' },
-  mild:     { key:'mild',     rank:3, color:'#c08552', shape:'triangle', marker:'▲',
+  mild:     { key:'mild',     rank:2, color:'#c08552', shape:'triangle', marker:'▲',
               label:'輕度警訊 Mild',
               rule:`RHR up ${RHR_MILD_RISE}–4 bpm on ${RHR_MILD_DAYS} consecutive days`,
               cause:'疲勞累積、恢復不足 — fatigue accumulating, recovery short',
               action:'降低訓練量 20–30%，增加睡眠 1 小時 — cut volume 20–30% and add an hour of sleep.' },
-  // NOT one of the article's five. It has to exist because the article's normal is
-  // defined as |Δ7| < 2 bpm while every warning tier is defined on CONSECUTIVE DAYS: a
-  // week whose average has climbed 2–3 bpm without any single run of days crossing +3
-  // satisfies neither, and calling that 正常波動 would contradict the rule it is named for.
-  elevated: { key:'elevated', rank:2, color:'#bd9a4f', shape:'triangle', marker:'▲',
-              label:'趨勢上升 Trend up',
-              rule:`7-day average up ${RHR_NORMAL_D7} bpm or more, no consecutive-day rule tripped`,
-              cause:'趨勢偏離，尚未成型 — drifting up, no pattern yet',
-              action:'維持課表但留意 — hold the plan and watch it; if it turns into '
-                     + `${RHR_MILD_DAYS} days running at +${RHR_MILD_RISE} bpm, treat it as 輕度警訊.` },
   low:      { key:'low',      rank:1, color:'#6f97a6', shape:'circle',   marker:'●',
               label:'低於基線 Below baseline',
               rule:`7-day average ${RHR_NORMAL_D7} bpm or more BELOW baseline`,
               cause:'恢復良好或適應中 — well recovered, or adapting',
               action:'維持原課表 — keep the current plan. Only a sustained drop under '
                      + RHR_LOW_ABS + ' bpm with flat exercise HR is a warning.' },
+  // The residual state. The article defines 正常波動 as |Δ7| < 2 bpm, but with no tier
+  // between it and 輕度警訊 a week that has drifted up 2–3 bpm without any run of days
+  // crossing +3 has nowhere else to land, so it scores normal and the panel prints the
+  // Δ7 figure beside it — the number is what tells you the week is not flat.
   normal:   { key:'normal',   rank:0, color:'#7f9d78', shape:'rect',     marker:'■',
               label:'正常波動 Normal',
-              rule:`7-day average within ±${RHR_NORMAL_D7} bpm of baseline`,
+              rule:`no warning rule tripped · Δ7 within ±${RHR_NORMAL_D7} bpm, or up without a consecutive-day run`,
               cause:'正常訓練適應 — normal training adaptation',
               action:'維持原課表 — keep the current plan.' },
   none:     { key:'none',     rank:-1, color:VD_NONE, shape:'circle',    marker:'○',
@@ -1906,7 +1900,7 @@ const RHR_LEVELS = {
               cause:'', action:'' },
 };
 // Legend / panel order: worst first, so the tiers read down the severity ramp.
-const RHR_LEVEL_ORDER = ['severe','rebound','moderate','mild','elevated','normal','low'];
+const RHR_LEVEL_ORDER = ['severe','rebound','moderate','mild','normal','low'];
 
 // Mean of the `win` days ENDING AT `end` inclusive. Null when the window is too sparse —
 // a gap, never a guess, same rule the 30-day baseline follows.
@@ -1963,7 +1957,6 @@ function annotateRhr7(grid) {
       // below here the rule is stated on the 7-day AVERAGE, so refuse to name a tier
       // without one — a lone night in a sparse week is not a week's trend
       : g.rhrD7 == null                                   ? RHR_LEVELS.none
-      : g.rhrD7 >=  RHR_NORMAL_D7                         ? RHR_LEVELS.elevated
       : g.rhrD7 <= -RHR_NORMAL_D7                         ? RHR_LEVELS.low
       :                                                     RHR_LEVELS.normal;
   });
@@ -2026,8 +2019,7 @@ function renderRhr7Panel(grid) {
   set('rhr7-base',  g && g.rhrBase != null ? g.rhrBase.toFixed(1) : '—');
   set('rhr7-delta', g && g.rhrD7   != null ? (g.rhrD7 >= 0 ? '+' : '') + g.rhrD7.toFixed(1) : '—');
   const dEl = document.getElementById('rhr7-delta');
-  if (dEl) dEl.style.color = g && g.rhrD7 != null && Math.abs(g.rhrD7) >= RHR_NORMAL_D7
-    ? (g.rhrD7 > 0 ? RHR_LEVELS.elevated.color : RHR_LEVELS.low.color) : 'var(--text)';
+  if (dEl) dEl.style.color = g && g.rhrD7 != null ? L.color : 'var(--text)';
   const streak = rhrStreakText(g);
   set('rhr7-streak', streak ? '· ' + streak : '');
 

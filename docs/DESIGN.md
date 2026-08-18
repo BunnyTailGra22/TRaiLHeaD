@@ -69,11 +69,6 @@ before the legend does: green `#7f9d78` → orange `#c08552` → red `#ab5a52` �
 `#8f3f38`. Plus blue `#6f97a6` for "off baseline in the *better* direction" — noteworthy,
 not a goal, and kept clearly distinct from green.
 
-The RHR 7-day tracker adds **one** step to that ramp, gold `#bd9a4f`, between green and
-orange — its 趨勢上升 tier sits between "normal" and the first real warning and had nowhere
-to land. It is the same gold the load family uses, which is safe here only because the two
-families already share green; nothing else crosses over.
-
 Grey `#9d9488` means "no data / not scored" in both families.
 
 The two families deliberately share green and diverge after it: green always means "this
@@ -96,7 +91,7 @@ is what makes the system work:
 |---|---|---|---|
 | **HRV Status** | Balanced — green | Unbalanced — orange | Low / Poor — red |
 | **Recovery Vitals** | Above baseline — blue | Within baseline — green | Off baseline — red |
-| **RHR 7-day tracker** | Below baseline — blue · Severe — deep red | Normal — green | Trend up — gold · Mild — orange · Moderate — red |
+| **RHR 7-day tracker** | Below baseline — blue · Severe — deep red | Normal — green | Mild — orange · Moderate — red |
 
 The tracker is the one place a marker is doubled up: ● carries both *Below baseline* and
 *Severe*, because both are the low end of RHR's scale and shape is not allowed to lie about
