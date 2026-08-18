@@ -126,7 +126,7 @@ main { padding: 20px 24px; }
 .bio-stat .bs-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
 /* RHR 7-day rolling tracker — the panel above the chart in Recovery Vitals' RHR mode */
-#rhr7-panel { border: 1px solid var(--border); border-radius: 10px; background: var(--card2); padding: 14px; margin-bottom: 16px; }
+#rhr7-panel { border: 1px solid var(--border); border-radius: 10px; background: var(--card2); padding: 14px; margin-top: 16px; }
 .rhr7-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
 .rhr7-chip { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; color: #fff; white-space: nowrap; }
 .rhr7-figs { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--muted); align-items: baseline; }
@@ -136,7 +136,7 @@ main { padding: 20px 24px; }
 .rhr7-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .rhr7-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .rhr7-legend i { font-style: normal; font-size: 12px; line-height: 1; }
-.rhr7-src { font-size: 11px; color: var(--muted); margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); }
+.rhr7-src { font-size: 11px; color: var(--muted); margin-top: 10px; }
 .rhr7-src a { color: var(--muted); }
 
 /* LOAD TABLE */
@@ -560,6 +560,20 @@ main { padding: 20px 24px; }
       <div class="mpill" data-vital="all">All (deviation)</div>
     </div>
 
+
+    <div class="bio-stat-grid" id="vitals-stat-cards">
+      <div class="bio-stat"><div class="bs-icon">❤️</div><div class="bs-label">Resting HR</div>
+        <div class="bs-value" id="vsv-rhr" style="color:var(--rhr)">—</div><div class="bs-sub" id="vss-rhr">bpm</div></div>
+      <div class="bio-stat"><div class="bs-icon">🫁</div><div class="bs-label">Avg SpO₂</div>
+        <div class="bs-value" id="vsv-spo2" style="color:var(--spo2)">—</div><div class="bs-sub" id="vss-spo2">%</div></div>
+      <div class="bio-stat"><div class="bs-icon">🌬️</div><div class="bs-label">Avg Respiration</div>
+        <div class="bs-value" id="vsv-resp" style="color:var(--resp)">—</div><div class="bs-sub" id="vss-resp">brpm</div></div>
+      <div class="bio-stat"><div class="bs-icon">🔎</div><div class="bs-label">Watch Days</div>
+        <div class="bs-value" id="vsv-watch">—</div><div class="bs-sub" id="vss-watch">≥2 vitals off baseline</div></div>
+    </div>
+
+    <div class="chart-box" id="vitals-box"><canvas id="vitals-chart"></canvas></div>
+
     <!-- RHR 7-day rolling-average tracker. RHR mode only; hidden for the other vitals. -->
     <div id="rhr7-panel" style="display:none">
       <div class="rhr7-head">
@@ -574,19 +588,6 @@ main { padding: 20px 24px; }
       <div class="rhr7-action" id="rhr7-action"></div>
       <div class="rhr7-legend" id="rhr7-legend"></div>
     </div>
-
-    <div class="bio-stat-grid" id="vitals-stat-cards">
-      <div class="bio-stat"><div class="bs-icon">❤️</div><div class="bs-label">Resting HR</div>
-        <div class="bs-value" id="vsv-rhr" style="color:var(--rhr)">—</div><div class="bs-sub" id="vss-rhr">bpm</div></div>
-      <div class="bio-stat"><div class="bs-icon">🫁</div><div class="bs-label">Avg SpO₂</div>
-        <div class="bs-value" id="vsv-spo2" style="color:var(--spo2)">—</div><div class="bs-sub" id="vss-spo2">%</div></div>
-      <div class="bio-stat"><div class="bs-icon">🌬️</div><div class="bs-label">Avg Respiration</div>
-        <div class="bs-value" id="vsv-resp" style="color:var(--resp)">—</div><div class="bs-sub" id="vss-resp">brpm</div></div>
-      <div class="bio-stat"><div class="bs-icon">🔎</div><div class="bs-label">Watch Days</div>
-        <div class="bs-value" id="vsv-watch">—</div><div class="bs-sub" id="vss-watch">≥2 vitals off baseline</div></div>
-    </div>
-
-    <div class="chart-box" id="vitals-box"><canvas id="vitals-chart"></canvas></div>
 
     <div class="rhr7-src" id="rhr7-src" style="display:none">判讀標準來源 —
       <a href="https://ctyeh.com/articles/14686" target="_blank" rel="noopener">ctyeh.com/articles/14686</a>
