@@ -125,6 +125,20 @@ main { padding: 20px 24px; }
 .bio-stat .bs-value { font-size: 22px; font-weight: 700; }
 .bio-stat .bs-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
+/* RHR 7-day rolling tracker — the panel above the chart in Recovery Vitals' RHR mode */
+#rhr7-panel { border: 1px solid var(--border); border-radius: 10px; background: var(--card2); padding: 14px; margin-bottom: 16px; }
+.rhr7-head { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.rhr7-chip { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; color: #fff; white-space: nowrap; }
+.rhr7-figs { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: var(--muted); align-items: baseline; }
+.rhr7-figs b { color: var(--text); font-size: 15px; font-weight: 700; margin-right: 2px; }
+.rhr7-action { font-size: 12px; color: var(--text); line-height: 1.55; }
+.rhr7-action em { font-style: normal; color: var(--muted); }
+.rhr7-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.rhr7-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.rhr7-legend i { font-style: normal; font-size: 12px; line-height: 1; }
+.rhr7-src { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.rhr7-src a { color: var(--muted); }
+
 /* LOAD TABLE */
 .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; min-width: 0; max-width: 100%; }
 .load-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 480px; }
@@ -522,9 +536,9 @@ main { padding: 20px 24px; }
   <!-- RECOVERY VITALS -->
   <div class="chart-card">
     <div class="chart-header">
-      <div class="section-title" style="margin:0">Recovery Vitals — Nightly vs Personal 30-day Baseline</div>
+      <div class="section-title" style="margin:0" id="vitals-title">Recovery Vitals — Nightly vs Personal 30-day Baseline</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-        <div class="shape-key">
+        <div class="shape-key" id="vitals-shape-key">
           <span><i style="color:#7f9d78">●</i>Above</span>
           <span><i style="color:#6f97a6">■</i>Within baseline</span>
           <span><i style="color:#b3746e">▲</i>Off baseline</span>
@@ -544,6 +558,24 @@ main { padding: 20px 24px; }
       <div class="mpill" data-vital="spo2">Avg SpO₂</div>
       <div class="mpill" data-vital="resp">Avg Respiration</div>
       <div class="mpill" data-vital="all">All (deviation)</div>
+    </div>
+
+    <!-- RHR 7-day rolling-average tracker. RHR mode only; hidden for the other vitals. -->
+    <div id="rhr7-panel" style="display:none">
+      <div class="rhr7-head">
+        <span class="rhr7-chip" id="rhr7-chip">—</span>
+        <div class="rhr7-figs">
+          <span><b id="rhr7-avg">—</b>bpm 7d avg</span>
+          <span><b id="rhr7-delta">—</b>bpm vs baseline</span>
+          <span><b id="rhr7-base">—</b>bpm baseline (lagged 7d)</span>
+          <span id="rhr7-streak"></span>
+        </div>
+      </div>
+      <div class="rhr7-action" id="rhr7-action"></div>
+      <div class="rhr7-legend" id="rhr7-legend"></div>
+      <div class="rhr7-src">判讀標準來源 —
+        <a href="https://ctyeh.com/articles/14686" target="_blank" rel="noopener">ctyeh.com/articles/14686</a>
+        · 7-day rolling RHR and the overtraining thresholds below are taken from it.</div>
     </div>
 
     <div class="bio-stat-grid" id="vitals-stat-cards">
@@ -1796,6 +1828,227 @@ const vitalStatus = z => z == null ? VITAL_STATUS.none
   : z >  1 ? VITAL_STATUS.off
   : VITAL_STATUS.within;
 
+// ── RHR 7-DAY ROLLING-AVERAGE TRACKER ─────────────────────────────────────────
+// A SECOND reading of resting HR, in absolute bpm, sitting beside the 30-day z-score.
+// The z-score answers "is tonight unusual for me"; this answers "where is the whole week
+// heading, and does the shape of it match a known overtraining pattern". Thresholds and
+// the five-tier reading are from https://ctyeh.com/articles/14686.
+//
+// Two windows, never overlapping:
+//   rhr7     mean RHR over the trailing 7 calendar days, INCLUDING today
+//   rhrBase  mean RHR over the 7-day block ENDING 7 days before today  (days i-13 … i-7)
+// The baseline is lagged by a full window on purpose: a rising week must not be allowed
+// to drag up the reference that judges it. So
+//   rhrD7  = rhr7  - rhrBase   the "7天平均值變化" of the table — the trend figure
+//   rhrDev = rhr   - rhrBase   tonight's own rise, what the consecutive-day rules count
+const RHR7_WIN   = 7;    // rolling window, in DAYS (dense grid, so calendar days)
+const RHR7_MIN_N = 4;    // min nights with a reading inside a window, else no figure
+const RHR7_LAG   = 7;    // baseline window ends this many days before today
+
+const RHR_NORMAL_D7   = 2;    // |Δ7| < 2 bpm ................ normal adaptation
+const RHR_MILD_RISE   = 3,  RHR_MILD_DAYS = 3;   // +3–4 bpm × 3 days .. fatigue accumulating
+const RHR_MOD_RISE    = 5,  RHR_MOD_DAYS  = 5;   // +5–8 bpm × 5 days .. early sympathetic OTS
+const RHR_LOW_ABS     = 35, RHR_LOW_DAYS  = 3;   // <35 bpm × 3 days ... parasympathetic OTS
+const RHR_REBOUND_JUMP = 10, RHR_REBOUND_WIN = 7; // dip, then >10 bpm .. infection / inflammation
+
+// The five tiers of the article, plus `low` (a quiet week that trips nothing) and `none`.
+// Colour = desirability, on the recovery heat ramp; shape = position on RHR's own scale
+// (● below baseline · ■ within · ▲ above). Rebound is an EVENT, not a position on that
+// scale, so it takes a marker of its own (★) rather than borrowing an ordinal one.
+const RHR_LEVELS = {
+  severe:   { key:'severe',   rank:5, color:'#8f3f38', shape:'circle',   marker:'●',
+              label:'重度警訊 Severe',
+              rule:`RHR < ${RHR_LOW_ABS} bpm for ${RHR_LOW_DAYS} days running, and exercise HR will not lift`,
+              cause:'副交感型過度訓練 — parasympathetic OTS',
+              action:'立即停止高強度訓練，尋求運動醫學評估 — stop high-intensity work now and get a sports-medicine assessment.',
+              caveat:'The sheet carries no workout HR, so only the RHR half of this is checked here — confirm the exercise-HR half yourself before acting.' },
+  rebound:  { key:'rebound',  rank:5, color:'#8f3f38', shape:'star',     marker:'★',
+              label:'異常反彈 Abnormal rebound',
+              rule:`RHR dropped, then jumped more than ${RHR_REBOUND_JUMP} bpm off that low`,
+              cause:'感染或發炎反應 — infection or inflammatory response',
+              action:'暫停訓練，監測體溫與症狀 — pause training, watch temperature and symptoms.' },
+  moderate: { key:'moderate', rank:4, color:'#ab5a52', shape:'triangle', marker:'▲',
+              label:'中度警訊 Moderate',
+              rule:`RHR up ${RHR_MOD_RISE}–8 bpm on ${RHR_MOD_DAYS} consecutive days`,
+              cause:'交感型過度訓練前期 — early sympathetic overtraining',
+              action:'完全休息 2–3 天，進行主動恢復 — 2–3 days complete rest, then active recovery only.' },
+  mild:     { key:'mild',     rank:3, color:'#c08552', shape:'triangle', marker:'▲',
+              label:'輕度警訊 Mild',
+              rule:`RHR up ${RHR_MILD_RISE}–4 bpm on ${RHR_MILD_DAYS} consecutive days`,
+              cause:'疲勞累積、恢復不足 — fatigue accumulating, recovery short',
+              action:'降低訓練量 20–30%，增加睡眠 1 小時 — cut volume 20–30% and add an hour of sleep.' },
+  // NOT one of the article's five. It has to exist because the article's normal is
+  // defined as |Δ7| < 2 bpm while every warning tier is defined on CONSECUTIVE DAYS: a
+  // week whose average has climbed 2–3 bpm without any single run of days crossing +3
+  // satisfies neither, and calling that 正常波動 would contradict the rule it is named for.
+  elevated: { key:'elevated', rank:2, color:'#bd9a4f', shape:'triangle', marker:'▲',
+              label:'趨勢上升 Trend up',
+              rule:`7-day average up ${RHR_NORMAL_D7} bpm or more, no consecutive-day rule tripped`,
+              cause:'趨勢偏離，尚未成型 — drifting up, no pattern yet',
+              action:'維持課表但留意 — hold the plan and watch it; if it turns into '
+                     + `${RHR_MILD_DAYS} days running at +${RHR_MILD_RISE} bpm, treat it as 輕度警訊.` },
+  low:      { key:'low',      rank:1, color:'#6f97a6', shape:'circle',   marker:'●',
+              label:'低於基線 Below baseline',
+              rule:`7-day average ${RHR_NORMAL_D7} bpm or more BELOW baseline`,
+              cause:'恢復良好或適應中 — well recovered, or adapting',
+              action:'維持原課表 — keep the current plan. Only a sustained drop under '
+                     + RHR_LOW_ABS + ' bpm with flat exercise HR is a warning.' },
+  normal:   { key:'normal',   rank:0, color:'#7f9d78', shape:'rect',     marker:'■',
+              label:'正常波動 Normal',
+              rule:`7-day average within ±${RHR_NORMAL_D7} bpm of baseline`,
+              cause:'正常訓練適應 — normal training adaptation',
+              action:'維持原課表 — keep the current plan.' },
+  none:     { key:'none',     rank:-1, color:VD_NONE, shape:'circle',    marker:'○',
+              label:'未評分 Not scored',
+              rule:'no reading, or not enough history for a baseline yet',
+              cause:'', action:'' },
+};
+// Legend / panel order: worst first, so the tiers read down the severity ramp.
+const RHR_LEVEL_ORDER = ['severe','rebound','moderate','mild','elevated','normal','low'];
+
+// Mean of the `win` days ENDING AT `end` inclusive. Null when the window is too sparse —
+// a gap, never a guess, same rule the 30-day baseline follows.
+function meanWindow(values, end, win, minN) {
+  if (end < 0) return null;
+  const w = [];
+  for (let j = Math.max(0, end - win + 1); j <= end; j++) if (values[j] != null) w.push(values[j]);
+  return w.length >= minN ? w.reduce((a,b) => a + b, 0) / w.length : null;
+}
+
+// Annotates the dense daily grid in place with the 7-day figures, the streak counters and
+// the tier. A night with no reading BREAKS a streak rather than being skipped over — two
+// separate episodes must never be welded into one by a missing night.
+function annotateRhr7(grid) {
+  const rhr = grid.map(g => g.rhr);
+
+  grid.forEach((g, i) => {
+    g.rhr7     = meanWindow(rhr, i, RHR7_WIN, RHR7_MIN_N);
+    g.rhrBase  = meanWindow(rhr, i - RHR7_LAG, RHR7_WIN, RHR7_MIN_N);
+    g.rhrD7    = (g.rhr7 != null && g.rhrBase != null) ? g.rhr7 - g.rhrBase : null;
+    g.rhrDev   = (g.rhr  != null && g.rhrBase != null) ? g.rhr  - g.rhrBase : null;
+    g.rhrBaseLo = g.rhrBase == null ? null : g.rhrBase - RHR_NORMAL_D7;   // the ±2 bpm
+    g.rhrBaseHi = g.rhrBase == null ? null : g.rhrBase + RHR_NORMAL_D7;   // normal band
+  });
+
+  let up3 = 0, up5 = 0, lowN = 0;
+  grid.forEach((g, i) => {
+    // streak counters — each is "consecutive days ending at i that satisfy the rule"
+    up3  = (g.rhrDev != null && g.rhrDev >= RHR_MILD_RISE) ? up3 + 1 : 0;
+    up5  = (g.rhrDev != null && g.rhrDev >= RHR_MOD_RISE)  ? up5 + 1 : 0;
+    lowN = (g.rhr    != null && g.rhr    <  RHR_LOW_ABS)   ? lowN + 1 : 0;
+    g.rhrUp3 = up3; g.rhrUp5 = up5; g.rhrLowRun = lowN;
+
+    // rebound — the jump off a genuine dip. The low must itself sit AT OR BELOW the
+    // baseline, or an ordinary week-on-week climb would read as a rebound.
+    g.rhrJump = g.rhrDip = null;
+    if (g.rhr != null && g.rhrBase != null) {
+      const prior = [];
+      for (let j = Math.max(0, i - RHR_REBOUND_WIN); j < i; j++)
+        if (grid[j].rhr != null) prior.push(grid[j].rhr);
+      if (prior.length >= 3) {
+        const dip = Math.min(...prior);
+        if (dip <= g.rhrBase) { g.rhrDip = dip; g.rhrJump = g.rhr - dip; }
+      }
+    }
+
+    g.rhrLevel =
+        g.rhr == null                                     ? RHR_LEVELS.none
+      : lowN >= RHR_LOW_DAYS                              ? RHR_LEVELS.severe   // absolute — needs no baseline
+      : g.rhrBase == null                                 ? RHR_LEVELS.none
+      : (g.rhrJump != null && g.rhrJump > RHR_REBOUND_JUMP) ? RHR_LEVELS.rebound
+      : up5 >= RHR_MOD_DAYS                               ? RHR_LEVELS.moderate
+      : up3 >= RHR_MILD_DAYS                              ? RHR_LEVELS.mild
+      // below here the rule is stated on the 7-day AVERAGE, so refuse to name a tier
+      // without one — a lone night in a sparse week is not a week's trend
+      : g.rhrD7 == null                                   ? RHR_LEVELS.none
+      : g.rhrD7 >=  RHR_NORMAL_D7                         ? RHR_LEVELS.elevated
+      : g.rhrD7 <= -RHR_NORMAL_D7                         ? RHR_LEVELS.low
+      :                                                     RHR_LEVELS.normal;
+  });
+  return grid;
+}
+
+// The reading as of the most recent night that HAS one — never the scope's last row, which
+// is usually today with no data in it yet.
+function latestRhr7(grid) {
+  for (let i = grid.length - 1; i >= 0; i--)
+    if (grid[i].rhr != null && grid[i].rhrLevel !== RHR_LEVELS.none) return grid[i];
+  return null;
+}
+
+// Why this tier fired, in the tier's own units — the counter that actually crossed.
+function rhrStreakText(g) {
+  if (!g) return '';
+  const L = g.rhrLevel;
+  if (L === RHR_LEVELS.severe)   return `${g.rhrLowRun} d running under ${RHR_LOW_ABS} bpm`;
+  if (L === RHR_LEVELS.rebound)  return `+${g.rhrJump.toFixed(0)} bpm off a ${g.rhrDip.toFixed(0)} bpm low`;
+  if (L === RHR_LEVELS.moderate) return `${g.rhrUp5} d running at +${RHR_MOD_RISE} bpm or more`;
+  if (L === RHR_LEVELS.mild)     return `${g.rhrUp3} d running at +${RHR_MILD_RISE} bpm or more`;
+  // a run that is building but has not tripped yet — 1 day is noise, don't report it
+  if (g.rhrUp3 >= 2)             return `${g.rhrUp3} d running at +${RHR_MILD_RISE} bpm or more`;
+  return '';
+}
+
+// The panel above the chart: today's tier, the three figures behind it, and what to do.
+function renderRhr7Panel(grid) {
+  const panel = document.getElementById('rhr7-panel');
+  if (!panel) return;
+  panel.style.display = _vitalMode === 'rhr' ? '' : 'none';
+  const key = document.getElementById('vitals-shape-key');
+  if (key) key.style.display = _vitalMode === 'rhr' ? 'none' : '';   // its 3 states don't apply here
+  // The two modes are judged against DIFFERENT windows, so the title has to say which
+  const title = document.getElementById('vitals-title');
+  if (title) title.textContent = _vitalMode === 'rhr'
+    ? 'Recovery Vitals — RHR vs Personal 7-day Rolling Baseline'
+    : 'Recovery Vitals — Nightly vs Personal 30-day Baseline';
+  if (_vitalMode !== 'rhr') return;
+
+  const g   = latestRhr7(grid);
+  const L   = g ? g.rhrLevel : RHR_LEVELS.none;
+  const set = (id, txt) => { const el = document.getElementById(id); if (el) el.textContent = txt; };
+
+  // Age of the reading, in days — the panel greys a tier out rather than letting a
+  // week-old 異常反彈 sit there in red as if it were tonight's.
+  const age   = g ? Math.round((Date.now() - g.date.getTime()) / 86400000) : null;
+  const stale = age != null && age > 7;
+
+  const chip = document.getElementById('rhr7-chip');
+  if (chip) {
+    chip.textContent = `${L.marker} ${L.label}` + (stale ? ' · 過期 stale' : '');
+    chip.style.background = stale ? VD_NONE : L.color;
+  }
+
+  set('rhr7-avg',   g && g.rhr7    != null ? g.rhr7.toFixed(1)    : '—');
+  set('rhr7-base',  g && g.rhrBase != null ? g.rhrBase.toFixed(1) : '—');
+  set('rhr7-delta', g && g.rhrD7   != null ? (g.rhrD7 >= 0 ? '+' : '') + g.rhrD7.toFixed(1) : '—');
+  const dEl = document.getElementById('rhr7-delta');
+  if (dEl) dEl.style.color = g && g.rhrD7 != null && Math.abs(g.rhrD7) >= RHR_NORMAL_D7
+    ? (g.rhrD7 > 0 ? RHR_LEVELS.elevated.color : RHR_LEVELS.low.color) : 'var(--text)';
+  const streak = rhrStreakText(g);
+  set('rhr7-streak', streak ? '· ' + streak : '');
+
+  const act = document.getElementById('rhr7-action');
+  if (act) {
+    if (!g) act.innerHTML = `<em>No tier yet — needs ${RHR7_MIN_N} nights in the current week and `
+                          + `${RHR7_MIN_N} in the week before it to have both figures.</em>`;
+    else {
+      const dstr = g.date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+      // latestRhr7 walks back past unscored nights, so the tier can be several days old.
+      // Say so — a stale tier presented as today's would be the worst failure here.
+      act.innerHTML = `<b>${L.cause}</b><br>${L.action}`
+        + (L.caveat ? `<br><em>${L.caveat}</em>` : '')
+        + `<br><em>${L.rule} · as of ${dstr}`
+        + (age > 2 ? ` — ${age} days ago, no scored night since` : '') + `</em>`;
+    }
+  }
+
+  const leg = document.getElementById('rhr7-legend');
+  if (leg) leg.innerHTML = RHR_LEVEL_ORDER.map(k => {
+    const v = RHR_LEVELS[k];
+    return `<span><i style="color:${v.color}">${v.marker}</i>${v.label}</span>`;
+  }).join('');
+}
+
 let _vitalMode = 'rhr';     // 'rhr' | 'spo2' | 'resp' | 'all'
 let _vitalWeeks = 4;        // 4 / 8 / 13 / 26
 let _vitalsChart = null;
@@ -1851,6 +2104,7 @@ function vitalSeries(sleepMap) {
       g[k+'Z']   = g[k] == null ? null : v.bad * (g[k] - s.median) / sd;
     });
   });
+  annotateRhr7(grid);   // 7-day rolling RHR tracker rides on the same dense daily grid
   _vitalGridSrc = sleepMap;
   return (_vitalGrid = grid);
 }
@@ -1884,10 +2138,21 @@ function renderVitals(sleepMap) {
     const el = document.getElementById('vsv-'+k), sub = document.getElementById('vss-'+k);
     if (!el) return;
     el.textContent = g ? g[k].toFixed(v.dp) : '—';
-    el.style.color = g ? vitalDotColor(g[k+'Z']) : 'var(--muted)';
-    if (sub) sub.textContent = v.unit + (g ? ' · ' + dstr(g.date) : '')
-      + (g && g[k+'Z'] != null ? ` · ${g[k+'Z'] >= 0 ? '+' : ''}${g[k+'Z'].toFixed(1)} SD` : '');
+    if (k === 'rhr') {
+      // RHR is read on the 7-day tracker's absolute-bpm tiers, not on the 30-day z
+      const L = g ? g.rhrLevel : RHR_LEVELS.none;
+      el.style.color = g ? L.color : 'var(--muted)';
+      if (sub) sub.textContent = v.unit + (g ? ' · ' + dstr(g.date) : '')
+        + (g && g.rhrD7 != null ? ` · Δ7 ${g.rhrD7 >= 0 ? '+' : ''}${g.rhrD7.toFixed(1)}` : '')
+        + (g && L !== RHR_LEVELS.none ? ` · ${L.marker} ${L.label.split(' ')[0]}` : '');
+    } else {
+      el.style.color = g ? vitalDotColor(g[k+'Z']) : 'var(--muted)';
+      if (sub) sub.textContent = v.unit + (g ? ' · ' + dstr(g.date) : '')
+        + (g && g[k+'Z'] != null ? ` · ${g[k+'Z'] >= 0 ? '+' : ''}${g[k+'Z'].toFixed(1)} SD` : '');
+    }
   });
+
+  renderRhr7Panel(all);   // reads full history — the current tier must not move with the scope pill
 
   // ── stat card 4: watch days (the co-movement flag) ──
   const flags   = series.map(isWatchDay);
@@ -1911,10 +2176,24 @@ function renderVitals(sleepMap) {
   // ── header note ──
   const noteEl = document.getElementById('vitals-note');
   const banded = series.filter(g => VITAL_ORDER.some(k => g[k+'Lo'] != null)).length;
+  // RHR is judged on the 7-day baseline, so it must not be gated on the 30-day one —
+  // the two windows fail independently and each has to report its own shortfall.
+  const banded7 = series.some(g => g.rhrBase != null);
   if (noteEl) {
-    if (!banded) noteEl.textContent = 'Baseline needs ≥10 nights in the trailing 30 days';
+    if (_vitalMode === 'rhr' && !banded7)
+      noteEl.textContent = `Needs ${RHR7_MIN_N} nights in the week and ${RHR7_MIN_N} in the week before it`;
+    else if (_vitalMode !== 'rhr' && !banded)
+      noteEl.textContent = 'Baseline needs ≥10 nights in the trailing 30 days';
     else if (_vitalMode === 'all')
       noteEl.textContent = `${scoredN} scored nights · ↑ = away from baseline toward worse recovery`;
+
+    else if (_vitalMode === 'rhr') {
+      const sc = series.filter(g => g.rhrLevel && g.rhrLevel !== RHR_LEVELS.none);
+      const alerts = sc.filter(g => g.rhrLevel.rank >= RHR_LEVELS.mild.rank).length;
+      noteEl.textContent = sc.length
+        ? `${sc.length} scored nights · ${alerts} on a warning tier · 7-day avg vs lagged 7-day baseline`
+        : 'no RHR data in scope';
+    }
     else {
       const m = VITALS[_vitalMode];
       const sc = series.filter(g => g[m.key] != null && g[m.key+'Lo'] != null);
@@ -1932,7 +2211,69 @@ function renderVitals(sleepMap) {
 
   const datasets = [];
 
-  if (_vitalMode !== 'all') {
+  if (_vitalMode === 'rhr') {
+    // ══ RESTING HR — 7-day rolling average vs a LAGGED 7-day baseline ══
+    // Three layers, coarsest first: the ±2 bpm "normal fluctuation" band around the
+    // baseline, the 7-day average riding through it, and the nightly dots tiered by the
+    // warning table. Absolute bpm throughout — the tiers are stated in bpm, so showing
+    // them on an SD axis would put the reading and its rule in different units.
+    const v = VITALS.rhr;
+    const lo = series.map(g => g.rhrBaseLo), hi = series.map(g => g.rhrBaseHi);
+    const vals = series.map(g => g.rhr);
+    if (banded7) datasets.push(
+      { label:'upper', data:hi, borderColor:'transparent', pointRadius:0,
+        fill:false, tension:0.35, order:5, spanGaps:false },
+      { label:`Normal ±${RHR_NORMAL_D7} bpm`, data:lo, borderColor:'transparent',
+        backgroundColor:VITAL_BAND_FILL, pointRadius:0,
+        fill:'-1', tension:0.35, order:5, spanGaps:false },
+      { label:'Baseline (lagged 7d)', data: series.map(g => g.rhrBase),
+        borderColor:'#6f675c', borderWidth:1, borderDash:[4,3],
+        pointRadius:0, pointHoverRadius:0, fill:false, tension:0.35, order:4, spanGaps:false },
+    );
+    datasets.push(
+      // the 7-day average IS a smoothed series, so it is allowed a line
+      { label:'7-day average', _vk:'rhr7', data: series.map(g => g.rhr7 == null ? null : +g.rhr7.toFixed(1)),
+        borderColor:v.color, borderWidth:2, pointRadius:0, pointHoverRadius:0,
+        fill:false, tension:0.35, order:2, spanGaps:false },
+      // nightly dots — shape and colour both carry the tier
+      { label:'Resting HR', _vk:'rhr', data:vals,
+        showLine:false, borderColor:v.color, borderWidth:2,
+        pointStyle: series.map(g => (g.rhrLevel || RHR_LEVELS.none).shape),
+        pointRadius: series.map(g => g.rhrLevel && g.rhrLevel.rank >= RHR_LEVELS.mild.rank
+                                   ? (phone?4.5:6) : (phone?3:4)),
+        pointHoverRadius:8,
+        pointBackgroundColor: series.map(g => (g.rhrLevel || RHR_LEVELS.none).color),
+        pointBorderColor:     series.map(g => (g.rhrLevel || RHR_LEVELS.none).color),
+        fill:false, tension:0, order:1 },
+    );
+
+    const finite7 = [...vals, ...lo, ...hi].filter(x => x != null && isFinite(x));
+    opts.scales.y.beginAtZero = false;
+    if (finite7.length) {
+      opts.scales.y.suggestedMin = Math.min(...finite7) - v.pad;
+      opts.scales.y.suggestedMax = Math.max(...finite7) + v.pad;
+    }
+    opts.plugins.tooltip.filter = item => item.dataset._vk === 'rhr';
+    opts.plugins.tooltip.callbacks = {
+      title: items => series[items[0].dataIndex].date
+        .toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'}),
+      label: item => `Resting HR: ${item.parsed.y.toFixed(0)} bpm`,
+      afterBody: items => {
+        const g = series[items[0].dataIndex], out = [];
+        if (g.rhr7 != null) out.push(`7-day average: ${g.rhr7.toFixed(1)} bpm`);
+        if (g.rhrBase == null) return out.concat(['Baseline unavailable (too few nights)']);
+        out.push(`Baseline: ${g.rhrBase.toFixed(1)} bpm  (7 d, lagged ${RHR7_LAG} d)`);
+        if (g.rhrD7  != null) out.push(`Δ 7-day average: ${g.rhrD7  >= 0 ? '+' : ''}${g.rhrD7.toFixed(1)} bpm`);
+        if (g.rhrDev != null) out.push(`Tonight vs baseline: ${g.rhrDev >= 0 ? '+' : ''}${g.rhrDev.toFixed(1)} bpm`);
+        const st = rhrStreakText(g);
+        if (st) out.push(st);
+        const L = g.rhrLevel;
+        if (L && L !== RHR_LEVELS.none) { out.push(`${L.marker} ${L.label}`); if (L.action) out.push(L.action); }
+        return out;
+      },
+    };
+
+  } else if (_vitalMode !== 'all') {
     // ══ SINGLE METRIC — absolute values vs its own band ══
     const v = VITALS[_vitalMode], k = v.key;
     const lo = series.map(g => g[k+'Lo']), hi = series.map(g => g[k+'Hi']);
@@ -2415,7 +2756,11 @@ function loadSampleData() {
   const sessions = [], sleepMap = {};
   const types = ['road','road','road','road','trail'];
   const rnd = (a,b) => a + Math.random()*(b-a);
-  [[2024,52,1.0],[2025,52,1.3],[2026,22,1.5]].forEach(([yr,wks,scale]) => {
+  // The current year runs to THIS week, not a number frozen at the time of writing —
+  // otherwise the sample tails off months short of today and every default 4-week scope
+  // opens empty. The `date > now` guard below still keeps it from running past today.
+  const wkNow = Math.ceil((Date.now() - new Date(new Date().getFullYear(),0,1)) / 604800000);
+  [[2024,52,1.0],[2025,52,1.3],[2026,Math.max(1,wkNow),1.5]].forEach(([yr,wks,scale]) => {
     for (let w = 0; w < wks; w++) {
       const n = Math.floor(rnd(1,4));
       for (let i = 0; i < n; i++) {
@@ -2428,19 +2773,38 @@ function loadSampleData() {
         sessions.push({date,dist,elev,hrs,type,ep:dist+elev/100,
           year:date.getFullYear(),month:date.getMonth(),week:isoWeek(date),
           rhr:null,hrv:null,sleepMins:null,sleepScore:null,spo2:null});
-        const dk = date.toISOString().slice(0,10);
-        sleepMap[dk] = {
-          rhr:        Math.round(rnd(48,62)),
-          hrv:        Math.round(rnd(30,75)),
-          sleepMins:  Math.round(rnd(300,520)),
-          sleepScore: Math.round(rnd(45,90)),
-          spo2:       Math.round(rnd(93,99)*10)/10,
-          resp:       Math.round(rnd(12,17)*10)/10,
-        };
       }
     }
   });
   sessions.sort((a,b)=>a.date-b.date);
+
+  // The watch records sleep EVERY night, not only on run nights. Synthesising nights
+  // only where a run happened left 1–3 nights a week, which is below the minimum for
+  // both the 30-day and the 7-day RHR windows — the whole Recovery tab scored as "no
+  // data". Walk the calendar instead, and give RHR the shape RECOVERY-PATTERN.md
+  // measures: a run costs about a bpm the FOLLOWING night and is back by the second.
+  const dkey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const ranOn = new Set(sessions.map(s => dkey(s.date)));
+  const RHR_SAMPLE_MEAN = 52;
+  let rhrWalk = RHR_SAMPLE_MEAN;
+  const last = sessions.length ? sessions[sessions.length-1].date : new Date();
+  for (const d = new Date(sessions.length ? sessions[0].date : last); d <= last; d.setDate(d.getDate()+1)) {
+    const yday = new Date(d); yday.setDate(yday.getDate() - 1);
+    // MEAN-REVERTING, not a free walk: an unbiased walk over 2.5 years wanders off and
+    // pins against whatever clamp you give it, which flattens the series to a constant.
+    rhrWalk += (RHR_SAMPLE_MEAN - rhrWalk) * 0.18          // pulled back to its own normal
+             + rnd(-0.7, 0.7)                              // nightly noise
+             + (ranOn.has(dkey(yday)) ? 0.9 : 0);          // yesterday's run costs ~1 bpm
+    rhrWalk  = Math.min(62, Math.max(42, rhrWalk));        // a guard rail, never the shape
+    sleepMap[dkey(d)] = {
+      rhr:        Math.round(rhrWalk),
+      hrv:        Math.round(rnd(30,75)),
+      sleepMins:  Math.round(rnd(300,520)),
+      sleepScore: Math.round(rnd(45,90)),
+      spo2:       Math.round(rnd(93,99)*10)/10,
+      resp:       Math.round(rnd(12,17)*10)/10,
+    };
+  }
   // Nothing here synthesises Garmin's own load model, so the acute-vs-ceiling card
   // hides itself rather than showing a made-up ceiling.
   _trainingLoad = [];

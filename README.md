@@ -85,6 +85,16 @@ rolling baseline rather than absolute numbers, because 48 bpm or 95% means nothi
 knowing what is normal for you. The strongest signal is co-movement — a "watch day" is one
 where two of the three sit a standard deviation on their bad side at once.
 
+Resting HR carries a **second** reading on top of that: a 7-day rolling average against a
+baseline lagged a full week behind it, read in absolute bpm on the overtraining tiers from
+[ctyeh.com/articles/14686](https://ctyeh.com/articles/14686) — 3 days at +3 bpm is fatigue
+accumulating, 5 days at +5 is early sympathetic overtraining, a drop under 35 bpm is the
+parasympathetic kind, and a sudden 10 bpm jump off a low reads as infection rather than
+training. The z-score answers "is tonight unusual"; this answers "where is the week
+heading", and the two are kept separate because only the z-score is unit-free enough to
+compare across the three vitals. Formulas and the full tier table are in
+[docs/SPEC.md](docs/SPEC.md).
+
 ## Files
 
 ```

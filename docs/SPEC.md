@@ -291,6 +291,90 @@ than counted as clean.
 Computed over full history then sliced to the scope (4 / 8 / 13 / 26 wk, default 8), so
 the 30-day window is 30 *calendar* days and the band is warm at the left edge.
 
+### Resting HR — 7-day rolling-average tracker
+
+RHR carries a **second** reading, in absolute bpm, alongside the 30-day z-score above.
+The two answer different questions and neither replaces the other:
+
+| | 30-day z | 7-day tracker |
+|---|---|---|
+| Question | is *tonight* unusual for me? | where is *the week* heading? |
+| Units | SD | bpm |
+| Feeds | "All (deviation)" mode, watch days | the RHR chart and its tier panel |
+
+Selecting **Resting HR** switches the chart to the tracker; the other two vitals are
+unchanged. Thresholds and the five-tier reading come from
+[ctyeh.com/articles/14686](https://ctyeh.com/articles/14686).
+
+#### The two windows
+
+```
+rhr7     mean RHR over the trailing 7 calendar days, INCLUDING today   (min 4 nights)
+rhrBase  mean RHR over the 7-day block ENDING 7 days before today      (min 4 nights)
+         i.e. days i-13 … i-7 — a full window clear of the current one
+
+Δ7   = rhr7 - rhrBase     the "7天平均值變化" of the table — the week's trend
+dev  = rhr  - rhrBase     tonight's own rise — what the consecutive-day rules count
+```
+
+The baseline is **lagged by a full window** on purpose. A trailing average that includes
+the days it is judging climbs along with them, so a genuine five-day rise would shrink to
+nothing by the time the fifth day arrived. Lagging it keeps the reference fixed while an
+episode plays out. The cost is that a *permanent* shift stops registering after two weeks —
+which is correct: by then it is the athlete's new normal, not an episode.
+
+Same rules as everywhere else in this file: too few nights yields `null`, never a guess,
+and **a night with no reading breaks a streak** rather than being skipped over — two
+separate episodes must not be welded into one by a missing night.
+
+#### The tiers
+
+Evaluated top-down; the first match wins.
+
+| Tier | Rule | Reading | Action |
+|---|---|---|---|
+| **重度警訊 Severe** ● | RHR < 35 bpm for 3 days running, and exercise HR will not lift | 副交感型 OTS | Stop high-intensity work now, seek a sports-medicine assessment |
+| **異常反彈 Abnormal rebound** ★ | RHR dropped, then jumped > 10 bpm off that low | Infection or inflammation | Pause training, watch temperature and symptoms |
+| **中度警訊 Moderate** ▲ | RHR up 5–8 bpm on 5 consecutive days | Early sympathetic overtraining | 2–3 days complete rest, then active recovery |
+| **輕度警訊 Mild** ▲ | RHR up 3–4 bpm on 3 consecutive days | Fatigue accumulating | Cut volume 20–30%, add an hour of sleep |
+| **趨勢上升 Trend up** ▲ | Δ7 ≥ +2 bpm, no consecutive-day rule tripped | Drifting, no pattern yet | Hold the plan and watch it |
+| **正常波動 Normal** ■ | \|Δ7\| < 2 bpm | Normal training adaptation | Keep the current plan |
+| **低於基線 Below baseline** ● | Δ7 ≤ −2 bpm | Well recovered, or adapting | Keep the current plan |
+
+Three details are ours, not the article's:
+
+- **Trend up** is not in the table. It has to exist because normal is defined on the
+  *7-day average* while every warning tier is defined on *consecutive days*: a week whose
+  average has climbed 2–3 bpm without any single run crossing +3 satisfies neither, and
+  calling that 正常波動 would contradict the rule it is named for.
+- **Below baseline** separates a quiet week from a normal one. A falling RHR is usually
+  adaptation; only a sustained drop under 35 bpm with flat exercise HR is the warning, and
+  that is Severe's job.
+- **Severe is only half-checkable here.** The sheet carries no workout HR, so only the
+  RHR < 35 bpm half is evaluated. The panel says so; the exercise-HR half is a manual
+  confirmation before acting on it.
+
+Severe is checked before the baseline exists, because it is an absolute threshold and needs
+no history. Every other tier waits for both windows. Normal, Trend up and Below baseline
+additionally require `rhr7` — a lone night in a sparse week is not a week's trend, so it
+scores as *not scored* rather than as normal.
+
+#### What is drawn
+
+Three layers, coarsest first: the ±2 bpm normal band around the lagged baseline, the 7-day
+average riding through it, then the nightly dots tiered by the table. Absolute bpm
+throughout — the tiers are stated in bpm, so an SD axis would put the reading and its rule
+in different units. The 7-day average is drawn as a **line**: it is a smoothed series, the
+one thing the dots-not-lines rule allows.
+
+The panel above the chart reports the tier as of **the most recent scored night**, which is
+not always last night. It prints that date, and greys the tier out past 7 days — a stale
+異常反彈 sitting in red as though it were tonight's would be the worst failure this chart
+could have.
+
+Watch days and "All (deviation)" mode are untouched: co-movement across three vitals needs
+one unit-free scale, and bpm tiers cannot supply it.
+
 ### Sleep quality scale (shared)
 
 **One** colour scale for both sleep charts. They sit side by side; a colour must mean the

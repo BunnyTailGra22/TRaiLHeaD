@@ -69,6 +69,11 @@ before the legend does: green `#7f9d78` → orange `#c08552` → red `#ab5a52` �
 `#8f3f38`. Plus blue `#6f97a6` for "off baseline in the *better* direction" — noteworthy,
 not a goal, and kept clearly distinct from green.
 
+The RHR 7-day tracker adds **one** step to that ramp, gold `#bd9a4f`, between green and
+orange — its 趨勢上升 tier sits between "normal" and the first real warning and had nowhere
+to land. It is the same gold the load family uses, which is safe here only because the two
+families already share green; nothing else crosses over.
+
 Grey `#9d9488` means "no data / not scored" in both families.
 
 The two families deliberately share green and diverge after it: green always means "this
@@ -91,6 +96,16 @@ is what makes the system work:
 |---|---|---|---|
 | **HRV Status** | Balanced — green | Unbalanced — orange | Low / Poor — red |
 | **Recovery Vitals** | Above baseline — blue | Within baseline — green | Off baseline — red |
+| **RHR 7-day tracker** | Below baseline — blue · Severe — deep red | Normal — green | Trend up — gold · Mild — orange · Moderate — red |
+
+The tracker is the one place a marker is doubled up: ● carries both *Below baseline* and
+*Severe*, because both are the low end of RHR's scale and shape is not allowed to lie about
+scale position. Colour separates them, which is exactly the division of labour above — and
+they are three tiers apart in hue, blue against deep red.
+
+It also adds a **★** for 異常反彈. That is deliberate and narrow: a rebound is an *event*
+— a jump off a low — not a position on the scale, so it cannot borrow an ordinal marker
+without claiming to be one.
 
 Note that green sits on ● in one chart and ■ in the other. That is not an inconsistency to
 fix: HRV's scale is *balance-centric* (its top tier is the healthy one), while Vitals' is
