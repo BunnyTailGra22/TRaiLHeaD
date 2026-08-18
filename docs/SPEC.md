@@ -334,7 +334,7 @@ Evaluated top-down; the first match wins.
 | Tier | Rule | Reading | Action |
 |---|---|---|---|
 | **重度警訊 Severe** ● | RHR < 35 bpm for 3 days running, and exercise HR will not lift | 副交感型 OTS | Stop high-intensity work now, seek a sports-medicine assessment |
-| **異常反彈 Abnormal rebound** ★ | tonight is > 10 bpm above the lowest of the last 7 nights | Infection or inflammation | Pause training, watch temperature and symptoms |
+| **異常反彈 Abnormal rebound** ★ | tonight is > 10 bpm above last night | Infection or inflammation | Pause training, watch temperature and symptoms |
 | **中度警訊 Moderate** ▲ | RHR up 5–8 bpm on 5 consecutive days | Early sympathetic overtraining | 2–3 days complete rest, then active recovery |
 | **輕度警訊 Mild** ▲ | RHR up 3–4 bpm on 3 consecutive days | Fatigue accumulating | Cut volume 20–30%, add an hour of sleep |
 | **正常波動 Normal** ■ | nothing above tripped | Normal training adaptation | Keep the current plan |
@@ -355,15 +355,21 @@ Two details are ours, not the article's:
 A falling RHR gets no tier of its own: it is usually adaptation, and the one case where it
 is not — a sustained drop under 35 bpm with flat exercise HR — is Severe's job.
 
-**Rebound is the one rule that touches neither window.** Its dip is a dip in the *nightly
-readings themselves* — tonight against the lowest of the last 7 nights, needing 3 of them
-to have data — so neither the baseline nor the 7-day average appears in it. Routing it
-through either would change what it detects: a baseline-relative version cannot see a
-rebound that happens entirely above the baseline, and an average-relative one smears the
-low it is supposed to measure from.
+**Rebound has no window in it at all** — no baseline, no 7-day average, no lookback. It is
+`rhr[i] - rhr[i-1] > 10`: a single overnight step, measured against last night and nothing
+else. Anything wider changes what it detects. A baseline-relative version cannot see a
+rebound that plays out entirely above the baseline; an average-relative one smears the low
+it should be measuring from; and a *lowest-of-the-last-N-nights* version silently accepts a
+slow climb of several nights as though it were one jump, which is precisely the shape a
+rebound is meant to be distinguished from.
+
+"Last night" is the previous **calendar** day, strictly. If that night has no reading there
+is no step to measure and no rebound is claimed — the same rule the streak counters follow,
+and for the same reason: a gap must never be quietly closed up so two nights a week apart
+are compared as though consecutive.
 
 Severe likewise needs no history, being an absolute threshold. Both are therefore checked
-*before* the gate that requires a baseline, and both can fire in the first fortnight.
+*before* the gate that requires a baseline; rebound can fire on the second night of data.
 Moderate and Mild wait for `rhrBase`; Normal additionally requires `rhr7`, because it
 claims the *week* tripped nothing and so needs a week to say it of — a lone night in a
 sparse week scores as *not scored* rather than as reassurance.

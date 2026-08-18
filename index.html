@@ -1851,8 +1851,7 @@ const RHR_NORMAL_D7   = 2;    // |Δ7| < 2 bpm ................ normal adaptatio
 const RHR_MILD_RISE   = 3,  RHR_MILD_DAYS = 3;   // +3–4 bpm × 3 days .. fatigue accumulating
 const RHR_MOD_RISE    = 5,  RHR_MOD_DAYS  = 5;   // +5–8 bpm × 5 days .. early sympathetic OTS
 const RHR_LOW_ABS     = 35, RHR_LOW_DAYS  = 3;   // <35 bpm × 3 days ... parasympathetic OTS
-const RHR_REBOUND_JUMP = 10, RHR_REBOUND_WIN = 7; // dip, then >10 bpm .. infection / inflammation
-const RHR_REBOUND_MIN_N = 3;   // nights needed in that window before a "low" means anything
+const RHR_REBOUND_JUMP = 10;   // tonight > last night + 10 bpm .. infection / inflammation
 
 // The five tiers of the article, plus `low` (a quiet week that trips nothing) and `none`.
 // Colour = desirability, on the recovery heat ramp; shape = position on RHR's own scale
@@ -1867,7 +1866,7 @@ const RHR_LEVELS = {
               caveat:'The sheet carries no workout HR, so only the RHR half of this is checked here — confirm the exercise-HR half yourself before acting.' },
   rebound:  { key:'rebound',  rank:3, color:'#8f3f38', shape:'star',     marker:'★',
               label:'異常反彈 Abnormal rebound',
-              rule:`tonight is more than ${RHR_REBOUND_JUMP} bpm above the lowest of the last ${RHR_REBOUND_WIN} nights`,
+              rule:`tonight is more than ${RHR_REBOUND_JUMP} bpm above last night`,
               cause:'感染或發炎反應 — infection or inflammatory response',
               action:'暫停訓練，監測體溫與症狀 — pause training, watch temperature and symptoms.' },
   moderate: { key:'moderate', rank:2, color:'#ab5a52', shape:'triangle', marker:'▲',
@@ -1931,21 +1930,16 @@ function annotateRhr7(grid) {
     lowN = (g.rhr    != null && g.rhr    <  RHR_LOW_ABS)   ? lowN + 1 : 0;
     g.rhrUp3 = up3; g.rhrUp5 = up5; g.rhrLowRun = lowN;
 
-    // rebound — tonight measured against the LOWEST NIGHT of the recent window, and
-    // nothing else. This is the one rule with no baseline and no 7-day average in it:
-    // the dip it looks for is a dip in the nightly readings themselves, so tying it to
-    // either window would change what it detects. It therefore also needs no history
-    // beyond the window, and fires as soon as there are nights to compare.
-    g.rhrJump = g.rhrDip = null;
-    if (g.rhr != null) {
-      const prior = [];
-      for (let j = Math.max(0, i - RHR_REBOUND_WIN); j < i; j++)
-        if (grid[j].rhr != null) prior.push(grid[j].rhr);
-      if (prior.length >= RHR_REBOUND_MIN_N) {
-        g.rhrDip  = Math.min(...prior);
-        g.rhrJump = g.rhr - g.rhrDip;
-      }
-    }
+    // rebound — tonight against LAST NIGHT, and nothing else. The one rule with no
+    // window in it at all: no baseline, no 7-day average, no lookback. It is a
+    // single-night step, so a step is all it measures.
+    // The previous night is the previous CALENDAR day, strictly. If that night has no
+    // reading there is no step to measure and no rebound is claimed — the same rule the
+    // streak counters follow, and for the same reason: a gap must not be quietly closed
+    // up so that two nights a week apart get compared as though they were consecutive.
+    const prev = i > 0 ? grid[i-1].rhr : null;
+    g.rhrPrev = prev;
+    g.rhrJump = (g.rhr != null && prev != null) ? g.rhr - prev : null;
 
     g.rhrLevel =
         g.rhr == null                                     ? RHR_LEVELS.none
@@ -1977,7 +1971,7 @@ function rhrStreakText(g) {
   if (!g) return '';
   const L = g.rhrLevel;
   if (L === RHR_LEVELS.severe)   return `${g.rhrLowRun} d running under ${RHR_LOW_ABS} bpm`;
-  if (L === RHR_LEVELS.rebound)  return `+${g.rhrJump.toFixed(0)} bpm off a ${g.rhrDip.toFixed(0)} bpm low`;
+  if (L === RHR_LEVELS.rebound)  return `+${g.rhrJump.toFixed(0)} bpm on last night's ${g.rhrPrev.toFixed(0)} bpm`;
   if (L === RHR_LEVELS.moderate) return `${g.rhrUp5} d running at +${RHR_MOD_RISE} bpm or more`;
   if (L === RHR_LEVELS.mild)     return `${g.rhrUp3} d running at +${RHR_MILD_RISE} bpm or more`;
   // a run that is building but has not tripped yet — 1 day is noise, don't report it
