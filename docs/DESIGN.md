@@ -91,14 +91,9 @@ is what makes the system work:
 |---|---|---|---|
 | **HRV Status** | Balanced — green | Unbalanced — orange | Low / Poor — red |
 | **Recovery Vitals** | Above baseline — blue | Within baseline — green | Off baseline — red |
-| **RHR 7-day tracker** | Below baseline — blue · Severe — deep red | Normal — green | Mild — orange · Moderate — red |
+| **RHR 7-day tracker** | Severe — deep red | Normal — green | Mild — orange · Moderate — red |
 
-The tracker is the one place a marker is doubled up: ● carries both *Below baseline* and
-*Severe*, because both are the low end of RHR's scale and shape is not allowed to lie about
-scale position. Colour separates them, which is exactly the division of labour above — and
-they are three tiers apart in hue, blue against deep red.
-
-It also adds a **★** for 異常反彈. That is deliberate and narrow: a rebound is an *event*
+The tracker adds a **★** for 異常反彈. That is deliberate and narrow: a rebound is an *event*
 — a jump off a low — not a position on the scale, so it cannot borrow an ordinal marker
 without claiming to be one.
 

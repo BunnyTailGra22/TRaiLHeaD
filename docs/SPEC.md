@@ -338,22 +338,22 @@ Evaluated top-down; the first match wins.
 | **中度警訊 Moderate** ▲ | RHR up 5–8 bpm on 5 consecutive days | Early sympathetic overtraining | 2–3 days complete rest, then active recovery |
 | **輕度警訊 Mild** ▲ | RHR up 3–4 bpm on 3 consecutive days | Fatigue accumulating | Cut volume 20–30%, add an hour of sleep |
 | **正常波動 Normal** ■ | nothing above tripped | Normal training adaptation | Keep the current plan |
-| **低於基線 Below baseline** ● | Δ7 ≤ −2 bpm | Well recovered, or adapting | Keep the current plan |
 
-Three details are ours, not the article's:
+Two details are ours, not the article's:
 
 - **Normal is the residual**, not a band. The article defines 正常波動 as \|Δ7\| < 2 bpm,
-  but normal is the only tier left once the warnings and Below baseline have had their
-  turn — so a week that has drifted up 2–3 bpm without any run of days crossing +3 lands
-  here too, since the warning tiers are all defined on *consecutive days* and none of them
-  catches it. The panel prints Δ7 next to the tier for exactly this reason: the tier says
-  no rule fired, the number says whether the week is actually flat.
-- **Below baseline** separates a quiet week from a normal one. A falling RHR is usually
-  adaptation; only a sustained drop under 35 bpm with flat exercise HR is the warning, and
-  that is Severe's job.
+  but it is the only tier left once the four warnings have had their turn, so *any* week
+  that trips none of them lands here — drifted up 2–3 bpm without a consecutive-day run,
+  or settled 3 bpm below baseline, alike. The warning tiers are all defined on consecutive
+  days or on absolute bpm, and none of them catches a plain shift in the average. The panel
+  prints Δ7 next to the tier for exactly this reason: **the tier says no rule fired, the
+  number says whether the week is actually flat, and reading only the tier will lose that.**
 - **Severe is only half-checkable here.** The sheet carries no workout HR, so only the
   RHR < 35 bpm half is evaluated. The panel says so; the exercise-HR half is a manual
   confirmation before acting on it.
+
+A falling RHR gets no tier of its own: it is usually adaptation, and the one case where it
+is not — a sustained drop under 35 bpm with flat exercise HR — is Severe's job.
 
 **Rebound is the one rule that touches neither window.** Its dip is a dip in the *nightly
 readings themselves* — tonight against the lowest of the last 7 nights, needing 3 of them
@@ -364,9 +364,9 @@ low it is supposed to measure from.
 
 Severe likewise needs no history, being an absolute threshold. Both are therefore checked
 *before* the gate that requires a baseline, and both can fire in the first fortnight.
-Moderate and Mild wait for `rhrBase`; Normal and Below baseline additionally require
-`rhr7` — a lone night in a sparse week is not a week's trend, so it scores as *not scored*
-rather than as normal.
+Moderate and Mild wait for `rhrBase`; Normal additionally requires `rhr7`, because it
+claims the *week* tripped nothing and so needs a week to say it of — a lone night in a
+sparse week scores as *not scored* rather than as reassurance.
 
 #### What is drawn
 
