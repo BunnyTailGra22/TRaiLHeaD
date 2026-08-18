@@ -1852,6 +1852,7 @@ const RHR_MILD_RISE   = 3,  RHR_MILD_DAYS = 3;   // +3–4 bpm × 3 days .. fati
 const RHR_MOD_RISE    = 5,  RHR_MOD_DAYS  = 5;   // +5–8 bpm × 5 days .. early sympathetic OTS
 const RHR_LOW_ABS     = 35, RHR_LOW_DAYS  = 3;   // <35 bpm × 3 days ... parasympathetic OTS
 const RHR_REBOUND_JUMP = 10, RHR_REBOUND_WIN = 7; // dip, then >10 bpm .. infection / inflammation
+const RHR_REBOUND_MIN_N = 3;   // nights needed in that window before a "low" means anything
 
 // The five tiers of the article, plus `low` (a quiet week that trips nothing) and `none`.
 // Colour = desirability, on the recovery heat ramp; shape = position on RHR's own scale
@@ -1866,7 +1867,7 @@ const RHR_LEVELS = {
               caveat:'The sheet carries no workout HR, so only the RHR half of this is checked here — confirm the exercise-HR half yourself before acting.' },
   rebound:  { key:'rebound',  rank:4, color:'#8f3f38', shape:'star',     marker:'★',
               label:'異常反彈 Abnormal rebound',
-              rule:`RHR dropped, then jumped more than ${RHR_REBOUND_JUMP} bpm off that low`,
+              rule:`tonight is more than ${RHR_REBOUND_JUMP} bpm above the lowest of the last ${RHR_REBOUND_WIN} nights`,
               cause:'感染或發炎反應 — infection or inflammatory response',
               action:'暫停訓練，監測體溫與症狀 — pause training, watch temperature and symptoms.' },
   moderate: { key:'moderate', rank:3, color:'#ab5a52', shape:'triangle', marker:'▲',
@@ -1934,24 +1935,29 @@ function annotateRhr7(grid) {
     lowN = (g.rhr    != null && g.rhr    <  RHR_LOW_ABS)   ? lowN + 1 : 0;
     g.rhrUp3 = up3; g.rhrUp5 = up5; g.rhrLowRun = lowN;
 
-    // rebound — the jump off a genuine dip. The low must itself sit AT OR BELOW the
-    // baseline, or an ordinary week-on-week climb would read as a rebound.
+    // rebound — tonight measured against the LOWEST NIGHT of the recent window, and
+    // nothing else. This is the one rule with no baseline and no 7-day average in it:
+    // the dip it looks for is a dip in the nightly readings themselves, so tying it to
+    // either window would change what it detects. It therefore also needs no history
+    // beyond the window, and fires as soon as there are nights to compare.
     g.rhrJump = g.rhrDip = null;
-    if (g.rhr != null && g.rhrBase != null) {
+    if (g.rhr != null) {
       const prior = [];
       for (let j = Math.max(0, i - RHR_REBOUND_WIN); j < i; j++)
         if (grid[j].rhr != null) prior.push(grid[j].rhr);
-      if (prior.length >= 3) {
-        const dip = Math.min(...prior);
-        if (dip <= g.rhrBase) { g.rhrDip = dip; g.rhrJump = g.rhr - dip; }
+      if (prior.length >= RHR_REBOUND_MIN_N) {
+        g.rhrDip  = Math.min(...prior);
+        g.rhrJump = g.rhr - g.rhrDip;
       }
     }
 
     g.rhrLevel =
         g.rhr == null                                     ? RHR_LEVELS.none
-      : lowN >= RHR_LOW_DAYS                              ? RHR_LEVELS.severe   // absolute — needs no baseline
-      : g.rhrBase == null                                 ? RHR_LEVELS.none
+      // severe and rebound are both read off the nightly numbers alone — neither waits
+      // for a baseline, so both are checked before the gate that requires one
+      : lowN >= RHR_LOW_DAYS                              ? RHR_LEVELS.severe
       : (g.rhrJump != null && g.rhrJump > RHR_REBOUND_JUMP) ? RHR_LEVELS.rebound
+      : g.rhrBase == null                                 ? RHR_LEVELS.none
       : up5 >= RHR_MOD_DAYS                               ? RHR_LEVELS.moderate
       : up3 >= RHR_MILD_DAYS                              ? RHR_LEVELS.mild
       // below here the rule is stated on the 7-day AVERAGE, so refuse to name a tier

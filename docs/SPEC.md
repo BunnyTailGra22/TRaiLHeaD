@@ -334,7 +334,7 @@ Evaluated top-down; the first match wins.
 | Tier | Rule | Reading | Action |
 |---|---|---|---|
 | **重度警訊 Severe** ● | RHR < 35 bpm for 3 days running, and exercise HR will not lift | 副交感型 OTS | Stop high-intensity work now, seek a sports-medicine assessment |
-| **異常反彈 Abnormal rebound** ★ | RHR dropped, then jumped > 10 bpm off that low | Infection or inflammation | Pause training, watch temperature and symptoms |
+| **異常反彈 Abnormal rebound** ★ | tonight is > 10 bpm above the lowest of the last 7 nights | Infection or inflammation | Pause training, watch temperature and symptoms |
 | **中度警訊 Moderate** ▲ | RHR up 5–8 bpm on 5 consecutive days | Early sympathetic overtraining | 2–3 days complete rest, then active recovery |
 | **輕度警訊 Mild** ▲ | RHR up 3–4 bpm on 3 consecutive days | Fatigue accumulating | Cut volume 20–30%, add an hour of sleep |
 | **正常波動 Normal** ■ | nothing above tripped | Normal training adaptation | Keep the current plan |
@@ -355,10 +355,18 @@ Three details are ours, not the article's:
   RHR < 35 bpm half is evaluated. The panel says so; the exercise-HR half is a manual
   confirmation before acting on it.
 
-Severe is checked before the baseline exists, because it is an absolute threshold and needs
-no history. Every other tier waits for both windows. Normal and Below baseline additionally
-require `rhr7` — a lone night in a sparse week is not a week's trend, so it scores as *not
-scored* rather than as normal.
+**Rebound is the one rule that touches neither window.** Its dip is a dip in the *nightly
+readings themselves* — tonight against the lowest of the last 7 nights, needing 3 of them
+to have data — so neither the baseline nor the 7-day average appears in it. Routing it
+through either would change what it detects: a baseline-relative version cannot see a
+rebound that happens entirely above the baseline, and an average-relative one smears the
+low it is supposed to measure from.
+
+Severe likewise needs no history, being an absolute threshold. Both are therefore checked
+*before* the gate that requires a baseline, and both can fire in the first fortnight.
+Moderate and Mild wait for `rhrBase`; Normal and Below baseline additionally require
+`rhr7` — a lone night in a sparse week is not a week's trend, so it scores as *not scored*
+rather than as normal.
 
 #### What is drawn
 
