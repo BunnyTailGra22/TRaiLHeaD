@@ -136,7 +136,7 @@ main { padding: 20px 24px; }
 .rhr7-legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .rhr7-legend span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 .rhr7-legend i { font-style: normal; font-size: 12px; line-height: 1; }
-.rhr7-src { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.rhr7-src { font-size: 11px; color: var(--muted); margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border); }
 .rhr7-src a { color: var(--muted); }
 
 /* LOAD TABLE */
@@ -573,9 +573,6 @@ main { padding: 20px 24px; }
       </div>
       <div class="rhr7-action" id="rhr7-action"></div>
       <div class="rhr7-legend" id="rhr7-legend"></div>
-      <div class="rhr7-src">判讀標準來源 —
-        <a href="https://ctyeh.com/articles/14686" target="_blank" rel="noopener">ctyeh.com/articles/14686</a>
-        · 7-day rolling RHR and the overtraining thresholds below are taken from it.</div>
     </div>
 
     <div class="bio-stat-grid" id="vitals-stat-cards">
@@ -590,6 +587,10 @@ main { padding: 20px 24px; }
     </div>
 
     <div class="chart-box" id="vitals-box"><canvas id="vitals-chart"></canvas></div>
+
+    <div class="rhr7-src" id="rhr7-src" style="display:none">判讀標準來源 —
+      <a href="https://ctyeh.com/articles/14686" target="_blank" rel="noopener">ctyeh.com/articles/14686</a>
+      · 7-day rolling RHR and the overtraining thresholds above are taken from it.</div>
   </div>
 
   </div><!-- /two-col -->
@@ -1994,6 +1995,8 @@ function renderRhr7Panel(grid) {
   const panel = document.getElementById('rhr7-panel');
   if (!panel) return;
   panel.style.display = _vitalMode === 'rhr' ? '' : 'none';
+  const src = document.getElementById('rhr7-src');       // the note now lives under the chart
+  if (src) src.style.display = _vitalMode === 'rhr' ? '' : 'none';
   const key = document.getElementById('vitals-shape-key');
   if (key) key.style.display = _vitalMode === 'rhr' ? 'none' : '';   // its 3 states don't apply here
   // The two modes are judged against DIFFERENT windows, so the title has to say which
