@@ -56,11 +56,13 @@ Two metrics carry most of the weight:
 - **EP (Effort Points)** = `distance_km + elevation_m/100` — one number for the size of a
   run that treats 100 m of climb as equivalent to 1 km flat. **EPH** = `EP/hours` is its
   density. Every load chart is built on these.
-- **Progressive Overload** is an ACWR model: acute EP is an exponentially-weighted
-  7-day sum of daily EP, chronic is an exponentially-weighted 4-week average of that, and
-  the shaded band is 0.8–1.4 × chronic. Above the band is spike risk, below it is
-  detraining. Being a ratio it is **scale-free**, so it reads spike risk but cannot judge
-  progression — which is why the ratio itself is not shown as a headline figure.
+- **Progressive Overload** is a textbook ACWR model. Acute Load is an exponentially
+  weighted 7-day average of daily EP (λ = 0.25), Chronic Load is the average weekly load
+  over the last 28 days, and both are read in EP per week so the ratio centres on 1.0.
+  0.8–1.3 is the sweet spot, ≥ 1.5 the danger zone, with undertrained below 0.8 and a
+  caution band between. The two windows are computed independently, so the ratio is a
+  genuine comparison against preparation — though being a ratio it stays scale-free and
+  still cannot judge progression.
 - **7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted against
   a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery or
   Strained flag within 14 days. It computes from the data rather than being hardcoded, and

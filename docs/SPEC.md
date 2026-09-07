@@ -29,71 +29,77 @@ type string contains `trail`, otherwise `road`.
 
 ### Progressive Overload — Acute EP for Stimulation
 
-An ACWR (acute:chronic workload ratio) model over a **gap-free daily EP series**: sessions
-summed per calendar day, from the first session through `max(today, last session)`, with
-**rest days contributing 0**. Rest days are real data points, not gaps — that is what
-makes the decay actually decay.
+Textbook **ACWR** (acute:chronic workload ratio) over a **gap-free daily EP series**:
+sessions summed per calendar day, from the first session through `max(today, last
+session)`, with **rest days contributing 0**. Rest days are real data points, not gaps —
+that is what makes the decay actually decay.
 
-**Acute EP** — exponentially-weighted rolling *sum*, 7-day time constant:
+Both windows are computed from that daily series **independently**. Chronic is not derived
+from acute, so the ratio compares current load against an independent measure of
+preparation, as the literature defines it.
 
-```
-ACUTE_TAU   = 7
-ACUTE_DECAY = exp(-1/7) ≈ 0.8669
-acute[i]    = ep[i] + acute[i-1] × ACUTE_DECAY
-```
-
-A workout enters at 100% of its EP and fades: ~50% left after 5 days, ~37% after 7, ~24%
-after 10, ~5% after 3 weeks. Being a sum rather than an average, its magnitude sits at
-roughly one week's worth of EP.
-
-**Chronic EP** — exponentially-weighted moving *average* of the acute series:
+**Acute Load** — exponentially weighted moving *average* of daily EP over 7 days:
 
 ```
-CHRONIC_WEEKS = 4                                  (fixed — not user-selectable)
-α             = 1 - exp(-1 / (CHRONIC_WEEKS × 7))
-chronic[i]    = chronic[i-1] + α × (acute[i] - chronic[i-1])
-chronic[0]    = acute[0]                           (seed)
+ACUTE_DAYS   = 7
+ACUTE_LAMBDA = 2 / (7 + 1) = 0.25          Williams et al. (2017) EWMA smoothing factor
+acuteDaily[i] = λ·ep[i] + (1 - λ)·acuteDaily[i-1]
+acuteDaily[0] = ep[0]                       (seed)
 ```
 
-The 4-week window is **fixed by design**. It is the model's definition of "what you are
-accustomed to", not a view preference — if it moved, the optimal range would move
-underneath the very reading it is meant to judge, and two sessions could not be compared.
-The header note and the legend both name it as an **exponential** weighting over 4 weeks
-(`chronic … (4 wk exp.)`), so the smoothing is visible in the chart rather than only here:
-it is an EWMA, not a flat 28-day mean, and the distinction matters when reading how fast
-the band chases a change of pace.
-
-**Optimal Range** — the shaded band:
+**Chronic Load** — average *weekly* load over the last 28 days:
 
 ```
-ACWR_LOW = 0.8,  ACWR_HIGH = 1.4
-band     = 0.8 × chronic  →  1.4 × chronic
+CHRONIC_DAYS = 28
+chronic[i]   = sum(ep[i-27 .. i]) / 4       i.e. EP per week
 ```
 
-The band rides with Chronic EP, so it asks "is this week big *relative to your recent
-norm*", not against any fixed target.
+Null until a full 28 days exist. A short window would flatter the ratio by dividing by
+less preparation than the model claims to measure, so nothing is drawn and the day is
+"not scored" rather than optimistically scored.
 
-**Status** — each day's dot on the Acute EP line, two states rather than three:
+**The two are put on one scale before dividing.** Acute is a per-*day* average; chronic is
+a per-*week* total. Comparing them directly would put the ratio near 1/7, where it could
+never reach the sweet spot at all. Acute is therefore expressed as its weekly equivalent
+(`× 7`) and **both axes read EP per week**:
 
-| Position | Ratio | Colour | Meaning |
+```
+acute[i] = acuteDaily[i] × 7
+ratio[i] = acute[i] / chronic[i]
+```
+
+Steady training at any constant daily load gives exactly `ratio = 1.000000` — verified
+numerically, and the check worth re-running if either window is ever changed.
+
+**The Ratio** — four zones. The spec names two; the gaps between them are named here so
+no day falls into an unlabelled state:
+
+| Ratio | Zone | Colour | Meaning |
 |---|---|---|---|
-| Inside band | 0.8 – 1.4 | green `#7f9d78` | ✓ optimal |
-| Outside band | < 0.8 or > 1.4 | red `#b3746e` | ⚠ out of range |
+| < 0.8 | Undertrained | gold `#bd9a4f` | below the stimulus needed to progress |
+| 0.8 – 1.3 | **Sweet spot** | green `#7f9d78` | safe progression, low relative injury risk |
+| 1.3 – 1.5 | Caution | rose `#b3746e` | above the sweet spot, not yet the danger zone |
+| ≥ 1.5 | **Danger zone** | clay `#a5602a` | sudden 7-day spike against 28-day preparation; significantly raised non-contact injury risk |
+| no chronic yet | Not scored | grey `#9d9488` | fewer than 28 days of history |
 
-Above and below still mean different things — spike risk versus detraining — and the
-tooltip names which. But the palette answers the binary question only, so the eye reads
-"in range or not" at a glance without decoding a third hue. The Acute EP **line** is green
-too; **Chronic EP is grey** `#9d9488`, dashed, along with the band fill, so the whole
-reference apparatus recedes and colour only ever means the reading.
+Zone matching runs **most severe first**, so a ratio is only ever assigned one zone.
 
-This is the shared load palette (`LOAD_IN` / `LOAD_OUT` / `LOAD_REF` in `index.html`),
-used identically by 7-Day Acute Load beside it — the pair sits side by side, so green and
-red must mean the same thing in both.
+**Drawn reference lines.** The shaded band is the sweet spot (`0.8 × chronic` to
+`1.3 × chronic`); a thin dashed clay rule marks the danger threshold at `1.5 × chronic`;
+chronic itself is a dashed grey line. All ride with chronic, so every question the chart
+asks is "relative to your own recent preparation", never against a fixed target. All
+reference series use `spanGaps:false`, so nothing is drawn across the first 28 days.
 
-**Header note** — `acute N (7d exp.) · chronic N (4 wk exp.)`. The ratio and its verdict
-are deliberately **not** shown. The dots already say in-range or not, and a headline number
-invited reading the ratio as a score when it self-centres near 1.0 by construction (see the
-deviation note below). The figure is still in the per-day tooltip.
+**Header note** — `ACWR 1.72 — Danger zone · acute 85 (7 d exp. avg) · chronic 49 EP/wk
+(28 d)`. The ratio now leads, because it *is* the reading. It was previously withheld
+while chronic was a second smoothing of acute — it self-centred near 1.0 by construction
+and invited being read as a score. With the windows independent that objection no longer
+applies.
+
+**Palette note.** This chart uses four zones where its neighbour, 7-Day Acute Load, uses
+two. Green still means "the state you want" and the warm ramp still means "attention", so
+the shared reading survives; the ramp is the DESIGN load/sleep graded family
+(gold · green · rose · clay) rather than a new set of hues. See DESIGN.md.
 
 **Garmin Recovery / Strained** are painted as vertical washes behind the curves, the same
 `_loadStatusBands` plugin and the same colours as on 7-Day Acute Load beside it — so a bad
@@ -110,23 +116,19 @@ timezone behind UTC.
 chronic are computed over full history and then sliced, so the curves themselves never
 change with the scope; only how much of them you see does.
 
-> **Deviation from the literature.** Textbook ACWR runs both windows over the same daily
-> load series. Here Chronic is a second smoothing pass over the *Acute* curve, so it
-> chases Acute with a lag and the ratio self-centres near 1.0. The chart reads as "change
-> of pace vs. your own recent trend" more than as load against an independent fitness
-> baseline. The 1.4 upper bound is also looser than the commonly cited 1.3. Worth knowing
-> before comparing these numbers against published thresholds.
+> **On the thresholds.** 0.8–1.3 and the 1.5 danger line follow the commonly cited ACWR
+> figures. They come from team-sport cohorts, mostly with session-RPE or GPS load rather
+> than an elevation-weighted trail metric, so treat them as a calibrated starting point
+> for this dataset, not a law. EP also under-weights climb against the clock relative to
+> what actually drives overnight recovery cost — see
+> [RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#ep-is-not-the-best-dose-variable--duration-is).
 
-The bands do carry recovery information — watch days run at 22% above the band against 12%
-inside it — but *below* the band is not a rested state: it collects illness and travel weeks
-and has the worst RHR of the three. Measured in
-[RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#does-the-progressive-overload-band-track-recovery).
-
-**This chart cannot judge progression, only spike risk.** Because chronic is a second
-smoothing of acute, the ratio is scale-free: across 2026 the episode where VO₂max fell and
-the one where it rose had the same ACWR median (1.08 vs 1.09) while their chronic EP
-differed by a third. Nothing on the Training tab judges progression — the level and slope
-that would are worked out in [PROGRESSION.md](PROGRESSION.md) and its script, not charted.
+**The ratio still cannot judge progression.** Being a ratio it is scale-free: a week at
+half your usual volume against a correspondingly low chronic reads the same as a week at
+twice it. Level and slope are what judge progression, and those are worked out in
+[PROGRESSION.md](PROGRESSION.md), not charted. What *is* new is that chronic is now a
+meaningful quantity in its own right — average weekly EP over the last month — so the grey
+line carries information the old second-smoothing version did not.
 
 ### EP Load Trend — 7-Day Total vs Baseline
 

@@ -133,6 +133,17 @@ climb: 25 EP of trail and 23 EP of road are nominally the same run and are nowhe
 
 ## Does the Progressive Overload band track recovery?
 
+> **Measured under the previous ACWR definition.** These figures come from the model in
+> which acute was an exponentially-weighted *sum* of daily EP, chronic a second smoothing
+> of that acute curve, and the band 0.8–1.4. Progressive Overload has since been redefined
+> to textbook ACWR — acute as a 7-day EWMA *average*, chronic as the independent 28-day
+> average weekly load, sweet spot 0.8–1.3 with a danger line at 1.5 (see
+> [SPEC.md](SPEC.md)). The grouping below therefore no longer matches the zones the chart
+> shows, and the analysis needs re-running against the new definition before these numbers
+> are quoted about the current chart. They are kept as recorded because the qualitative
+> findings — that the high side carries worse recovery, and that the low side is not a
+> rested state — are about load itself, not about the particular smoothing.
+
 Same-night recovery, grouped by the ACWR state the chart would have been showing:
 
 | State | days | rhr z | hrv z | resp z | score z | watch-day % |

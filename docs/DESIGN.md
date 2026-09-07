@@ -40,8 +40,12 @@ Two status families, because they answer different questions.
 **Load & sleep quality** — a graded scale where both ends are informative:
 green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
 
-**Load charts** (Progressive Overload, 7-Day Acute Load) share one two-state palette, so
-the pair sitting side by side reads identically:
+**Load charts.** 7-Day Acute Load uses a two-state palette; Progressive Overload grades
+the same idea into four ACWR zones (gold undertrained · green sweet spot · rose caution ·
+clay danger), because its spec distinguishes a sweet spot from an outright danger zone and
+a binary palette would discard that. Green still means "the state you want" and the warm
+ramp still means "attention", so the pair sitting side by side still reads consistently —
+the four zones refine the two-state scale rather than contradicting it:
 
 | Role | Token | Colour |
 |---|---|---|
@@ -49,10 +53,13 @@ the pair sitting side by side reads identically:
 | Out of range | `LOAD_OUT` | red `#b3746e` |
 | Reference line (chronic, ceiling, band fill) | `LOAD_REF` | grey `#9d9488` |
 
-Only two states, though *above* and *below* the band mean opposite things — spike risk and
-detraining. The tooltip names which; the palette answers "in range or not" so that reading
-survives a glance. Keeping every reference line grey is what makes it work: colour appears
-on the chart only where there is a reading to judge, never on the rule doing the judging.
+On 7-Day Acute Load only two states, though *above* and *below* the band mean opposite
+things — spike risk and detraining. The tooltip names which; the palette answers "in range
+or not" so that reading survives a glance. Keeping every reference line grey is what makes
+it work: colour appears on the chart only where there is a reading to judge, never on the
+rule doing the judging. Progressive Overload's one exception is the danger threshold at
+1.5x chronic, drawn as a thin clay rule — it is a named boundary in the model, not a
+neutral reference, so it carries the colour of the zone it opens.
 
 > Grey doubles as "no data / not scored" on the recovery charts. On the load charts it is
 > unambiguous in practice — it only ever appears as a continuous dashed rule or a band

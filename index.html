@@ -384,8 +384,10 @@ main { padding: 20px 24px; }
         </div>
       </div>
       <div class="shape-key" style="margin-bottom:8px">
-        <span><i style="color:#7f9d78">●</i> in range</span>
-        <span><i style="color:#b3746e">●</i> out of range</span>
+        <span><i style="color:#bd9a4f">●</i> &lt;0.8 undertrained</span>
+        <span><i style="color:#7f9d78">●</i> 0.8–1.3 sweet spot</span>
+        <span><i style="color:#b3746e">●</i> 1.3–1.5 caution</span>
+        <span><i style="color:#a5602a">●</i> ≥1.5 danger</span>
         <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
         <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
       </div>
@@ -1325,20 +1327,32 @@ function compute13wkRolling(sessions) {
   });
 }
 let _rollingChart = null;
-// Chronic EP time constant is FIXED at 4 weeks — it's the model's definition of
-// "what you're accustomed to", not a view setting, so it must not move underneath the
-// optimal range. The pills now scope the VIEW instead (see _overloadWeeks).
-const CHRONIC_WEEKS = 4;
+// Textbook ACWR. Both windows are computed from the DAILY EP series independently —
+// chronic is no longer a second smoothing of acute — so the ratio compares current load
+// against an independent measure of preparation, the way the literature defines it.
+const CHRONIC_WEEKS = 4;    // 28 days, fixed: the model's definition of "prepared for"
 let _overloadWeeks = 4;     // x-axis scope in weeks (4 / 8 / 13 / 26), daily resolution
 
-// Acute EP  — exponentially-weighted rolling SUM of daily EP, 7-day time constant.
-//   acute[i] = ep[i] + acute[i-1] * ACUTE_DECAY
-//   A workout enters at 100% of its EP, then decays: ~50% left after 5 d, ~37% after 7 d,
-//   ~24% after 10 d, ~5% after 3 weeks — i.e. it has largely washed out by ~10 days.
-const ACUTE_TAU   = 7;
-const ACUTE_DECAY = Math.exp(-1 / ACUTE_TAU);          // ≈ 0.8669
-// Optimal range = 0.8–1.4 × Chronic EP (acute:chronic workload ratio sweet spot)
-const ACWR_LOW = 0.8, ACWR_HIGH = 1.4;
+// Acute Load — exponentially weighted MOVING AVERAGE of daily EP over 7 days.
+//   lambda = 2/(N+1) is the standard EWMA smoothing factor used in the ACWR literature
+//   (Williams et al. 2017), i.e. 0.25 for a 7-day window.
+//   acuteDaily[i] = L*ep[i] + (1-L)*acuteDaily[i-1]
+const ACUTE_DAYS   = 7;
+const ACUTE_LAMBDA = 2 / (ACUTE_DAYS + 1);             // 0.25
+// Chronic Load — average WEEKLY load over the last 28 days = sum(28 d) / 4.
+const CHRONIC_DAYS = CHRONIC_WEEKS * 7;                // 28
+
+// Acute is a per-DAY average and chronic a per-WEEK total, so acute is expressed as its
+// weekly equivalent (x7) before the two are compared. Both axes are then EP per week and
+// the ratio is centred on 1.0 for steady training — without this the ratio would sit
+// near 1/7 and could never reach the sweet spot at all.
+const WEEK = 7;
+
+// Ratio zones. The spec names two of them; the gaps between are named here so no day
+// falls into an unlabelled state.
+const ACWR_SWEET_LO = 0.8;   // below this: undertrained / detraining
+const ACWR_SWEET_HI = 1.3;   // 0.8-1.3 is the sweet spot
+const ACWR_DANGER   = 1.5;   // >= 1.5 is the danger zone; 1.3-1.5 is caution
 
 // Shared palette for BOTH load charts — Progressive Overload and 7-Day Acute Load —
 // so "in range" and "out of range" read identically across the pair sitting side by
@@ -1359,18 +1373,41 @@ function computeAcuteChronic(sessions) {
   const first = Math.min(...perDay.keys());
   const last  = Math.max(key(new Date()), Math.max(...perDay.keys()));
 
-  // Chronic EP = exponentially-weighted average of Acute EP over CHRONIC_WEEKS weeks
-  const chronicAlpha = 1 - Math.exp(-1 / (CHRONIC_WEEKS * 7));
-  const out = [];
-  let acute = 0, chronic = null;
-  for (let t = first; t <= last; t += DAY) {
-    const ep = perDay.get(t) || 0;                       // rest days contribute 0
-    acute = ep + acute * ACUTE_DECAY;                    // 100% in, then decays
-    chronic = chronic === null ? acute : chronic + chronicAlpha * (acute - chronic);
-    out.push({ date: new Date(t), ep, acute, chronic });
-  }
+  // Daily EP grid first, so both windows read the same source series.
+  const days = [];
+  for (let t = first; t <= last; t += DAY) days.push({ t, ep: perDay.get(t) || 0 });
+
+  // Acute: EWMA of daily EP, seeded on day 0, then expressed per week (x7).
+  let acuteDaily = null;
+  const out = days.map((d, i) => {
+    acuteDaily = acuteDaily === null ? d.ep
+      : ACUTE_LAMBDA * d.ep + (1 - ACUTE_LAMBDA) * acuteDaily;
+
+    // Chronic: average weekly load over the trailing 28 days = sum(28 d) / 4.
+    // Null until a full 28 days exist — a short window would flatter the ratio by
+    // dividing by less preparation than the model claims to measure.
+    let chronic = null;
+    if (i >= CHRONIC_DAYS - 1) {
+      let sum = 0;
+      for (let j = i - CHRONIC_DAYS + 1; j <= i; j++) sum += days[j].ep;
+      chronic = sum / CHRONIC_WEEKS;
+    }
+    const acute = acuteDaily * WEEK;
+    return { date: new Date(d.t), ep: d.ep, acute, chronic,
+             ratio: (chronic != null && chronic > 0) ? acute / chronic : null };
+  });
   return out;
 }
+
+// Which ratio zone a day sits in. Order matters: most severe first.
+const ACWR_ZONES = [
+  { key: 'danger', test: r => r >= ACWR_DANGER,      color: '#a5602a', label: 'Danger zone' },
+  { key: 'caution', test: r => r > ACWR_SWEET_HI,    color: '#b3746e', label: 'Caution' },
+  { key: 'sweet',  test: r => r >= ACWR_SWEET_LO,    color: '#7f9d78', label: 'Sweet spot' },
+  { key: 'under',  test: () => true,                 color: '#bd9a4f', label: 'Undertrained' },
+];
+const acwrZone = r => r == null ? { key:'none', color: LOAD_REF, label: 'Not scored' }
+                                : ACWR_ZONES.find(z => z.test(r));
 
 function renderRollingChart(sessions) {
   // Computed over FULL history so the band is already "warmed up" at the left edge
@@ -1378,29 +1415,34 @@ function renderRollingChart(sessions) {
   const series = all.slice(Math.max(0, all.length - _overloadWeeks * 7));
 
   const acute  = series.map(d => +d.acute.toFixed(1));
-  const lower  = series.map(d => +(d.chronic * ACWR_LOW).toFixed(1));
-  const upper  = series.map(d => +(d.chronic * ACWR_HIGH).toFixed(1));
+  // Null-safe: chronic is absent for the first 28 days, and a band must not be invented.
+  const lower  = series.map(d => d.chronic == null ? null : +(d.chronic * ACWR_SWEET_LO).toFixed(1));
+  const upper  = series.map(d => d.chronic == null ? null : +(d.chronic * ACWR_SWEET_HI).toFixed(1));
+  const danger = series.map(d => d.chronic == null ? null : +(d.chronic * ACWR_DANGER).toFixed(1));
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
 
-  // Colour each day by where Acute EP sits vs the band. Two states, not three: green
-  // in the band, red outside it either way. Above and below mean different things
-  // (spike risk vs detraining) and the tooltip still says which — but the chart's job
-  // here is the binary "in range or not", so the palette answers that question only.
-  const IN = LOAD_IN, OUT = LOAD_OUT;
-  const dotColors = acute.map((v, i) => (v > upper[i] || v < lower[i]) ? OUT : IN);
+  // Four zones now, not two. The spec distinguishes the sweet spot from an outright
+  // danger zone, so a binary palette would throw away the distinction it asks for.
+  // Green still means "the state you want" and the warm ramp still means "attention",
+  // which is what the sibling chart's two-state palette also says — this refines that
+  // scale rather than contradicting it. Ramp is the DESIGN load/sleep graded family:
+  // gold (under) · green (sweet) · rose (caution) · clay (danger).
+  const dotColors = series.map(d => acwrZone(d.ratio).color);
 
-  // Header note: today's acute and chronic. The ratio and its verdict are deliberately
-  // NOT here — the dots already say in-range or not, and a headline number invited
-  // reading the ratio as a score when it self-centres near 1.0 by construction. Still
-  // in the tooltip for anyone who wants the figure for a specific day.
+  // The ratio IS the reading now, so it leads the note. It was withheld while chronic
+  // was a second smoothing of acute (it self-centred near 1.0 and invited being read as
+  // a score); with the two windows independent that objection no longer applies.
   const noteEl = document.getElementById('overload-note');
   if (noteEl) {
     const t = series[series.length - 1];
-    // the time constants are named here since they're fixed and no longer pickable
-    noteEl.textContent = t
-      ? `acute ${t.acute.toFixed(0)} (7d exp.) · chronic ${t.chronic.toFixed(0)} `
-        + `(${CHRONIC_WEEKS} wk exp.)`
-      : '';
+    if (!t) noteEl.textContent = '';
+    else if (t.ratio == null) {
+      noteEl.textContent = `acute ${t.acute.toFixed(0)} EP/wk · chronic needs ${CHRONIC_DAYS} d of history`;
+    } else {
+      const z = acwrZone(t.ratio);
+      noteEl.textContent = `ACWR ${t.ratio.toFixed(2)} — ${z.label} · acute ${t.acute.toFixed(0)} `
+        + `(7 d exp. avg) · chronic ${t.chronic.toFixed(0)} EP/wk (${CHRONIC_DAYS} d)`;
+    }
   }
 
   // Garmin's Recovery/Strained stretches, joined onto the EP grid BY DATE KEY — this
@@ -1420,37 +1462,43 @@ function renderRollingChart(sessions) {
 
   const datasets = [
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
-      fill: false, tension: 0.35, order: 3 },
-    { label: 'Optimal Range', data: lower, borderColor: 'transparent',
+      fill: false, tension: 0.35, order: 4, spanGaps: false },
+    { label: 'Sweet Spot (0.8–1.3)', data: lower, borderColor: 'transparent',
       backgroundColor: 'rgba(157,148,136,0.28)', pointRadius: 0,   // light warm grey
-      fill: '-1', tension: 0.35, order: 3 },                 // fills up to `upper`
-    { label: `Chronic EP (${CHRONIC_WEEKS} wk exp.)`, data: series.map(d => +d.chronic.toFixed(1)),
+      fill: '-1', tension: 0.35, order: 4, spanGaps: false },   // fills up to `upper`
+    { label: `Danger (${ACWR_DANGER}×)`, data: danger,
+      borderColor: '#a5602a', borderWidth: 1, borderDash: [2,3],
+      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 3, spanGaps: false },
+    { label: `Chronic Load (${CHRONIC_DAYS} d avg/wk)`, data: series.map(d => d.chronic == null ? null : +d.chronic.toFixed(1)),
       borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
-      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2 },
-    { label: 'Acute EP', data: acute, borderColor: IN, borderWidth: 2,
+      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2, spanGaps: false },
+    { label: 'Acute Load', data: acute, borderColor: LOAD_IN, borderWidth: 2,
       pointRadius: 2, pointHoverRadius: 5,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.25, order: 1 },
   ];
 
-  const opts = chartOpts({ yLabel: 'EP' });
+  const opts = chartOpts({ yLabel: 'EP per week' });
   opts.plugins.legend.labels.filter = (item) => item.text !== 'upper';   // hide the invisible bound
-  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute EP';
+  opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute Load';
   opts.plugins.tooltip.callbacks = {
     title: (items) => series[items[0].dataIndex].date
       .toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }),
-    label: (item) => 'Acute EP: ' + item.parsed.y.toFixed(1),
+    label: (item) => 'Acute Load: ' + item.parsed.y.toFixed(1) + ' EP/wk',
     afterBody: (items) => {
-      const i = items[0].dataIndex, d = series[i], v = acute[i];
-      const ratio = d.chronic > 0 ? v / d.chronic : 0;
-      const status = v > upper[i] ? '⚠ Above band — spike risk'
-                   : v < lower[i] ? '↓ Below band — detraining'
-                   : '✓ In optimal range';
+      const i = items[0].dataIndex, d = series[i];
+      if (d.ratio == null) return ['Chronic Load: not enough history yet',
+        ...(garminStatusOn(d.date) ? ['Garmin: ' + titleCase(garminStatusOn(d.date))] : [])];
+      const z = acwrZone(d.ratio);
+      const detail = z.key === 'danger'  ? '⚠ Danger zone — spike vs 28 d preparation'
+                   : z.key === 'caution' ? '⚠ Caution — above the sweet spot'
+                   : z.key === 'sweet'   ? '✓ Sweet spot — safe progression'
+                   :                       '↓ Undertrained — below 0.8';
       return [
-        'Chronic EP: ' + d.chronic.toFixed(1),
-        'Ratio: ' + ratio.toFixed(2),
-        'Optimal: ' + lower[i].toFixed(0) + '–' + upper[i].toFixed(0) + ' EP',
-        status,
+        'Chronic Load: ' + d.chronic.toFixed(1) + ' EP/wk',
+        'ACWR: ' + d.ratio.toFixed(2) + ' — ' + z.label,
+        'Sweet spot: ' + lower[i].toFixed(0) + '–' + upper[i].toFixed(0) + ' EP/wk',
+        detail,
         ...(garminStatusOn(d.date) ? ['Garmin: ' + titleCase(garminStatusOn(d.date))] : []),
       ];
     },
