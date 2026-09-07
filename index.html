@@ -421,7 +421,7 @@ main { padding: 20px 24px; }
   <!-- EP LOAD TREND — full width: a 90-day baseline needs the horizontal room -->
   <div class="chart-card">
     <div class="chart-header">
-      <div class="section-title" style="margin:0">EP Load Trend — 7-Day Average vs Baseline</div>
+      <div class="section-title" style="margin:0">EP Load Trend — 7-Day Total vs Baseline</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <div id="eptrend-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="eptrend-scope-pills">
@@ -1584,9 +1584,10 @@ function renderAcuteCeiling() {
 let _epTrendChart = null;
 let _epTrendWeeks = 13;       // x-axis view scope (8 / 13 / 26 / 52 wk)
 let _epTrendBaseDays = 30;    // baseline window (14 / 30 / 60 / 90 d) — changes the METRIC
-const EP_TREND_MA = 7;        // the trend line is a 7-day trailing mean, fixed
+const EP_TREND_DAYS = 7;      // the trend line is a 7-day trailing TOTAL, fixed
 
-const _mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+const _sum  = a => a.reduce((x, y) => x + y, 0);
+const _mean = a => _sum(a) / a.length;
 const _sdSample = a => {
   if (a.length < 2) return null;
   const m = _mean(a);
@@ -1600,22 +1601,23 @@ function computeEpTrend(sessions) {
   const ep = all.map(d => d.ep);
   const N = _epTrendBaseDays;
 
-  // Trend: 7-day trailing mean of daily EP.
+  // Trend: simple rolling TOTAL of daily EP over the past 7 days — a week's worth of
+  // work as one number, which is how training volume is normally spoken about.
   const trend = ep.map((_, i) =>
-    i < EP_TREND_MA - 1 ? null : _mean(ep.slice(i - EP_TREND_MA + 1, i + 1)));
+    i < EP_TREND_DAYS - 1 ? null : _sum(ep.slice(i - EP_TREND_DAYS + 1, i + 1)));
 
   return all.map((d, i) => {
     let base = null, sd = null;
     if (i >= N - 1) {
-      base = _mean(ep.slice(i - N + 1, i + 1));            // the N-day moving average
-      // SD is taken over the 7-day AVERAGES inside the window, NOT over daily EP.
-      // Daily EP mixes rest days (0) with 40+ EP days, so its SD is larger than its own
-      // mean: the band would sit partly below zero and swallow the trend line whole
-      // (measured: 99-100% of days "inside", lower bound negative on 89-100% of them).
-      // Judging a weekly average against the spread of weekly averages is apples to
-      // apples, and lands at the textbook ~68% coverage instead.
+      // Baseline and band are BOTH computed over the rolling-total series, so all three
+      // lines live on one scale (EP per 7 days). Deriving the centre from daily EP
+      // instead would leave it 7x below the trend line and the band would never bite.
+      // Using the 7-day totals rather than the daily values also keeps the spread
+      // honest: daily EP mixes rest days (0) with 40+ EP days, so its SD exceeds its own
+      // mean and a band built on it sits partly below zero, calling 99-100% of days
+      // "in range". Week vs the spread of weeks is apples to apples — ~68% coverage.
       const winT = trend.slice(i - N + 1, i + 1).filter(v => v != null);
-      if (winT.length >= EP_TREND_MA) sd = _sdSample(winT);
+      if (winT.length >= EP_TREND_DAYS) { base = _mean(winT); sd = _sdSample(winT); }
     }
     const hasBand = base != null && sd != null;
     return {
@@ -1653,10 +1655,10 @@ function renderEpTrend(sessions) {
     if (last && last.base != null && last.sd) {
       const z = (last.trend - last.base) / last.sd;
       const where = last.trend > last.hi ? 'above' : last.trend < last.lo ? 'below' : 'within';
-      noteEl.textContent = `7d avg ${last.trend.toFixed(1)} EP · baseline ${last.base.toFixed(1)} `
+      noteEl.textContent = `7d total ${last.trend.toFixed(1)} EP · baseline ${last.base.toFixed(1)} `
         + `(${_epTrendBaseDays} d) · ${z >= 0 ? '+' : ''}${z.toFixed(1)} SD, ${where} band`;
     } else {
-      noteEl.textContent = last ? `7d avg ${last.trend.toFixed(1)} EP · baseline needs `
+      noteEl.textContent = last ? `7d total ${last.trend.toFixed(1)} EP · baseline needs `
         + `${_epTrendBaseDays} d of history` : 'No sessions in scope';
     }
   }
@@ -1682,7 +1684,7 @@ function renderEpTrend(sessions) {
     { label: `Baseline (${_epTrendBaseDays} d avg)`, data: base,
       borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4, 3],
       pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.3, order: 2, spanGaps: false },
-    { label: `${EP_TREND_MA}-Day Avg EP`, data: trend, borderColor: LOAD_IN, borderWidth: 2,
+    { label: `${EP_TREND_DAYS}-Day Total EP`, data: trend, borderColor: LOAD_IN, borderWidth: 2,
       pointRadius: 2, pointHoverRadius: 5,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.3, order: 1, spanGaps: false },
@@ -1694,13 +1696,13 @@ function renderEpTrend(sessions) {
   opts.plugins.legend.position = phone ? 'bottom' : 'top';
   opts.plugins.legend.labels = { ...(opts.plugins.legend.labels || {}),
     filter: it => it.text !== 'upper' };
-  opts.plugins.tooltip.filter = it => it.dataset.label === `${EP_TREND_MA}-Day Avg EP`;
+  opts.plugins.tooltip.filter = it => it.dataset.label === `${EP_TREND_DAYS}-Day Total EP`;
   opts.plugins.tooltip.callbacks = {
-    label: it => `${EP_TREND_MA}-day avg: ${it.parsed.y.toFixed(1)} EP`,
+    label: it => `${EP_TREND_DAYS}-day total: ${it.parsed.y.toFixed(1)} EP`,
     afterBody: (items) => {
       const d = series[items[0].dataIndex];
       if (!d || d.base == null) return ['Baseline: not enough history yet'];
-      const out = [`Baseline: ${d.base.toFixed(1)} EP (${_epTrendBaseDays} d)`];
+      const out = [`Baseline: ${d.base.toFixed(1)} EP / 7 d (${_epTrendBaseDays} d avg)`];
       if (d.sd) {
         out.push(`Band: ${d.lo.toFixed(1)}–${d.hi.toFixed(1)} EP (±1 SD)`);
         if (d.trend != null) {
@@ -1719,7 +1721,7 @@ function renderEpTrend(sessions) {
     x: { ...darkScale(), ticks: { color: '#6f675c', font: { size: phone ? 9 : 10 },
          maxRotation: 0, autoSkip: true, maxTicksLimit: phone ? 5 : 12 } },
     y: { ...darkScale(), beginAtZero: true,
-         title: { display: true, text: 'EP per day', color: '#6f675c', font: { size: 11 } },
+         title: { display: true, text: 'EP per 7 days', color: '#6f675c', font: { size: 11 } },
          ticks: { color: '#6f675c', font: { size: phone ? 10 : 11 } } },
   };
   opts.plugins.loadStatusBands = { bands };

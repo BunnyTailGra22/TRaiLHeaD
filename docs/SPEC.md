@@ -128,54 +128,60 @@ the one where it rose had the same ACWR median (1.08 vs 1.09) while their chroni
 differed by a third. Nothing on the Training tab judges progression — the level and slope
 that would are worked out in [PROGRESSION.md](PROGRESSION.md) and its script, not charted.
 
-### EP Load Trend — 7-Day Average vs Baseline
+### EP Load Trend — 7-Day Total vs Baseline
 
 The plainest of the three load charts. Same gap-free daily EP series as Progressive
-Overload (rest days = 0), but read in **raw EP** rather than as a ratio, so it can answer
-what a scale-free ratio structurally cannot: is the current week bigger or smaller than the
-recent norm.
+Overload (rest days = 0), but read as **raw weekly volume** rather than a ratio, so it can
+answer what a scale-free ratio structurally cannot: is the current week bigger or smaller
+than the recent norm.
 
-**Trend** — 7-day trailing mean of daily EP, window fixed:
-
-```
-EP_TREND_MA = 7
-trend[i]    = mean(ep[i-6 .. i])
-```
-
-**Baseline** — N-day moving average of the same daily series, N selectable (14 / 30 / 60 /
-90 d, default 30):
+**Trend** — simple rolling total of daily EP over the past 7 days, window fixed:
 
 ```
-base[i] = mean(ep[i-N+1 .. i])
+EP_TREND_DAYS = 7
+trend[i]      = sum(ep[i-6 .. i])
 ```
 
-**Band** — `base ± 1 SD`, but the SD is taken over the **7-day averages** inside the
-window, *not* over the daily EP values:
+A week's work as one number, in the unit training volume is normally spoken about. The
+y-axis is therefore **EP per 7 days**, not EP per day.
+
+**Baseline and band** — both computed over that *same* rolling-total series, across the
+last N days (N = 14 / 30 / 60 / 90, default 30):
 
 ```
-sd[i]  = sampleSD( trend[i-N+1 .. i] )        ← spread of weekly averages
-band   = [ max(0, base - sd),  base + sd ]
+win     = trend[i-N+1 .. i]            (nulls dropped; needs >= 7 values)
+base[i] = mean(win)
+sd[i]   = sampleSD(win)
+band    = [ max(0, base - sd),  base + sd ]
 ```
 
-This is the one place the chart departs from a literal reading of "N-day moving average
-±1 SD", and it is deliberate. Daily EP mixes rest days at 0 with 40+ EP days, so its SD is
-**larger than its own mean**. Measured over 977 days of real history:
+Keeping all three lines on one series is what makes the chart legible: centre, band and
+trend share a scale and the band actually bites. Two things follow from it.
 
-| Baseline | SD of daily EP | SD of 7-day avg | Days "inside" using daily SD | using 7-day SD |
-|---|---|---|---|---|
-| 14 d | 5.45 | 1.41 | 100% | 68.8% |
-| 30 d | 5.44 | 1.70 | 100% | 65.8% |
-| 60 d | 8.28 | 2.50 | 99.5% | 67.2% |
-| 90 d | 7.60 | 2.36 | 99.0% | 66.4% |
+**Why the spread is not taken from daily EP.** Daily EP mixes rest days at 0 with 40+ EP
+days, so its dispersion describes day-to-day lumpiness, not week-to-week variation. Scaling
+it to a week (`SD_daily × 7`) and banding on that gives, over 977 days of real history:
 
-A band built on daily SD sits partly **below zero** — on 89% of days at 14 d and 100% at
-90 d — and swallows the trend line whole: it calls 99–100% of days "in range", which is to
-say it never says anything. Judging a weekly average against the spread of weekly averages
-is apples to apples, and lands at the textbook ~68% coverage for ±1 SD.
+| Baseline | Band from weekly SD | Band from daily SD × 7 | Inside, weekly SD | Inside, daily SD | Lower bound < 0 |
+|---|---|---|---|---|---|
+| 14 d | ±9.9 | ±38.2 | 54.0% | 98.9% | 88.8% |
+| 30 d | ±11.9 | ±38.1 | 61.9% | 99.6% | 96.0% |
+| 60 d | ±17.5 | ±58.0 | 64.5% | 98.9% | 100% |
+| 90 d | ±16.5 | ±53.2 | 65.2% | 98.9% | 100% |
+
+The daily-SD band is three to four times too wide, sits below zero on 89–100% of days, and
+calls 99% of them "in range" — it never says anything. Week against the spread of weeks is
+apples to apples.
+
+**Why short windows read tighter.** Consecutive 7-day totals overlap by 6 of their 7 days,
+so a 14-day window holds only about two independent weeks. Its sample SD is a small, noisy
+estimate, the band is correspondingly tight, and 46% of days fall outside it. That is a
+real property of the estimator, not a fault: 14 d answers "different from the last fortnight",
+while 90 d (65% inside, close to the textbook ~68% for ±1 SD) answers "different from this
+season". Read the short windows as sensitive, not as authoritative.
 
 The drawn floor is clamped at 0 because EP cannot be negative. The clamp never flips an
-in/out verdict — `trend >= 0` always, so a sub-zero floor was unreachable anyway — and with
-a 60- or 90-day baseline it never activates at all.
+in/out verdict — `trend >= 0` always, so a sub-zero floor was unreachable anyway.
 
 **Status** — the shared two-state load palette, same as the pair above:
 
@@ -185,7 +191,7 @@ a 60- or 90-day baseline it never activates at all.
 | Outside | red `#b3746e` | building (above) or easing (below) |
 | No baseline yet | grey `#9d9488` | fewer than N days of history |
 
-The tooltip names which direction, and gives the z-score. Baseline and band are grey like
+The tooltip names which direction and gives the z-score. Baseline and band are grey like
 every other reference apparatus on the load charts.
 
 **Pills, two rows.** View scope (8 / 13 / 26 / 52 wk, default 13) pans the x-axis only.
