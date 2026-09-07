@@ -144,10 +144,16 @@ same Excellent → Good → Fair → Poor order.
 `main` is a vertical stack of `.chart-card`s. Pairs sit in a `.two-col` grid (`1fr 1fr`,
 16px gap).
 
-**Training tab** — Year-over-Year summary cards, then three paired rows:
+**Training tab** — Year-over-Year summary cards, then:
 1. Cumulative EP | Monthly EP
-2. Progressive Overload | Recent 8 Weeks — Load Summary
-3. Distribution by Category | 專項訓練 Seasonality
+2. Progressive Overload | 7-Day Acute Load
+3. EP Load Trend *(full width)*
+4. Recent 8 Weeks — Load Summary *(full width)*
+5. Distribution by Category | 專項訓練 Seasonality
+
+The three load charts run consecutively (rows 2–3) because they are three readings of the
+same thing: a ratio, an absolute against a ceiling, and a raw level against its own norm.
+EP Load Trend is full width because a 90-day baseline needs the horizontal room to read.
 
 **Recovery & Body tab** — two paired rows, then one full-width card:
 1. Sleep Duration → Score | Sleep Consistency

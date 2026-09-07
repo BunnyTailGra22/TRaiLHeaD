@@ -128,6 +128,78 @@ the one where it rose had the same ACWR median (1.08 vs 1.09) while their chroni
 differed by a third. Nothing on the Training tab judges progression — the level and slope
 that would are worked out in [PROGRESSION.md](PROGRESSION.md) and its script, not charted.
 
+### EP Load Trend — 7-Day Average vs Baseline
+
+The plainest of the three load charts. Same gap-free daily EP series as Progressive
+Overload (rest days = 0), but read in **raw EP** rather than as a ratio, so it can answer
+what a scale-free ratio structurally cannot: is the current week bigger or smaller than the
+recent norm.
+
+**Trend** — 7-day trailing mean of daily EP, window fixed:
+
+```
+EP_TREND_MA = 7
+trend[i]    = mean(ep[i-6 .. i])
+```
+
+**Baseline** — N-day moving average of the same daily series, N selectable (14 / 30 / 60 /
+90 d, default 30):
+
+```
+base[i] = mean(ep[i-N+1 .. i])
+```
+
+**Band** — `base ± 1 SD`, but the SD is taken over the **7-day averages** inside the
+window, *not* over the daily EP values:
+
+```
+sd[i]  = sampleSD( trend[i-N+1 .. i] )        ← spread of weekly averages
+band   = [ max(0, base - sd),  base + sd ]
+```
+
+This is the one place the chart departs from a literal reading of "N-day moving average
+±1 SD", and it is deliberate. Daily EP mixes rest days at 0 with 40+ EP days, so its SD is
+**larger than its own mean**. Measured over 977 days of real history:
+
+| Baseline | SD of daily EP | SD of 7-day avg | Days "inside" using daily SD | using 7-day SD |
+|---|---|---|---|---|
+| 14 d | 5.45 | 1.41 | 100% | 68.8% |
+| 30 d | 5.44 | 1.70 | 100% | 65.8% |
+| 60 d | 8.28 | 2.50 | 99.5% | 67.2% |
+| 90 d | 7.60 | 2.36 | 99.0% | 66.4% |
+
+A band built on daily SD sits partly **below zero** — on 89% of days at 14 d and 100% at
+90 d — and swallows the trend line whole: it calls 99–100% of days "in range", which is to
+say it never says anything. Judging a weekly average against the spread of weekly averages
+is apples to apples, and lands at the textbook ~68% coverage for ±1 SD.
+
+The drawn floor is clamped at 0 because EP cannot be negative. The clamp never flips an
+in/out verdict — `trend >= 0` always, so a sub-zero floor was unreachable anyway — and with
+a 60- or 90-day baseline it never activates at all.
+
+**Status** — the shared two-state load palette, same as the pair above:
+
+| Position | Colour | Reading |
+|---|---|---|
+| Inside the band | green `#7f9d78` | at the recent norm |
+| Outside | red `#b3746e` | building (above) or easing (below) |
+| No baseline yet | grey `#9d9488` | fewer than N days of history |
+
+The tooltip names which direction, and gives the z-score. Baseline and band are grey like
+every other reference apparatus on the load charts.
+
+**Pills, two rows.** View scope (8 / 13 / 26 / 52 wk, default 13) pans the x-axis only.
+The baseline window (14 / 30 / 60 / 90 d) is a **metric** pill, not a scope pill, because
+it changes what is computed rather than how much is shown — the sibling convention where a
+defining parameter stays fixed (Chronic EP's 4 weeks) does not apply here, since comparing
+the same week against a 14-day and a 90-day norm is the point of the chart, not a leak of
+the definition. Both are computed over full history and sliced, so the band is warm at the
+left edge.
+
+**Garmin Recovery / Strained** washes are painted behind the curves by the same
+`_loadStatusBands` plugin and joined by `localDayKey`, identically to the other two load
+charts, so a bad stretch lines up across all three.
+
 ### 7-Day Acute Load — Against the Ceiling
 
 Garmin's own `Acute Load` (its 7-day exponentially weighted load), plotted against the
