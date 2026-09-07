@@ -106,7 +106,7 @@ meaningless. Days with no TrainingLoad row simply carry no band. The key is buil
 sheet's date strings parse as UTC — comparing `Date` objects directly slips a day in any
 timezone behind UTC.
 
-**View scope** — 4 / 8 / 13 / 26 wk pills (default 8) pan the x-axis only. Acute and
+**View scope** — 4 / 8 / 13 / 26 wk pills (default 4) pan the x-axis only. Acute and
 chronic are computed over full history and then sliced, so the curves themselves never
 change with the scope; only how much of them you see does.
 
@@ -245,7 +245,7 @@ the `_loadStatusBands` plugin — Chart.js has no band primitive on a category a
 are passed as **plugin options**, not hung off the config object: Chart.js wraps that in
 its own `Config`, so a stray property on it never reaches the chart.
 
-**View scope** — 4 / 8 / 13 / 26 wk pills (default 26). The ceiling is derived from full
+**View scope** — 4 / 8 / 13 / 26 wk pills (default 4). The ceiling is derived from full
 history, so panning the view never moves the rule; only the crossing count in the header
 note changes.
 
@@ -314,7 +314,7 @@ serious states group visually.
 Status matching is exact-first, then substring with **longest key first** — otherwise
 `UNBALANCED` would match on `BALANCED`. Unknown/blank status falls back to grey `#9d9488`.
 
-Scope: 4 / 8 / 13 / 26 wk (default 8), applied as a date cutoff before rendering.
+Scope: 4 / 8 / 13 / 26 wk (default 4), applied as a date cutoff before rendering.
 
 ### Recovery Vitals — Nightly vs Personal 30-day Baseline
 
@@ -366,7 +366,7 @@ the three series into one indistinguishable cloud.
 bad side. Requires all three vitals present; otherwise the night is "not scored" rather
 than counted as clean.
 
-Computed over full history then sliced to the scope (4 / 8 / 13 / 26 wk, default 8), so
+Computed over full history then sliced to the scope (4 / 8 / 13 / 26 wk, default 4), so
 the 30-day window is 30 *calendar* days and the band is warm at the left edge.
 
 ### Resting HR — 7-day rolling-average tracker
