@@ -39,7 +39,6 @@ same render path as real data.
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
 | Progressive Overload — Acute EP for stimulation | 7-Day Acute Load vs the ceiling |
-| EP Load Trend — 7-day total vs baseline (full width) | |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 
@@ -67,16 +66,12 @@ Two metrics carry most of the weight:
   a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery or
   Strained flag within 14 days. It computes from the data rather than being hardcoded, and
   isn't drawn at all until there are enough flagged days to calibrate on.
-- **EP Load Trend** is the plainest of the three: a simple rolling **total** of EP over the
-  past 7 days, against the average and ±1 SD of that same weekly-total series over the last
-  14 / 30 / 60 / 90 days. Where the other two answer "is this a spike", this one answers "is
-  this week bigger or smaller than my recent norm", in raw weekly volume rather than a
-  scale-free ratio.
 
-Both load charts share one two-state palette — green in range, red out, every reference
-line grey — and both shade Garmin's own Recovery and Strained stretches behind the curves,
-so a bad patch lines up across the two models at a glance. See
-[docs/DESIGN.md](docs/DESIGN.md).
+The two share a colour logic — green is the state you want, the warm ramp is attention,
+every reference line grey — though Progressive Overload grades it into four ACWR zones
+while 7-Day Acute Load stays two-state. Both shade Garmin's own Recovery and Strained
+stretches behind the curves, so a bad patch lines up across the two models at a glance.
+See [docs/DESIGN.md](docs/DESIGN.md).
 
 Nothing on the tab judges *progression*, only spike risk: a scale-free ratio structurally
 can't. The level and slope that would are worked out in
