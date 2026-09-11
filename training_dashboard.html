@@ -1720,9 +1720,10 @@ function renderLongRunTable(sessions) {
     + `${Math.round(m).toLocaleString('en-US')} m climbed · newest first`;
 
   let html = `<table class="load-table"><thead><tr>
-    <th>Date</th><th>Activity</th><th>Category</th>
+    <th class="num">EP</th><th class="num">EPH</th><th class="num">VAM</th><th>Category</th>
+    <th>Date</th><th>Activity</th>
     <th class="num">Distance</th><th class="num">Elevation</th><th class="num">Slope</th>
-    <th class="num">Time</th><th class="num">EP</th><th class="num">EPH</th><th class="num">VAM</th>
+    <th class="num">Time</th>
   </tr></thead><tbody>`;
   rows.forEach(s => {
     const cat   = focusCatOf(s);
@@ -1732,16 +1733,16 @@ function renderLongRunTable(sessions) {
     const vam   = s.hrs > 0 ? s.elev / s.hrs : null;        // vertical metres per hour
     const name  = s.name || '—';
     html += `<tr>
+      <td class="num"><strong>${s.ep.toFixed(1)}</strong></td>
+      <td class="num">${s.eph.toFixed(1)}</td>
+      <td class="num">${vam != null ? Math.round(vam) + ' m/h' : '—'}</td>
+      <td><span style="color:${cat.color}">●</span> ${_esc(cat.key)}</td>
       <td>${s.date.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })}</td>
       <td class="lr-name" title="${_esc(name)}">${_esc(name)}</td>
-      <td><span style="color:${cat.color}">●</span> ${_esc(cat.key)}</td>
       <td class="num">${s.dist.toFixed(1)} km</td>
       <td class="num">${Math.round(s.elev).toLocaleString('en-US')} m</td>
       <td class="num">${slope != null ? slope.toFixed(1) + '%' : '—'}</td>
       <td class="num">${_hm(s.hrs)}</td>
-      <td class="num"><strong>${s.ep.toFixed(1)}</strong></td>
-      <td class="num">${s.eph.toFixed(1)}</td>
-      <td class="num">${vam != null ? Math.round(vam) + ' m/h' : '—'}</td>
     </tr>`;
   });
   wrap.innerHTML = html + '</tbody></table>';

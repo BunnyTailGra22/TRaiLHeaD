@@ -208,15 +208,21 @@ chart's most-specific-first assignment — a 25 km 劍中劍 run is listed as �
 ">20 km". The 20 km cut is `LONGRUN_MIN_KM`, strictly greater than, matching the chart's
 own ">20 km" test.
 
+Columns in display order — the three effort measures lead, so they are what stays in
+view when the table scrolls sideways on a narrow screen:
+
 | Column | Formula |
 |---|---|
+| EP | `dist + elev / 100` |
+| EPH | `EP / hrs` |
+| VAM | `elev / hrs` (vertical m per hour) |
+| Category | the Seasonality chart's category |
+| Date | session date, local |
+| Activity | name from the sheet |
 | Distance | `dist` (km) |
 | Elevation | `elev` — elevation **gain** (m) |
 | Slope | `elev / (dist × 1000) × 100` (%) |
 | Time | `hrs`, shown h:mm |
-| EP | `dist + elev / 100` |
-| EPH | `EP / hrs` |
-| VAM | `elev / hrs` (vertical m per hour) |
 
 **Slope is gain over distance, not net grade.** It measures how hilly the route is — a
 loop that climbs 1,000 m and descends 1,000 m over 20 km reads 5%, although its net grade
