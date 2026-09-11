@@ -41,6 +41,7 @@ same render path as real data.
 | Progressive Overload — Acute EP for stimulation | 7-Day Acute Load vs the ceiling |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
+| 專項訓練 Long Runs — every session over 20 km (full width) | |
 
 **Recovery & Body tab**
 

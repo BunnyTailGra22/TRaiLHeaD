@@ -156,6 +156,7 @@ same Excellent → Good → Fair → Poor order.
 2. Progressive Overload | 7-Day Acute Load
 3. Recent 8 Weeks — Load Summary *(full width)*
 4. Distribution by Category | 專項訓練 Seasonality
+5. 專項訓練 Long Runs *(full width)* — the >20 km bubbles above it, as a table
 
 The two load charts are paired in row 2 because they are two readings of the same thing:
 a ratio against your own preparation, and an absolute against a derived ceiling.

@@ -145,6 +145,12 @@ main { padding: 20px 24px; }
 .load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .load-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .load-table tr:hover td { background: var(--card2); }
+/* Long-run log: can run to dozens of rows, so cap the height and pin the header. */
+.longrun-scroll { max-height: 440px; overflow: auto; }
+.longrun-scroll .load-table { min-width: 820px; }
+.longrun-scroll .load-table thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
+.load-table th.num, .load-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.load-table td.lr-name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
 
 /* EMPTY */
 .empty { text-align: center; padding: 40px; color: var(--muted); }
@@ -447,6 +453,17 @@ main { padding: 20px 24px; }
         <div id="focus-note" style="font-size:11px;color:var(--muted)">x = month · y = EPH · size = EP</div>
       </div>
       <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROW 5: every >20 km session the Seasonality chart plots, newest first -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">專項訓練 Long Runs — sessions over 20 km</div>
+      <div id="longrun-note" style="font-size:11px;color:var(--muted)"></div>
+    </div>
+    <div class="table-scroll longrun-scroll">
+      <div id="longrun-table-wrap"><div class="empty">No data loaded.</div></div>
     </div>
   </div>
 
@@ -987,6 +1004,7 @@ function renderAll(sessions, sleepMap) {
   renderFocusChart(sessions);   // running activities only
   renderBoxChart(sessions);
   renderLoadTable(sessions);
+  renderLongRunTable(sessions);
   renderHrvStatus(sleepMap);
   renderVitals(sleepMap);
   renderSleepRaster(sleepMap);
@@ -1669,6 +1687,61 @@ function renderLoadTable(sessions) {
       <td>${d.dist.toFixed(1)} km</td><td>${d.elev.toFixed(0)} m</td>
       <td>${d.hrs.toFixed(1)} h</td><td>${d.sessions}</td><td>${eph}</td>
       <td><span style="color:var(--road)">${rp}%</span> / <span style="color:var(--trail)">${tp}%</span></td>
+    </tr>`;
+  });
+  wrap.innerHTML = html + '</tbody></table>';
+}
+
+// ── 專項 LONG RUNS TABLE ──────────────────────────────────────────────────────
+// Every session the Seasonality chart plots with distance > 20 km. It uses the chart's
+// own filter and category resolver, so a row here is always a bubble there — and a
+// 25 km 劍中劍 run is listed as 劍中劍 (most-specific-first), not as ">20 km".
+const LONGRUN_MIN_KM = 20;
+const _esc = t => String(t).replace(/[&<>"']/g,
+  c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+const _hm = h => { const m = Math.round(h * 60); return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; };
+
+function renderLongRunTable(sessions) {
+  const wrap = document.getElementById('longrun-table-wrap');
+  if (!wrap) return;
+  const rows = sessions
+    .map(s => ({ ...s, eph: s.hrs > 0 ? s.ep / s.hrs : null }))
+    .filter(s => s.eph !== null && focusCatOf(s) && s.dist > LONGRUN_MIN_KM)
+    .sort((a, b) => b.date - a.date);                       // newest first
+
+  const note = document.getElementById('longrun-note');
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="empty">No sessions over 20 km.</div>';
+    if (note) note.textContent = '';
+    return;
+  }
+  const km = rows.reduce((a, s) => a + s.dist, 0), m = rows.reduce((a, s) => a + s.elev, 0);
+  if (note) note.textContent = `${rows.length} sessions · ${km.toFixed(0)} km · `
+    + `${Math.round(m).toLocaleString('en-US')} m climbed · newest first`;
+
+  let html = `<table class="load-table"><thead><tr>
+    <th>Date</th><th>Activity</th><th>Category</th>
+    <th class="num">Distance</th><th class="num">Elevation</th><th class="num">Slope</th>
+    <th class="num">Time</th><th class="num">EP</th><th class="num">EPH</th><th class="num">VAM</th>
+  </tr></thead><tbody>`;
+  rows.forEach(s => {
+    const cat   = focusCatOf(s);
+    // Slope = climb per horizontal distance: elevation gain (m) / distance (m) × 100.
+    // Gain only, so it measures how hilly the route is, not its net grade.
+    const slope = s.dist > 0 ? s.elev / (s.dist * 1000) * 100 : null;
+    const vam   = s.hrs > 0 ? s.elev / s.hrs : null;        // vertical metres per hour
+    const name  = s.name || '—';
+    html += `<tr>
+      <td>${s.date.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })}</td>
+      <td class="lr-name" title="${_esc(name)}">${_esc(name)}</td>
+      <td><span style="color:${cat.color}">●</span> ${_esc(cat.key)}</td>
+      <td class="num">${s.dist.toFixed(1)} km</td>
+      <td class="num">${Math.round(s.elev).toLocaleString('en-US')} m</td>
+      <td class="num">${slope != null ? slope.toFixed(1) + '%' : '—'}</td>
+      <td class="num">${_hm(s.hrs)}</td>
+      <td class="num"><strong>${s.ep.toFixed(1)}</strong></td>
+      <td class="num">${s.eph.toFixed(1)}</td>
+      <td class="num">${vam != null ? Math.round(vam) + ' m/h' : '—'}</td>
     </tr>`;
   });
   wrap.innerHTML = html + '</tbody></table>';

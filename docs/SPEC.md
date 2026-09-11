@@ -199,6 +199,37 @@ session only ever lands in one:
 | ≥50 km | distance ≥ 50 |
 | >20 km | distance > 20 |
 
+### 專項訓練 Long Runs — sessions over 20 km
+
+A table of every session the Seasonality chart plots with **distance > 20 km**, newest
+first. It reuses the chart's own filter (runs only, positive moving time) and its
+category resolver, so a row here is always a bubble there, and the Category column is the
+chart's most-specific-first assignment — a 25 km 劍中劍 run is listed as 劍中劍, not as
+">20 km". The 20 km cut is `LONGRUN_MIN_KM`, strictly greater than, matching the chart's
+own ">20 km" test.
+
+| Column | Formula |
+|---|---|
+| Distance | `dist` (km) |
+| Elevation | `elev` — elevation **gain** (m) |
+| Slope | `elev / (dist × 1000) × 100` (%) |
+| Time | `hrs`, shown h:mm |
+| EP | `dist + elev / 100` |
+| EPH | `EP / hrs` |
+| VAM | `elev / hrs` (vertical m per hour) |
+
+**Slope is gain over distance, not net grade.** It measures how hilly the route is — a
+loop that climbs 1,000 m and descends 1,000 m over 20 km reads 5%, although its net grade
+is zero. It is the right number for comparing how much climbing a route packs per km.
+
+**VAM** uses total moving time, flats and descents included, so it is lower than the
+climbing-only VAM a watch reports on a single ascent. It is comparable between rows in this
+table, not against published climb VAMs.
+
+The header note gives the count, total distance and total climb. The table caps at 440 px
+with a sticky header, so it stays one card tall as the list grows. Activity names are
+HTML-escaped before insertion — they come from the sheet.
+
 ### Distribution by Category
 Hand-rolled box-and-whisker per category: whisker min→max, box Q1→Q3, median rule, plus
 faint jittered dots for the raw sessions. Quartiles by linear interpolation between order
