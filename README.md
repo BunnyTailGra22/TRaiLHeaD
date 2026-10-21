@@ -14,7 +14,9 @@ Garmin Connect  ──►  garmin_google_sync  ──►  Google Sheet  ──�
 ```
 
 The sheet is written by [garmin_google_sync](https://github.com/BunnyTailGra22/garmin_google_sync),
-a Python job that runs daily on GitHub Actions. This repo is the read-only front end.
+a Python job that runs on GitHub Actions at 10:00 and 22:00 (UTC+8). This repo is the read-only
+front end. The tab bar shows **Updated …**, the time the last sync run finished. It is in your
+browser's timezone and comes from the sheet's `Meta` tab, so it isn't the time you loaded the page.
 
 ---
 

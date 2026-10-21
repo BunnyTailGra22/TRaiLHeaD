@@ -36,10 +36,12 @@ initGate()
                   ├─ fetchRange(Activities!A1:L5000)    ─┐
                   ├─ fetchRange(Sleep!A1:V5000)          ├─ Promise.all, Sheets v4 REST
                   ├─ fetchRange(Biometrics!A1:J3000)     │
-                  └─ fetchRange(TrainingLoad!A1:G1300)  ─┘
+                  ├─ fetchRange(TrainingLoad!A1:G1300)   │
+                  └─ fetchRange(Meta!A1:A2)             ─┘
                        ├─ parseSleepRows()    → sleepMap  { 'YYYY-MM-DD': {...} }
                        ├─ parseBiometrics()   → _bodyComp [ {date, weight, ...} ]
                        ├─ parseTrainingLoad() → _trainingLoad [ {date, acute, ...} ]
+                       ├─ parseLastSync()     → Date | null  → renderLastSync()
                        └─ processSessions()   → sessions  [ {date, dist, elev, ep, ...} ]
                             └─ renderAll(sessions, sleepMap)
                                  └─ every chart renderer, in order
@@ -53,7 +55,13 @@ and `renderAcuteCeiling` hides its whole card when the tab is missing rather tha
 empty frame. `loadSampleData` clears `_trainingLoad` for the same reason — nothing there
 synthesises Garmin's load model, and a made-up ceiling would be worse than no chart.
 
-Reading that tab does not change what Progressive Overload is built on; it still derives its
+The **`Meta`** fetch is optional in the same way. The sync stamps `Meta!A2` with its finish
+time (ISO UTC) after every other tab is written, and `renderLastSync` shows it as
+*Updated Oct 21, 10:02* at the right end of the tab bar, in the browser's timezone. It is
+when the sheet last took data, not when the page fetched it. With no `Meta` tab, or on
+sample data, the element is left empty and hides itself.
+
+Reading the TrainingLoad tab does not change what Progressive Overload is built on; it still derives its
 own ACWR from EP. `analysis/progression.py` reads the same tab offline for VO₂max, which the
 dashboard still does not plot.
 
