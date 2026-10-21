@@ -477,7 +477,7 @@ visceral fat. Stat cards show the latest non-null reading per metric.
 
 ## Source data
 
-Google Sheet, three tabs, read via the Sheets v4 REST API.
+Google Sheet, five tabs, read via the Sheets v4 REST API.
 
 | Tab | Default range | Used for |
 |---|---|---|
@@ -485,6 +485,7 @@ Google Sheet, three tabs, read via the Sheets v4 REST API.
 | Sleep | `Sleep!A1:V5000` | sleep map, HRV, vitals, both sleep charts |
 | Biometrics | `Biometrics!A1:J3000` | body composition |
 | TrainingLoad | `TrainingLoad!A1:G1300` | 7-Day Acute Load vs the ceiling |
+| Meta | `Meta!A1:A2` | the *Updated* stamp in the tab bar |
 
 **Activities columns** (name-mapped, configurable): Start Time, Distance (km), Elevation
 Gain (m), Duration (min), Type. `Activity Name` is read if present, for 專項 categories.
@@ -495,6 +496,9 @@ Low (ms), Baseline High (ms), 7d Avg (ms), HRV Status *(hardcoded header names)*
 
 **Biometrics columns** (all hardcoded): Date, Weight (kg), BMI, Body Fat %, Body Water %,
 Muscle Mass (kg), Bone Mass (kg), Visceral Fat, Metabolic Age, Physique Rating.
+
+**Meta**: one header, `Last Sync (UTC)`, over one ISO 8601 UTC timestamp
+(`2026-10-21T02:01:33Z`) that the sync rewrites at the end of every run.
 
 Lookup is by header name, case-insensitive, so column order in the sheet does not matter.
 A missing column resolves to `-1` and yields `null` values rather than an error.
