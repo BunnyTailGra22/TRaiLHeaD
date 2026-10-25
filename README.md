@@ -44,6 +44,7 @@ same render path as real data.
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
+| 路線課表 — EP vs. Slope %, a static reference figure (full width) | |
 
 **Recovery & Body tab**
 
@@ -107,6 +108,8 @@ compare across the three vitals. Formulas and the full tier table are in
 index.html               the whole dashboard — HTML, CSS and JS in one file
 training_dashboard.html  byte-identical copy, kept for the descriptive filename
 prototype-monthly.html   scratch prototype, not part of the site
+assets/
+  EP_vs_Slope.png        static route-plan figure shown on the Training tab
 tokens/                  design tokens — reference only, not loaded at runtime
 docs/
   ARCHITECTURE.md        how it's put together, data flow, rendering pattern
@@ -128,6 +131,12 @@ nothing enforces it, so `cp index.html training_dashboard.html` on every commit 
 touches the dashboard.
 
 The only external dependency is Chart.js 4.4.1 from cdnjs. No CDN, no charts.
+
+One asset sits beside the HTML: `assets/EP_vs_Slope.png`, a rendered figure of the
+Notion **route-plan** table. It is the only thing on the dashboard that is not drawn live
+from the sheet, so its card says so in the header. Opening `index.html` straight from the
+filesystem still works — the image is referenced by relative path, not embedded — but the
+two files are no longer strictly self-contained on their own.
 
 ## Access
 
