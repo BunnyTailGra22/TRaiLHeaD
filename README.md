@@ -44,7 +44,7 @@ same render path as real data.
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
-| Course Heatmap — EP vs. Slope %, a static reference figure (full width) | |
+| Course Heatmap — Slope % vs. EP, a static reference figure (full width) | |
 
 **Recovery & Body tab**
 
