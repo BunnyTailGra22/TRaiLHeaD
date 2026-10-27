@@ -162,10 +162,11 @@ same Excellent → Good → Fair → Poor order.
 The two load charts are paired in row 2 because they are two readings of the same thing:
 a ratio against your own preparation, and an absolute against a derived ceiling.
 
-**Recovery & Body tab** — two paired rows, then one full-width card:
+**Recovery tab** — two paired rows, then one full-width card:
 1. Sleep Duration → Score | Sleep Consistency
 2. HRV Status | Recovery Vitals
-3. Body Composition (full width)
+3. Body Composition (full width) — pick one or two metrics; two share the x-axis on twin
+   y-axes, the second dashed with square points so the pair separates without colour
 
 Rows are paired by kind: the two sleep charts together, the two
 nightly-vs-baseline charts together.

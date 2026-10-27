@@ -46,13 +46,13 @@ same render path as real data.
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
 | Course Heatmap — Slope % vs. EP, a static reference figure (full width) | |
 
-**Recovery & Body tab**
+**Recovery tab**
 
 | | |
 |---|---|
 | Sleep Duration → Score | Sleep Consistency |
 | HRV Status | Recovery Vitals |
-| Body Composition (full width) | |
+| Body Composition — one metric, or two on twin axes (full width) | |
 
 Two metrics carry most of the weight:
 

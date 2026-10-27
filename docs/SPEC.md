@@ -472,6 +472,9 @@ Scope 30 / 60 / 90 / 180 / 365 d.
 ### Body Composition
 Straight plots of the Biometrics tab: weight, body fat %, muscle mass, BMI, body water %,
 visceral fat. Stat cards show the latest non-null reading per metric.
+Plot one metric, or two at once: the first on the left axis, the second on the right. A third
+pick drops the oldest; the last one can't be cleared. With two, the x-axis is every date either
+was measured on, and a date missing one of them is a gap in that line, bridged — not a zero.
 
 ---
 

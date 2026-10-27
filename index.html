@@ -92,6 +92,7 @@ main { padding: 20px 24px; }
 .metric-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .mpill { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--card2); color: var(--muted); cursor: pointer; font-size: 12px; user-select: none; }
 .mpill.active { border-color: var(--text); color: var(--text); background: var(--card2); }
+.mpill-hint { align-self: center; color: var(--muted); font-size: 11px; }
 
 /* LAYOUTS */
 .two-col  { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
@@ -342,7 +343,7 @@ main { padding: 20px 24px; }
 
   <div class="tabs">
     <div class="tab active" data-tab="training">Training</div>
-    <div class="tab" data-tab="recovery">Recovery &amp; Body</div>
+    <div class="tab" data-tab="recovery">Recovery</div>
     <div id="last-sync"></div>
   </div>
 
@@ -495,7 +496,7 @@ main { padding: 20px 24px; }
 
   </div><!-- ══ /TRAINING TAB ══ -->
 
-  <!-- ══ RECOVERY & BODY TAB ══ -->
+  <!-- ══ RECOVERY TAB ══ -->
   <div id="tab-recovery" class="tab-panel">
 
   <!-- ROW 1: SLEEP→RECOVERY + SLEEP CONSISTENCY (side by side) -->
@@ -646,6 +647,7 @@ main { padding: 20px 24px; }
     <div class="chart-header">
       <div class="section-title" style="margin:0">Body Composition</div>
       <div class="metric-pills" id="body-metric-pills">
+        <span class="mpill-hint">Pick 1–2</span>
         <div class="mpill active" data-body="weight">Weight</div>
         <div class="mpill" data-body="bodyFat">Body Fat %</div>
         <div class="mpill" data-body="muscle">Muscle Mass</div>
@@ -667,7 +669,7 @@ main { padding: 20px 24px; }
     <div id="body-note" style="font-size:11px;color:var(--muted);margin-top:8px"></div>
   </div>
 
-  </div><!-- ══ /RECOVERY & BODY TAB ══ -->
+  </div><!-- ══ /RECOVERY TAB ══ -->
 
 </main>
 
@@ -2573,7 +2575,8 @@ const BODY_METRICS = {
   visceral: { label:'Visceral Fat', unit:'',      color:'#c4a86f' },
 };
 let _bodyChart = null;
-let _bodyMetric = 'weight';
+// One or two selected metrics, oldest pick first. Two plot on twin axes (left, right).
+let _bodyMetrics = ['weight'];
 
 function renderBodyComp() {
   // latest non-null value per stat card
@@ -2592,45 +2595,76 @@ function renderBodyComp() {
   renderBodyChart();
 }
 
+// "Weight (kg)", but "Body Fat %" rather than "Body Fat % (%)"
+function bodyAxisTitle(m) { return m.unit && !m.label.includes(m.unit) ? `${m.label} (${m.unit})` : m.label; }
+
 function renderBodyChart() {
-  const m = BODY_METRICS[_bodyMetric];
-  const pts = _bodyComp.filter(r => r[_bodyMetric] != null);
+  const keys = _bodyMetrics, dual = keys.length === 2;
+  // Rows where any selected metric was measured; the other may be null there — a gap, bridged by spanGaps
+  const rows = _bodyComp.filter(r => keys.some(k => r[k] != null));
   const noteEl = document.getElementById('body-note');
   if (noteEl) {
-    if (pts.length >= 2) {
-      const first = pts[0][_bodyMetric], last = pts[pts.length-1][_bodyMetric];
-      const d = last - first, sign = d>=0?'+':'';
-      noteEl.textContent = `${pts.length} measurements · ${m.label} ${sign}${d.toFixed(1)}${m.unit} since ${pts[0].date.toLocaleDateString('en-US',{month:'short',year:'2-digit'})}`;
-    } else noteEl.textContent = pts.length ? '1 measurement' : 'No body-composition data in the Biometrics tab';
+    const deltas = keys.map(k => {
+      const m = BODY_METRICS[k], pts = rows.filter(r => r[k] != null);
+      if (pts.length < 2) return null;
+      const d = pts[pts.length-1][k] - pts[0][k], sign = d>=0?'+':'';
+      return `${m.label} ${sign}${d.toFixed(1)}${m.unit} since ${pts[0].date.toLocaleDateString('en-US',{month:'short',year:'2-digit'})}`;
+    }).filter(Boolean);
+    if (deltas.length) noteEl.textContent = `${rows.length} measurements · ${deltas.join(' · ')}`;
+    else noteEl.textContent = rows.length === 1 ? '1 measurement' : rows.length ? `${rows.length} measurements` : 'No body-composition data in the Biometrics tab';
   }
 
   const phone = isPhone();
-  const opts = chartOpts({ yLabel: m.unit || m.label });
+  const first = BODY_METRICS[keys[0]];
+  const opts = chartOpts({ yLabel: dual ? '' : (first.unit || first.label) });
   // Category labels (no Chart.js date adapter loaded), thinned on small screens
-  const labels = pts.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}));
+  const labels = rows.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}));
   opts.scales.x = darkScale({ ticks:{ color:'#6f675c', font:{size:phone?10:11}, maxRotation:0,
-    autoSkip:true, maxTicksLimit:phone?6:10 } });
+    autoSkip:true, maxTicksLimit:phone?4:10 } });
   opts.scales.y.beginAtZero = false;
+  if (dual) {
+    // Let each dataset's own point style through, so the legend keys differ in shape too
+    delete opts.plugins.legend.labels.pointStyle;
+    // Each axis names its metric, so a side is never read by colour alone — kept on phones too
+    const axisTitle = m => ({ display:true, text:bodyAxisTitle(m), color:'#6f675c', font:{size:phone?10:11} });
+    opts.scales.y.title = axisTitle(first);
+    opts.scales.y1 = darkScale({ position:'right', beginAtZero:false, grid:{ drawOnChartArea:false },
+      ticks:{ color:'#6f675c', font:{size:phone?10:11} }, title: axisTitle(BODY_METRICS[keys[1]]) });
+  }
+  opts.plugins.tooltip.callbacks = {
+    label: c => {
+      const m = BODY_METRICS[keys[c.datasetIndex]];
+      return `${m.label}: ${c.parsed.y}${m.unit && !m.label.includes(m.unit) ? ' '+m.unit : ''}`;
+    },
+  };
 
   const ctx = document.getElementById('body-chart').getContext('2d');
   if (_bodyChart) _bodyChart.destroy();
   _bodyChart = new Chart(ctx, {
     type:'line',
-    data:{ labels, datasets:[{
-      label: m.label,
-      data: pts.map(r => +r[_bodyMetric].toFixed(2)),
-      borderColor: m.color, backgroundColor: m.color+'22',
-      borderWidth:2, pointRadius:2.5, pointHoverRadius:5, tension:0.25, fill:true, spanGaps:true,
-    }]},
+    data:{ labels, datasets: keys.map((k, i) => {
+      const m = BODY_METRICS[k];
+      return {
+        label: dual ? `${m.label} · ${i ? 'right' : 'left'} axis` : m.label,
+        data: rows.map(r => r[k] != null ? +r[k].toFixed(2) : null),
+        yAxisID: i ? 'y1' : 'y',
+        borderColor: m.color, backgroundColor: dual ? m.color : m.color+'22',
+        // Second series dashed with square points, so the pair separates without colour
+        borderDash: i ? [6,4] : [], pointStyle: i ? 'rectRounded' : 'circle',
+        borderWidth:2, pointRadius:2.5, pointHoverRadius:5, tension:0.25, fill:!dual, spanGaps:true,
+      };
+    })},
     options: opts,
   });
 }
 
+// Multi-select, one to two: clicking a third drops the oldest pick; the last pick can't be cleared
 document.querySelectorAll('.mpill[data-body]').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('.mpill[data-body]').forEach(x => x.classList.remove('active'));
-    p.classList.add('active');
-    _bodyMetric = p.dataset.body;
+    const k = p.dataset.body, i = _bodyMetrics.indexOf(k);
+    if (i >= 0) { if (_bodyMetrics.length === 1) return; _bodyMetrics.splice(i, 1); }
+    else { _bodyMetrics.push(k); if (_bodyMetrics.length > 2) _bodyMetrics.shift(); }
+    document.querySelectorAll('.mpill[data-body]').forEach(x => x.classList.toggle('active', _bodyMetrics.includes(x.dataset.body)));
     renderBodyChart();
   });
 });
