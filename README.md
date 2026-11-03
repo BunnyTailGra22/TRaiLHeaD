@@ -110,6 +110,9 @@ training_dashboard.html  byte-identical copy, kept for the descriptive filename
 prototype-monthly.html   scratch prototype, not part of the site
 assets/
   EP_vs_Slope.png        static route-plan figure shown on the Training tab
+  EP_vs_Slope-dark.png   its dark-theme rendering
+tools/
+  course_heatmap.py      regenerates both of the above
 tokens/                  design tokens — reference only, not loaded at runtime
 docs/
   ARCHITECTURE.md        how it's put together, data flow, rendering pattern
@@ -131,6 +134,25 @@ nothing enforces it, so `cp index.html training_dashboard.html` on every commit 
 touches the dashboard.
 
 The only external dependency is Chart.js 4.4.1 from cdnjs. No CDN, no charts.
+
+## Theme and export
+
+A **light/dark toggle** sits in the top bar. The stored choice wins; with none stored the
+page follows `prefers-color-scheme` and keeps following it until the toggle is used. An
+inline script in `<head>` sets `data-theme` before the stylesheet paints, so there is no
+flash of the wrong theme.
+
+Chart.js cannot read CSS custom properties, so the chrome colours it needs — text, muted,
+border, gridlines, band fills, tooltip, the Garmin status washes — are named as variables
+and pulled through `TH()` at *render* time. A theme flip therefore has to redraw the
+canvases, which `applyTheme()` does by re-running the visible panel's renderers. The
+Course Heatmap is a PNG rather than a canvas, so it has a second dark rendering that is
+swapped alongside.
+
+Every chart card carries a **⤓ PNG** button. It composites the canvas onto the current
+theme's background with the card's title and header note, at 2x, and downloads it as
+`trailhead-<title>-<date>.png`. Tables and the static figure have no canvas and so get no
+button; the figure links its own full-resolution original instead.
 
 One asset sits beside the HTML: `assets/EP_vs_Slope.png`, a rendered figure of the
 Notion **route-plan** table. It is the only thing on the dashboard that is not drawn live

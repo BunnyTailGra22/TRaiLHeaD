@@ -3,19 +3,58 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#e9e4dc">
+<meta name="theme-color" content="#e9e4dc" id="meta-theme-color">
+<script>
+// Runs before the stylesheet paints: a stored choice wins, otherwise follow the OS.
+(function () {
+  var m = null;
+  try { m = localStorage.getItem('trailhead-theme'); } catch (e) {}
+  if (m !== 'dark' && m !== 'light') {
+    m = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.setAttribute('data-theme', m);
+})();
+</script>
 <title>TRaiLHEAD · Training Dashboard</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root {
+  color-scheme: light;
   /* Morandi · light minimalist */
   --bg: #e9e4dc; --card: #f9f6f1; --card2: #ece6dd; --border: #dcd4c8;
   --text: #453f37; --muted: #6f675c;   /* muted darkened for AA-legible labels */
+  /* Chart chrome. These were hardcoded in the JS; naming them is what lets the
+     canvases follow the theme, since Chart.js cannot read CSS variables itself. */
+  --grid: rgba(79,72,63,0.08);         /* axis gridlines */
+  --band: rgba(157,148,136,0.28);      /* every baseline / optimal-range fill */
+  --tip-bg: #f9f6f1; --tip-title: #453f37;
+  --shade-recovery: rgba(179,116,110,0.11);
+  --shade-strained: rgba(143,63,56,0.16);
   --road: #5f7d8c; --trail: #8a9a5b;   /* deepened for contrast on white */
   --y2024: #5f7d8c; --y2025: #8a9a5b; --y2026: #a5602a;  /* spread on lightness+hue */
   --hrv: #9c8196; --sleep: #6f97a6; --weight: #b39555; --spo2: #7f9d78;
   --rhr: #b3746e; --bb: #bd9a4f; --resp: #7e8aa2;
   --red: #b3746e; --yellow: #bd9a4f; --green: #7f9d78;
+}
+
+/* ── Dark theme ───────────────────────────────────────────────────────────────
+   Warm near-black rather than neutral grey, so the Morandi hues keep their
+   character. The data colours are lifted a little: the light palette was
+   deepened for contrast on a pale card, which makes it muddy on a dark one. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1c1a18; --card: #26231f; --card2: #312d28; --border: #3d3832;
+  --text: #ece6dd; --muted: #a79d91;
+  --grid: rgba(236,230,221,0.09);
+  --band: rgba(167,157,145,0.20);
+  --tip-bg: #312d28; --tip-title: #ece6dd;
+  --shade-recovery: rgba(199,132,126,0.14);
+  --shade-strained: rgba(176,78,70,0.20);
+  --road: #7fa3b5; --trail: #a6b974;
+  --y2024: #7fa3b5; --y2025: #a6b974; --y2026: #cd7e3c;
+  --hrv: #bb9db3; --sleep: #8fb8c7; --weight: #d0b069; --spo2: #9bbb93;
+  --rhr: #d08f88; --bb: #d7b465; --resp: #98a5bf;
+  --red: #d08f88; --yellow: #d7b465; --green: #9bbb93;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { max-width: 100%; overflow-x: hidden; }
@@ -151,6 +190,14 @@ main { padding: 20px 24px; }
 .load-table th { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
 .load-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
 .load-table tr:hover td { background: var(--card2); }
+/* Per-card PNG export. Sits in the header, quiet until the card is hovered. */
+.card-dl { background: transparent; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 6px; font-size: 11px; line-height: 1; padding: 4px 7px; cursor: pointer;
+  opacity: 0; transition: opacity .15s, background .15s; }
+.chart-card:hover .card-dl, .card-dl:focus { opacity: 1; }
+.card-dl:hover { background: var(--card2); color: var(--text); }
+@media (hover: none) { .card-dl { opacity: 1; } }   /* touch: no hover to reveal it */
+
 /* Static reference figure — a PNG, not a canvas, so it scales by width alone. */
 .static-figure { display: block; max-width: 760px; margin: 0 auto; }
 .static-figure img { width: 100%; height: auto; display: block;
@@ -276,6 +323,7 @@ main { padding: 20px 24px; }
   <div class="nav-title">TRai<span>L</span>HEAD <span style="color:var(--muted);font-weight:400;font-size:12px;margin-left:6px;">Training Dashboard</span></div>
   <div class="nav-right">
     <span id="status-dot"></span><span id="status-msg">Not connected</span>
+    <button class="btn" id="theme-btn" onclick="toggleTheme()" title="Switch light / dark">☾ Dark</button>
     <button class="btn" onclick="toggleConfig()">⚙ Config</button>
     <button class="btn primary" onclick="loadData()">↻ Refresh</button>
   </div>
@@ -674,12 +722,136 @@ main { padding: 20px 24px; }
 </main>
 
 <script>
+// ── Theme ────────────────────────────────────────────────────────────────────
+// Chart.js cannot read CSS custom properties, so the chrome colours are pulled
+// from them at RENDER time. Re-read on every call rather than cached, so a theme
+// flip lands on the next render without a page reload.
+const TH = () => {
+  const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  return { text:v('--text'), muted:v('--muted'), border:v('--border'),
+           card:v('--card'), bg:v('--bg'), grid:v('--grid'), band:v('--band'),
+           tipBg:v('--tip-bg'), tipTitle:v('--tip-title'),
+           recovery:v('--shade-recovery'), strained:v('--shade-strained') };
+};
+const rgba = (hex, a) => {
+  const h = String(hex).trim().replace('#','');
+  const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const n = parseInt(f, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+};
+
+const THEME_KEY = 'trailhead-theme';
+const systemTheme = () => (window.matchMedia
+  && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+
+function applyTheme(mode, persist) {
+  const m = (mode === 'dark' || mode === 'light') ? mode : systemTheme();
+  document.documentElement.setAttribute('data-theme', m);
+  if (persist) { try { localStorage.setItem(THEME_KEY, m); } catch (e) {} }
+  Chart.defaults.color = TH().muted;
+  const mt = document.getElementById('meta-theme-color');
+  if (mt) mt.setAttribute('content', TH().bg);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = m === 'dark' ? '☀ Light' : '☾ Dark';
+  // The Course Heatmap is a PNG, not a canvas, so it needs its own dark rendering.
+  const fig = document.querySelector('.static-figure');
+  if (fig) {
+    const f = m === 'dark' ? 'assets/EP_vs_Slope-dark.png' : 'assets/EP_vs_Slope.png';
+    fig.setAttribute('href', f);
+    fig.querySelector('img').setAttribute('src', f);
+  }
+  // Canvases bake their colours in at draw time, so every visible chart must be
+  // rebuilt — switchTab re-runs the renderers for whichever panel is showing.
+  const active = document.querySelector('.tab.active');
+  if (active) switchTab(active.dataset.tab);
+}
+function toggleTheme() {
+  applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true);
+}
+// Follow the OS only while the user has not made an explicit choice.
+if (window.matchMedia) {
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    let saved = null; try { saved = localStorage.getItem(THEME_KEY); } catch (e) {}
+    if (saved !== 'dark' && saved !== 'light') applyTheme(null, false);
+  });
+}
+
+// ── PNG export ───────────────────────────────────────────────────────────────
+// A chart canvas is transparent and carries no title, so exporting it raw gives a
+// floating plot. Composite onto the theme background with the card's own heading
+// instead, at 2x for a usable resolution.
+function exportCardPng(btn) {
+  const card = btn.closest('.chart-card');
+  const src  = card.querySelector('canvas');
+  // A chart on a hidden panel, or one that has not drawn yet, has a 0-size bitmap;
+  // drawImage throws on that, so refuse rather than error out.
+  if (!src || !src.width || !src.height) {
+    const old = btn.textContent;
+    btn.textContent = 'not ready'; btn.disabled = true;
+    setTimeout(() => { btn.textContent = old; btn.disabled = false; }, 1400);
+    return;
+  }
+  const t = TH(), S = 2, PAD = 20 * S, TOP = 64 * S;
+  const w = src.width, h = src.height;              // already device-pixel sized
+  const out = document.createElement('canvas');
+  out.width  = w + PAD * 2;
+  out.height = h + TOP + PAD;
+  const c = out.getContext('2d');
+  c.fillStyle = t.bg; c.fillRect(0, 0, out.width, out.height);
+  c.fillStyle = t.card;
+  c.strokeStyle = t.border; c.lineWidth = S;
+  const r = 14 * S, x0 = PAD/2, y0 = PAD/2, x1 = out.width - PAD/2, y1 = out.height - PAD/2;
+  c.beginPath(); c.moveTo(x0+r, y0);
+  c.arcTo(x1, y0, x1, y1, r); c.arcTo(x1, y1, x0, y1, r);
+  c.arcTo(x0, y1, x0, y0, r); c.arcTo(x0, y0, x1, y0, r);
+  c.closePath(); c.fill(); c.stroke();
+
+  const title = (card.querySelector('.section-title') || {}).textContent || 'chart';
+  const note  = (card.querySelector('.chart-header div[id$="-note"]') || {}).textContent || '';
+  c.fillStyle = t.text;
+  c.font = `600 ${15*S}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+  c.fillText(title.trim(), PAD * 1.4, TOP * 0.52);
+  if (note) {
+    c.fillStyle = t.muted;
+    c.font = `${11*S}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    c.fillText(note.trim(), PAD * 1.4, TOP * 0.82);
+  }
+  c.drawImage(src, PAD, TOP);
+
+  const name = title.trim().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 60)
+             || 'chart';
+  const stamp = new Date().toISOString().slice(0, 10);
+  out.toBlob(b => {
+    const url = URL.createObjectURL(b);
+    const a = document.createElement('a');
+    a.href = url; a.download = `trailhead-${name}-${stamp}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, 'image/png');
+}
+
+// Injected rather than written into each card's markup, so any chart added later
+// gets an export button without remembering to add one. Cards without a canvas
+// (the two tables, the static reference figure) are skipped.
+function mountExportButtons() {
+  document.querySelectorAll('.chart-card').forEach(card => {
+    if (!card.querySelector('canvas') || card.querySelector('.card-dl')) return;
+    const hdr = card.querySelector('.chart-header');
+    if (!hdr) return;
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'card-dl'; b.textContent = '⤓ PNG';
+    b.title = 'Download this chart as a PNG';
+    b.addEventListener('click', () => exportCardPng(b));
+    hdr.appendChild(b);
+  });
+}
+
 // ── CHART.JS GLOBAL DEFAULTS ──────────────────────────────────────────────────
 // Match chart text to the page's system font (Chart.js defaults to Helvetica/Arial)
 if (window.Chart) {
   Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif";
   Chart.defaults.font.size = 11;
-  Chart.defaults.color = '#6b6358';
+  Chart.defaults.color = TH().muted;
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
@@ -1136,9 +1308,9 @@ function renderFocusChart(sessions) {
   opts.scales = {
     x: { ...darkScale(), min: -0.3, max: 12,
       afterBuildTicks: (axis) => { axis.ticks = Array.from({length:13}, (_,i)=>({value:i})); },
-      ticks: { color:'#6f675c', font:{size: phone?10:11}, autoSkip:false, maxRotation:0,
+      ticks: { color:TH().muted, font:{size: phone?10:11}, autoSkip:false, maxRotation:0,
                callback:(v)=> v>=0&&v<12 ? MONTHS[v] : '' } },
-    y: { ...darkScale(), title:{display:!phone, text:'EPH', color:'#6f675c', font:{size:11}} },
+    y: { ...darkScale(), title:{display:!phone, text:'EPH', color:TH().muted, font:{size:11}} },
   };
 
   const ctx = document.getElementById('focus-chart').getContext('2d');
@@ -1181,7 +1353,7 @@ const _boxPlugin = {
       ctx.fillRect(cx - bw/2, top, bw, Math.max(1, bot - top));
       ctx.strokeRect(cx - bw/2, top, bw, Math.max(1, bot - top));
       // median
-      ctx.strokeStyle = '#453f37'; ctx.lineWidth = 2;
+      ctx.strokeStyle = TH().text; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.moveTo(cx - bw/2, yPix(st.median)); ctx.lineTo(cx + bw/2, yPix(st.median)); ctx.stroke();
       // raw dots (jittered)
       ctx.fillStyle = c.color + 'cc';
@@ -1217,8 +1389,8 @@ function renderBoxChart(sessions) {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor:'#f9f6f1', borderColor:'#dcd4c8', borderWidth:1,
-        titleColor:'#453f37', bodyColor:'#6f675c',
+        backgroundColor:TH().tipBg, borderColor:TH().border, borderWidth:1,
+        titleColor:TH().text, bodyColor:TH().muted,
         callbacks: {
           title: (it) => cats[it[0].dataIndex].key,
           label: () => '',
@@ -1234,10 +1406,10 @@ function renderBoxChart(sessions) {
     },
     scales: {
       x: { type:'category', labels: cats.map(c => c.key), offset:true,
-           grid:{ display:false }, ticks:{ color:'#6f675c', font:{ size: phone?10:11 } } },
-      y: { min:yMin, max:yMax, grid:{ color:'rgba(79,72,63,0.08)' },
-           ticks:{ color:'#6f675c', font:{ size: phone?10:11 } },
-           title:{ display:true, text: _boxMetric === 'ep' ? 'EP' : 'EPH', color:'#6f675c', font:{ size:10 } } },
+           grid:{ display:false }, ticks:{ color:TH().muted, font:{ size: phone?10:11 } } },
+      y: { min:yMin, max:yMax, grid:{ color:TH().grid },
+           ticks:{ color:TH().muted, font:{ size: phone?10:11 } },
+           title:{ display:true, text: _boxMetric === 'ep' ? 'EP' : 'EPH', color:TH().muted, font:{ size:10 } } },
     },
   };
   // Invisible scatter carries the category x-positions so tooltips + axes work
@@ -1502,7 +1674,7 @@ function renderRollingChart(sessions) {
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
       fill: false, tension: 0.35, order: 4, spanGaps: false },
     { label: 'Sweet Spot (0.8–1.3)', data: lower, borderColor: 'transparent',
-      backgroundColor: 'rgba(157,148,136,0.28)', pointRadius: 0,   // light warm grey
+      backgroundColor: TH().band, pointRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 4, spanGaps: false },   // fills up to `upper`
     { label: `Danger (${ACWR_DANGER}×)`, data: danger,
       borderColor: '#a5602a', borderWidth: 1, borderDash: [2,3],
@@ -1676,7 +1848,7 @@ const _loadStatusBands = {
     bands.forEach(b => {
       const x0 = x.getPixelForValue(b.a);
       const x1 = x.getPixelForValue(Math.min(b.b + 1, x.max));
-      ctx.fillStyle = b.s === 'STRAINED' ? 'rgba(143,63,56,0.16)' : 'rgba(179,116,110,0.11)';
+      ctx.fillStyle = b.s === 'STRAINED' ? TH().strained : TH().recovery;
       ctx.fillRect(x0, a.top, Math.max(x1 - x0, 2), a.bottom - a.top);
     });
     ctx.restore();
@@ -1891,7 +2063,7 @@ function renderHrvStatus(sleepMap) {
     { label:'upper', data: hi, borderColor:'transparent', pointRadius:0,
       fill:false, tension:0.35, order:4, spanGaps:true },
     { label:'Baseline Range', data: lo, borderColor:'transparent',
-      backgroundColor:'rgba(157,148,136,0.28)', pointRadius:0,   // light warm grey
+      backgroundColor:TH().band, pointRadius:0,   // light warm grey
       fill:'-1', tension:0.35, order:4, spanGaps:true },
     { label:'7d Avg', data: nights.map(n => n.avg7 ?? null),
       borderColor:'#6f97a6', borderWidth:2, borderDash:[5,4],
@@ -1982,7 +2154,7 @@ const VITALS = {
 const VITAL_ORDER     = ['rhr','spo2','resp'];
 const VITAL_BASE_WIN  = 30;   // trailing baseline window, in DAYS
 const VITAL_MIN_N     = 10;   // min non-null days required in that window
-const VITAL_BAND_FILL = 'rgba(157,148,136,0.28)';   // same warm grey as the other bands
+const VITAL_BAND_FILL = TH().band;   // same warm grey as the other bands
 const VD_ABOVE  = '#6f97a6',   // blue  — off baseline, BETTER direction
       VD_WITHIN = '#7f9d78',   // green — within baseline
       VD_OFF    = '#ab5a52',   // red   — off baseline, WORSE direction
@@ -2370,7 +2542,7 @@ function renderVitals(sleepMap) {
   }
 
   const opts = chartOpts({ yLabel: _vitalMode === 'all' ? 'SD from baseline' : VITALS[_vitalMode].unit });
-  opts.scales.x = darkScale({ ticks:{ color:'#6f675c', font:{size:phone?10:11}, maxRotation:0,
+  opts.scales.x = darkScale({ ticks:{ color:TH().muted, font:{size:phone?10:11}, maxRotation:0,
                                       autoSkip:true, maxTicksLimit: phone?6:12 } });
   opts.plugins.legend.labels.filter = item => item.text !== 'upper';
 
@@ -2392,7 +2564,7 @@ function renderVitals(sleepMap) {
         backgroundColor:VITAL_BAND_FILL, pointRadius:0,
         fill:'-1', tension:0.35, order:5, spanGaps:false },
       { label:'Baseline (lagged 7d)', data: series.map(g => g.rhrBase),
-        borderColor:'#6f675c', borderWidth:1, borderDash:[4,3],
+        borderColor:TH().muted, borderWidth:1, borderDash:[4,3],
         pointRadius:0, pointHoverRadius:0, fill:false, tension:0.35, order:4, spanGaps:false },
     );
     datasets.push(
@@ -2453,7 +2625,7 @@ function renderVitals(sleepMap) {
     );
     datasets.push(
       { label:'30d Median', data: series.map(g => g[k+'Med']),
-        borderColor:'#6f675c', borderWidth:1, borderDash:[4,3],
+        borderColor:TH().muted, borderWidth:1, borderDash:[4,3],
         pointRadius:0, pointHoverRadius:0, fill:false, tension:0.35, order:3, spanGaps:false },
       // DOTS ONLY — showLine:false. Shape + colour both encode the nightly status.
       { label:v.label, _vk:k, data:vals,
@@ -2519,9 +2691,9 @@ function renderVitals(sleepMap) {
     opts.scales.y.beginAtZero = false;
     opts.scales.y.suggestedMin = -3; opts.scales.y.suggestedMax = 3;
     opts.scales.y.ticks.callback = val => (val > 0 ? '+' : '') + val;
-    opts.scales.y.grid = { color: c => c.tick.value === 0 ? 'rgba(79,72,63,0.35)' : 'rgba(79,72,63,0.08)' };
+    opts.scales.y.grid = { color: c => c.tick.value === 0 ? 'rgba(79,72,63,0.35)' : TH().grid };
     if (!phone) opts.scales.y.title = { display:true, text:'SD from 30d baseline (↑ = worse)',
-                                        color:'#6f675c', font:{size:11} };
+                                        color:TH().muted, font:{size:11} };
     // keep ALL THREE series in the tooltip — filter out only the band bounds
     opts.plugins.tooltip.filter = item => !!item.dataset._vk;
     opts.plugins.tooltip.callbacks = {
@@ -2619,17 +2791,17 @@ function renderBodyChart() {
   const opts = chartOpts({ yLabel: dual ? '' : (first.unit || first.label) });
   // Category labels (no Chart.js date adapter loaded), thinned on small screens
   const labels = rows.map(r => r.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}));
-  opts.scales.x = darkScale({ ticks:{ color:'#6f675c', font:{size:phone?10:11}, maxRotation:0,
+  opts.scales.x = darkScale({ ticks:{ color:TH().muted, font:{size:phone?10:11}, maxRotation:0,
     autoSkip:true, maxTicksLimit:phone?4:10 } });
   opts.scales.y.beginAtZero = false;
   if (dual) {
     // Let each dataset's own point style through, so the legend keys differ in shape too
     delete opts.plugins.legend.labels.pointStyle;
     // Each axis names its metric, so a side is never read by colour alone — kept on phones too
-    const axisTitle = m => ({ display:true, text:bodyAxisTitle(m), color:'#6f675c', font:{size:phone?10:11} });
+    const axisTitle = m => ({ display:true, text:bodyAxisTitle(m), color:TH().muted, font:{size:phone?10:11} });
     opts.scales.y.title = axisTitle(first);
     opts.scales.y1 = darkScale({ position:'right', beginAtZero:false, grid:{ drawOnChartArea:false },
-      ticks:{ color:'#6f675c', font:{size:phone?10:11} }, title: axisTitle(BODY_METRICS[keys[1]]) });
+      ticks:{ color:TH().muted, font:{size:phone?10:11} }, title: axisTitle(BODY_METRICS[keys[1]]) });
   }
   opts.plugins.tooltip.callbacks = {
     label: c => {
@@ -2711,7 +2883,7 @@ const _rasterMedianLines = {
     [['bed', opts.bed], ['wake', opts.wake]].forEach(([k, v]) => {
       if (v == null) return;
       const px = x.getPixelForValue(v);
-      ctx.strokeStyle = '#6f675c'; ctx.setLineDash([4,3]); ctx.lineWidth = 1;
+      ctx.strokeStyle = TH().muted; ctx.setLineDash([4,3]); ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
     });
     ctx.restore();
@@ -2753,8 +2925,8 @@ function renderSleepRaster(sleepMap) {
     indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: false,
     plugins: {
       legend: { display: false },
-      tooltip: { backgroundColor:'#f9f6f1', borderColor:'#dcd4c8', borderWidth:1,
-        titleColor:'#453f37', bodyColor:'#6f675c',
+      tooltip: { backgroundColor:TH().tipBg, borderColor:TH().border, borderWidth:1,
+        titleColor:TH().text, bodyColor:TH().muted,
         callbacks: {
           title: (it) => nights[it[0].dataIndex].date.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}),
           label: (it) => { const n = nights[it.dataIndex];
@@ -2768,10 +2940,10 @@ function renderSleepRaster(sleepMap) {
     },
     scales: {
       x: { min: xmin, max: xmax, position: 'top',
-        grid: { color:'rgba(79,72,63,0.08)' },
-        ticks: { color:'#6f675c', font:{size:phone?9:11}, stepSize: 2, callback: v => clockLabel(v) } },
+        grid: { color:TH().grid },
+        ticks: { color:TH().muted, font:{size:phone?9:11}, stepSize: 2, callback: v => clockLabel(v) } },
       y: { grid: { display:false },
-        ticks: { color:'#6f675c', font:{size:phone?8:10}, autoSkip:true, maxTicksLimit: phone?12:24 } },
+        ticks: { color:TH().muted, font:{size:phone?8:10}, autoSkip:true, maxTicksLimit: phone?12:24 } },
     },
   };
 
@@ -2863,10 +3035,10 @@ function renderSleepPerf(sleepMap) {
       label: 'trail',
       data: trail.map(n => ({ x:n.hours, y:n.score, _n:n })),
       showLine: true, fill:false, tension:0,
-      borderColor: 'rgba(111,103,92,0.5)', borderWidth: 1.5,
+      borderColor: rgba(TH().muted, 0.5), borderWidth: 1.5,
       // Fade oldest→newest so the line reads directionally without needing an arrowhead;
       // the latest night's hollow ring already marks where it ends up.
-      segment: { borderColor: ctx => `rgba(111,103,92,${0.28 + 0.22 * ctx.p0DataIndex})` },
+      segment: { borderColor: ctx => rgba(TH().muted, 0.28 + 0.22 * ctx.p0DataIndex) },
       pointRadius: 0, pointHoverRadius: 0,   // dots are drawn by the quality datasets
       order: 99,                             // higher order = drawn first = behind the dots
     });
@@ -2886,10 +3058,10 @@ function renderSleepPerf(sleepMap) {
       return ['Duration: '+n.hours.toFixed(1)+' h', 'Score: '+n.score, 'Quality: '+catOf(n).key]; },
   };
   opts.scales = {
-    x:{ ...darkScale(), title:{display:true, text:'Sleep Duration (h)', color:'#6f675c', font:{size:11}},
-        ticks:{ color:'#6f675c', font:{size:phone?10:11} } },
-    y:{ ...darkScale(), title:{display:true, text:'Sleep Score', color:'#6f675c', font:{size:11}},
-        ticks:{ color:'#6f675c', font:{size:phone?10:11} } },
+    x:{ ...darkScale(), title:{display:true, text:'Sleep Duration (h)', color:TH().muted, font:{size:11}},
+        ticks:{ color:TH().muted, font:{size:phone?10:11} } },
+    y:{ ...darkScale(), title:{display:true, text:'Sleep Score', color:TH().muted, font:{size:11}},
+        ticks:{ color:TH().muted, font:{size:phone?10:11} } },
   };
 
   const ctx = document.getElementById('perf-chart').getContext('2d');
@@ -2921,7 +3093,7 @@ document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () =>
 function isPhone() { return window.innerWidth <= 600; }
 
 function darkScale(extra) {
-  return { grid:{color:'rgba(79,72,63,0.08)'}, ticks:{color:'#6f675c',font:{size:11}}, border:{color:'transparent'}, ...extra };
+  return { grid:{color:TH().grid}, ticks:{color:TH().muted,font:{size:11}}, border:{color:'transparent'}, ...extra };
 }
 function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
   const phone = isPhone();
@@ -2931,17 +3103,17 @@ function chartOpts({ stacked=false, yLabel='', yStep } = {}) {
       legend: {
         position: phone ? 'bottom' : 'top',
         labels: {
-          color:'#6b6358', font:{ size: phone ? 10 : 11 },
+          color:TH().muted, font:{ size: phone ? 10 : 11 },
           usePointStyle:true, pointStyle:'circle',
           boxWidth: 6, boxHeight: 6, padding: phone ? 10 : 16,
         },
       },
-      tooltip: { backgroundColor:'#f5f1ea',borderColor:'#dcd4c8',borderWidth:1,titleColor:'#4f483f',bodyColor:'#6f675c' },
+      tooltip: { backgroundColor:TH().tipBg,borderColor:TH().border,borderWidth:1,titleColor:TH().tipTitle,bodyColor:TH().muted },
     },
     scales: {
-      x: darkScale({ ticks:{ color:'#6f675c', font:{size: phone?10:11}, maxRotation: phone?45:0, autoSkip:true, maxTicksLimit: phone?7:12 } }),
-      y: darkScale({ stacked, ticks:{color:'#6f675c',font:{size: phone?10:11},...(yStep?{stepSize:yStep}:{})},
-        title: (yLabel && !phone) ? {display:true,text:yLabel,color:'#6f675c',font:{size:11}} : undefined }),
+      x: darkScale({ ticks:{ color:TH().muted, font:{size: phone?10:11}, maxRotation: phone?45:0, autoSkip:true, maxTicksLimit: phone?7:12 } }),
+      y: darkScale({ stacked, ticks:{color:TH().muted,font:{size: phone?10:11},...(yStep?{stepSize:yStep}:{})},
+        title: (yLabel && !phone) ? {display:true,text:yLabel,color:TH().muted,font:{size:11}} : undefined }),
     },
     interaction: { mode:'index', intersect:false },
   };
@@ -3098,6 +3270,24 @@ function initGate() {
     document.getElementById('gate-input').focus();
   }
 }
+
+// The head script already set data-theme; bring the button, the meta colour and
+// Chart's own default text colour into line with it before anything draws.
+mountExportButtons();
+
+(function syncThemeUI() {
+  const m = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  if (window.Chart) Chart.defaults.color = TH().muted;
+  const mt = document.getElementById('meta-theme-color');
+  if (mt) mt.setAttribute('content', TH().bg);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = m === 'dark' ? '☀ Light' : '☾ Dark';
+  const fig = document.querySelector('.static-figure');
+  if (fig && m === 'dark') {
+    fig.setAttribute('href', 'assets/EP_vs_Slope-dark.png');
+    fig.querySelector('img').setAttribute('src', 'assets/EP_vs_Slope-dark.png');
+  }
+})();
 
 initGate();
 </script>

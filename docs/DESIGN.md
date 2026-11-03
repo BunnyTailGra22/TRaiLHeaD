@@ -33,6 +33,18 @@ Biometric series each own a hue: HRV mauve `#9c8196`, sleep powder-blue `#6f97a6
 sage `#7f9d78`, RHR dusty rose `#b3746e`, respiration slate `#7e8aa2`, weight ochre
 `#b39555`.
 
+### Dark theme
+
+`html[data-theme="dark"]` redefines the same token names over a warm near-black
+(`--bg #1c1a18`, `--card #26231f`) rather than neutral grey, so the Morandi hues keep their
+character. The data colours are **lifted**, not reused: the light palette was deliberately
+deepened for contrast on a pale card, which turns muddy on a dark one — `--trail` goes
+`#8a9a5b` → `#a6b974`, `--muted` `#6f675c` → `#a79d91`.
+
+Chart chrome is named as tokens (`--grid`, `--band`, `--tip-bg`, `--shade-recovery`,
+`--shade-strained`) purely so the canvases can follow the theme; Chart.js cannot read CSS
+variables, so `TH()` reads them at render time and the charts are redrawn on a flip.
+
 ### Status
 
 Two status families, because they answer different questions.
