@@ -69,9 +69,9 @@ Green still means "the state you want" on both, and warm colours still mean "att
 
 On Garmin 7-Day Acute Load, *above* and *below* the band share orange though they mean
 opposite things — spike risk and detraining. The tooltip names which, and the dot's
-position against the band says it at a glance. Green and orange share a lightness, so dot
-**size** grows with the zone (2 → 3.5 → 4.5) and the reading survives greyscale and
-colour-blind eyes. Keeping every reference line grey is what makes
+position against the band says it at a glance. Every dot is one size; green and orange
+share a lightness, so position against the band is what carries in / out of range in
+greyscale and for colour-blind eyes. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
 rule doing the judging. Progressive Overload's one exception is the danger threshold at
 1.5x chronic, drawn as a thin clay rule — it is a named boundary in the model, not a
@@ -156,7 +156,8 @@ Two idioms, kept visually consistent (both render as a coloured dot plus a label
   useful (Sleep Duration → Score, the EP charts). Configured with `usePointStyle:true`.
 - **HTML `.shape-key`** in the card header — used where the categories are per-point
   encodings inside a single dataset, which Chart.js cannot legend on its own: HRV Status,
-  Recovery Vitals, Sleep Consistency.
+  Recovery Vitals, Sleep Consistency, Progressive Overload. Garmin 7-Day Acute Load
+  deliberately has none: its dot zones and washes live in the ⓘ panel and the tooltip.
 
 Where two charts sit side by side, their legends must agree in **colour, label, and
 order**. The sleep pair is the reference case: both use the shared quality scale in the

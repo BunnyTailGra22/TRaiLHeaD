@@ -163,19 +163,23 @@ ratio = Acute / Chronic                         recomputed, never the sheet's co
 GARMIN_RED_OVER = 1.5
 ```
 
-| Load Ratio | Zone | Marker | Colour |
-|---|---|---|---|
-| > 1.5 | Over 1.5× | ● r 4.5 | red `#ab5a52` |
-| > 1.2 – 1.5 | Above band | ● r 3.5 | orange `#c08552` |
-| 0.8 – 1.2 | In band | ● r 2 | green `#7f9d78` |
-| < 0.8 | Below band | ● r 3.5 | orange `#c08552` |
-| no Chronic Load | not scored | ● r 2 | grey `#9d9488` |
+| Load Ratio | Zone | Colour |
+|---|---|---|
+| > 1.5 | Over 1.5× | red `#ab5a52` |
+| > 1.2 – 1.5 | Above band | orange `#c08552` |
+| 0.8 – 1.2 | In band | green `#7f9d78` |
+| < 0.8 | Below band | orange `#c08552` |
+| no Chronic Load | not scored | grey `#9d9488` |
 
-Edges are inclusive of the band: 0.8 and 1.2 are green, 1.5 is orange. Orange and red are
-the dashboard's existing orange and red (HRV Unbalanced and Low), so they mean "drifting"
-and "alarm" here as well. Green and orange share a lightness, so the zone is never carried
-by colour alone — the dot **grows** as it leaves the band, and its position against the
-grey band says the same thing.
+Every dot is the same size, `GARMIN_DOT_R = 3` (5 on hover), whatever its zone. Edges are
+inclusive of the band: 0.8 and 1.2 are green, 1.5 is orange. Orange and red are the
+dashboard's existing orange and red (HRV Unbalanced and Low), so they mean "drifting" and
+"alarm" here as well. Green and orange share a lightness, so in / out of range is also
+read from the dot's position against the grey band, and the tooltip names the zone.
+
+The card carries **no static key**. The zones and the Recovery / Strained washes are
+defined in the ⓘ panel and named in the tooltip; the row under the header holds only the
+overlay toggles, plus the HRV key while that overlay is on.
 
 The ratio is recomputed as `Acute / Chronic`, not read from the sheet's `Load Ratio`
 column: Garmin **truncates** that to one decimal (308 of 313 rows match a floor, 158 a

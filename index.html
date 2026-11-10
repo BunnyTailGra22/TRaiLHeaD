@@ -504,12 +504,9 @@ main { padding: 20px 24px; }
           </div>
         </div>
       </div>
+      <!-- No static key: the dot zones and the Recovery/Strained washes are defined in the
+           ⓘ panel and named in the tooltip. The row holds only the overlay toggles. -->
       <div class="shape-key" style="margin-bottom:8px">
-        <span><i style="color:#7f9d78">●</i> 0.8–1.2× in band</span>
-        <span><i style="color:#c08552">●</i> &lt;0.8× or &gt;1.2×</span>
-        <span><i style="color:#ab5a52">●</i> &gt;1.5×</span>
-        <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
-        <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
         <!-- filled from HRV_STATUS by the renderer, shown only while the HRV overlay is on -->
         <span id="garminload-hrv-key" hidden></span>
         <!-- optional overlays, off by default; each hides itself when its column is absent -->
@@ -1814,18 +1811,20 @@ const GARMIN_RED_OVER = 1.5;   // past this the dot turns red
 
 // Dot colour = which zone the day's Load Ratio falls in. Most severe first. Orange and
 // red are the dashboard's existing orange and red (HRV Unbalanced and Low), so they mean
-// "drifting" and "alarm" here too. Green and orange share a lightness, so the zone is
-// also carried by dot SIZE and by position against the band — never by colour alone.
+// "drifting" and "alarm" here too. Every dot is the same size: green and orange share a
+// lightness, so in/out of range is carried by position against the grey band as well as
+// by colour, and the tooltip names the zone.
 const GARMIN_ORANGE = '#c08552';
 const GARMIN_RED    = '#ab5a52';
+const GARMIN_DOT_R  = 3;     // one radius for every dot, every zone
 const GARMIN_ZONES = [
-  { key: 'red',   test: r => r > GARMIN_RED_OVER, color: GARMIN_RED,    radius: 4.5,
+  { key: 'red',   test: r => r > GARMIN_RED_OVER, color: GARMIN_RED,
     label: `Over ${GARMIN_RED_OVER}×`,  tip: `⚠ over ${GARMIN_RED_OVER}× chronic` },
-  { key: 'above', test: r => r > GARMIN_BAND_HI,  color: GARMIN_ORANGE, radius: 3.5,
+  { key: 'above', test: r => r > GARMIN_BAND_HI,  color: GARMIN_ORANGE,
     label: 'Above band',                tip: `↑ above the band (> ${GARMIN_BAND_HI}×)` },
-  { key: 'in',    test: r => r >= GARMIN_BAND_LO, color: LOAD_IN,       radius: 2,
+  { key: 'in',    test: r => r >= GARMIN_BAND_LO, color: LOAD_IN,
     label: 'In band',                   tip: `✓ in band (${GARMIN_BAND_LO}–${GARMIN_BAND_HI}×)` },
-  { key: 'below', test: () => true,               color: GARMIN_ORANGE, radius: 3.5,
+  { key: 'below', test: () => true,               color: GARMIN_ORANGE,
     label: 'Below band',                tip: `↓ below the band (< ${GARMIN_BAND_LO}×)` },
 ];
 // Recomputed from the two loads rather than read from the sheet's Load Ratio column:
@@ -1891,10 +1890,9 @@ function renderGarminLoad() {
   const showVo2 = _garminOverlay.vo2 && vo2InView.length > 0;
   const showHrv = _garminOverlay.hrv && have.hrv;
 
-  // A day with no Chronic Load can't be scored: a small grey dot, as on Progressive Overload.
+  // A day with no Chronic Load can't be scored: a grey dot, as on Progressive Overload.
   const zones     = series.map(d => garminZone(garminRatio(d)));
   const dotColors = zones.map(z => z ? z.color : LOAD_REF);
-  const dotRadii  = zones.map(z => z ? z.radius : 2);
 
   // Ratio leads, the way the Progressive Overload note beside it reads.
   const noteEl = document.getElementById('garminload-note');
@@ -1919,7 +1917,7 @@ function renderGarminLoad() {
 
   const datasets = [{
     label: 'Acute Load', data: acute, borderColor: LOAD_IN, borderWidth: 2,
-    pointRadius: dotRadii, pointHoverRadius: 5,
+    pointRadius: GARMIN_DOT_R, pointHoverRadius: GARMIN_DOT_R + 2,
     pointBackgroundColor: dotColors, pointBorderColor: dotColors,
     spanGaps: false, fill: false, tension: 0.25, order: 1,
   }];
@@ -2341,9 +2339,8 @@ document.querySelectorAll('#garminload-overlay-pills .mpill').forEach(p => {
       <dt>${sw(LOAD_IN, '━●')} Acute Load</dt>
       <dd>Each dot is coloured by that day's Load Ratio, Acute ÷ Chronic:<br>
         ${sw(LOAD_IN, '●')} ${lo}–${hi} in band ·
-        ${sw(GARMIN_ORANGE, '●', ';font-size:14px')} under ${lo} or over ${hi} ·
-        ${sw(GARMIN_RED, '●', ';font-size:16px')} over ${red}.
-        Larger dots are further out.</dd>
+        ${sw(GARMIN_ORANGE, '●')} under ${lo} or over ${hi} ·
+        ${sw(GARMIN_RED, '●')} over ${red}</dd>
       <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Chronic band</dt>
       <dd>Chronic Load × ${lo} to × ${hi}, the loads where Load Ratio (ACWR) is ${lo}–${hi}.
         Above it is a spike, below it a drop in load.</dd>

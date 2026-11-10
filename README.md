@@ -69,7 +69,7 @@ Two metrics carry most of the weight:
 - **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
   against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
   0.8–1.2). Each dot is coloured by that day's ratio: green in band, orange under 0.8× or
-  over 1.2×, red over 1.5×, and larger the further out it is. **VO₂ Max** and
+  over 1.2×, red over 1.5×, all one size. **VO₂ Max** and
   **HRV Status** can be overlaid from pills above the chart — both off by default. An ⓘ
   beside the title explains the model.
 
