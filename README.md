@@ -42,7 +42,7 @@ same render path as real data.
 | Cumulative EP | Monthly EP, road vs trail |
 | Progressive Overload — Acute EP for stimulation | 7-Day Acute Load vs the ceiling |
 | Recent 8 Weeks load table (full width) | |
-| Weekly Load — the table's weekly EP as a chart, 8 wk to 1 yr (full width) | |
+| Weekly Load — the table's distance and elevation gain per week, 4 to 26 wk (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
 | Course Heatmap — Slope % vs. EP, a static reference figure (full width) | |
@@ -76,6 +76,9 @@ The two share a colour logic — green is the state you want, the warm ramp is a
 every reference line grey — though Progressive Overload grades it into four ACWR zones
 while 7-Day Acute Load stays two-state. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
+Each of the two has an **ⓘ** beside its title: hover it, or tap it on a phone, for every
+line, dot and band defined with its formula or rule. The panels are built from the same
+constants as the charts, so a changed threshold updates its explanation too.
 See [docs/DESIGN.md](docs/DESIGN.md).
 
 Nothing on the tab judges *progression*, only spike risk: a scale-free ratio structurally

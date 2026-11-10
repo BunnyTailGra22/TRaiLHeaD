@@ -35,6 +35,7 @@
   --hrv: #9c8196; --sleep: #6f97a6; --weight: #b39555; --spo2: #7f9d78;
   --rhr: #b3746e; --bb: #bd9a4f; --resp: #7e8aa2;
   --red: #b3746e; --yellow: #bd9a4f; --green: #7f9d78;
+  --dist: #7e8aa2; --climb: #b39555;   /* Weekly Load bars — kept off road/trail's hues */
 }
 
 /* ── Dark theme ───────────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ html[data-theme="dark"] {
   --hrv: #bb9db3; --sleep: #8fb8c7; --weight: #d0b069; --spo2: #9bbb93;
   --rhr: #d08f88; --bb: #d7b465; --resp: #98a5bf;
   --red: #d08f88; --yellow: #d7b465; --green: #9bbb93;
+  --dist: #98a5bf; --climb: #d0b069;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { max-width: 100%; overflow-x: hidden; }
@@ -197,6 +199,30 @@ main { padding: 20px 24px; }
 .chart-card:hover .card-dl, .card-dl:focus { opacity: 1; }
 .card-dl:hover { background: var(--card2); color: var(--text); }
 @media (hover: none) { .card-dl { opacity: 1; } }   /* touch: no hover to reveal it */
+/* Chart glossary: an ⓘ beside the title opens a panel defining every line, dot and band.
+   Kept outside .section-title so PNG export still reads the bare title. */
+.title-wrap { position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.info-btn { flex: none; width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent; color: var(--muted);
+  font-size: 11px; line-height: 1; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center; }
+.info-btn:hover, .info-btn[aria-expanded="true"] { background: var(--card2); color: var(--text); }
+.info-pop { display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 50;
+  width: min(400px, calc(100vw - 48px)); padding: 12px 14px; border-radius: 10px;
+  background: var(--tip-bg); border: 1px solid var(--border); color: var(--text);
+  font-size: 12px; line-height: 1.45; }
+.info-pop.open { display: block; }
+.info-pop .info-head { font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.info-pop dt { font-weight: 600; margin-top: 8px; }
+.info-pop dt:first-of-type { margin-top: 0; }
+.info-pop dd { color: var(--muted); }
+.info-pop i { font-style: normal; }
+.info-pop code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+  color: var(--text); background: var(--bg); padding: 1px 5px; border-radius: 4px;
+  display: inline-block; margin-top: 2px; }
+.info-pop .info-foot { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border);
+  color: var(--muted); font-size: 11px; }
 
 /* Static reference figure — a PNG, not a canvas, so it scales by width alone. */
 .static-figure { display: block; max-width: 760px; margin: 0 auto; }
@@ -435,7 +461,11 @@ main { padding: 20px 24px; }
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">Progressive Overload — Acute EP for Stimulation</div>
+        <div class="title-wrap">
+          <div class="section-title" style="margin:0">Progressive Overload — Acute EP for Stimulation</div>
+          <button type="button" class="info-btn" aria-label="How to read this chart" aria-expanded="false" aria-controls="overload-info">i</button>
+          <div class="info-pop" id="overload-info" role="tooltip"></div>
+        </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
           <!-- view scope only — the chronic window itself is fixed at 4 wk -->
@@ -461,7 +491,11 @@ main { padding: 20px 24px; }
     <!-- hidden by the renderer when the TrainingLoad tab is missing -->
     <div class="chart-card" id="acuteceil-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">7-Day Acute Load — Against the Ceiling</div>
+        <div class="title-wrap">
+          <div class="section-title" style="margin:0">7-Day Acute Load — Against the Ceiling</div>
+          <button type="button" class="info-btn" aria-label="How to read this chart" aria-expanded="false" aria-controls="acuteceil-info">i</button>
+          <div class="info-pop" id="acuteceil-info" role="tooltip"></div>
+        </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="acuteceil-note" style="font-size:11px;color:var(--muted)"></div>
           <div class="range-pills" id="acuteceil-scope-pills">
@@ -493,18 +527,17 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 3b: the table's weekly EP as a chart, over a longer view -->
+  <!-- ROW 3b: the table's weekly distance and elevation gain as a chart -->
   <div class="chart-card">
     <div class="chart-header">
-      <div class="section-title" style="margin:0">Weekly Load — EP per week</div>
+      <div class="section-title" style="margin:0">Weekly Load — Distance &amp; Elevation Gain</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
         <div id="weekly-note" style="font-size:11px;color:var(--muted)"></div>
         <div class="range-pills" id="weekly-scope-pills">
+          <div class="rpill" data-weeks="4">4 wk</div>
           <div class="rpill active" data-weeks="8">8 wk</div>
           <div class="rpill" data-weeks="13">13 wk</div>
-          <div class="rpill" data-weeks="26">2 qtr</div>
-          <div class="rpill" data-weeks="39">3 qtr</div>
-          <div class="rpill" data-weeks="52">1 yr</div>
+          <div class="rpill" data-weeks="26">26 wk</div>
         </div>
       </div>
     </div>
@@ -749,6 +782,7 @@ const TH = () => {
   return { text:v('--text'), muted:v('--muted'), border:v('--border'),
            card:v('--card'), bg:v('--bg'), grid:v('--grid'), band:v('--band'),
            tipBg:v('--tip-bg'), tipTitle:v('--tip-title'), road:v('--road'), trail:v('--trail'),
+           dist:v('--dist'), climb:v('--climb'),
            recovery:v('--shade-recovery'), strained:v('--shade-strained') };
 };
 const rgba = (hex, a) => {
@@ -1874,6 +1908,96 @@ const _loadStatusBands = {
   },
 };
 
+// ── LOAD-CHART GLOSSARIES ─────────────────────────────────────────────────────
+// The ⓘ panels beside the two load-chart titles. Built from the same constants the
+// charts use, so a changed threshold can't leave the explanation behind. Swatches copy
+// each chart's own marks: colour, line style and the shape-key's wash opacities.
+(function buildLoadGlossaries() {
+  const z = k => ACWR_ZONES.find(x => x.key === k).color;
+  const sw = (c, ch, extra = '') => `<i style="color:${c}${extra}">${ch}</i>`;
+  // Box-drawing dashes fall back to a plain hyphen in some fonts; a bordered span doesn't
+  const rule = (c, style, w = 2) =>
+    `<i style="display:inline-block;width:16px;vertical-align:middle;border-top:${w}px ${style} ${c}"></i>`;
+  const washes = `${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')}`;
+  const L = ACUTE_LAMBDA, lo = ACWR_SWEET_LO, hi = ACWR_SWEET_HI, dz = ACWR_DANGER;
+
+  const overload = document.getElementById('overload-info');
+  if (overload) overload.innerHTML = `
+    <div class="info-head">How to read this chart</div>
+    <dl>
+      <dt>${sw(LOAD_IN, '━●')} Acute Load</dt>
+      <dd>Your recent load: a ${ACUTE_DAYS}-day exponentially weighted average of daily EP,
+        shown per week.<br><code>daily = ${L} × EP today + ${1 - L} × daily yesterday</code>
+        <code>Acute = daily × ${WEEK}</code></dd>
+      <dt>Dot colour — ACWR</dt>
+      <dd><code>ACWR = Acute ÷ Chronic</code><br>
+        ${sw(z('under'), '●')} &lt; ${lo} undertrained · ${sw(z('sweet'), '●')} ${lo}–${hi} sweet spot ·
+        ${sw(z('caution'), '●')} ${hi}–${dz} caution · ${sw(z('danger'), '●')} ≥ ${dz} danger</dd>
+      <dt>${rule(LOAD_REF, 'dashed', 1.5)} Chronic Load</dt>
+      <dd>What you're prepared for: average weekly EP over the last ${CHRONIC_DAYS} days.
+        Not drawn until ${CHRONIC_DAYS} days of history exist.
+        <code>Chronic = EP over ${CHRONIC_DAYS} d ÷ ${CHRONIC_WEEKS}</code></dd>
+      <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Sweet-spot band</dt>
+      <dd><code>Chronic × ${lo} → Chronic × ${hi}</code></dd>
+      <dt>${rule(z('danger'), 'dotted', 1.5)} Danger line</dt>
+      <dd><code>Chronic × ${dz}</code></dd>
+      <dt>${washes} Background</dt>
+      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
+    </dl>
+    <div class="info-foot">EP = distance km + elevation gain m ÷ 100. The ratio flags spikes
+      against your own base; being scale-free, it can't judge progression.</div>`;
+
+  const ceil = document.getElementById('acuteceil-info');
+  if (ceil) ceil.innerHTML = `
+    <div class="info-head">How to read this chart</div>
+    <dl>
+      <dt>${sw(LOAD_IN, '━●')} Acute Load</dt>
+      <dd>Garmin's own 7-day acute training load, from the TrainingLoad tab — Garmin's
+        units, not EP.</dd>
+      <dt>Dots</dt>
+      <dd>${sw(LOAD_IN, '●')} at or under the ceiling · ${sw(LOAD_OUT, '●', ';font-size:15px')} larger, above it</dd>
+      <dt>${rule(LOAD_REF, 'dashed', 1.5)} Ceiling</dt>
+      <dd>The highest acute load that was never followed by a Garmin Recovery or Strained
+        flag within ${CEIL_LOOKAHEAD} days.
+        <code>Ceiling = max acute with no flag in the next ${CEIL_LOOKAHEAD} d</code><br>
+        Derived from all history, so it moves as data arrives. Not drawn until Garmin has
+        flagged at least ${CEIL_MIN_FLAGS} days.</dd>
+      <dt>${washes} Background</dt>
+      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
+    </dl>
+    <div class="info-foot">Hover a day for Garmin's Chronic (28 d) and its Ratio,
+      acute ÷ chronic.</div>`;
+})();
+
+// Hover opens on a pointer device; a click or tap pins it open. Escape, a second click
+// or a tap anywhere else closes it.
+(function wireInfoPopovers() {
+  const canHover = () => window.matchMedia && matchMedia('(hover: hover)').matches;
+  const all = [];
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    const pop = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!pop) return;
+    let pinned = false, timer = null;
+    const show = on => {
+      clearTimeout(timer);
+      pop.classList.toggle('open', on);
+      btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (!on) pinned = false;
+    };
+    btn.addEventListener('click', e => { e.stopPropagation(); pinned = !pinned; show(pinned); });
+    [btn, pop].forEach(el => {
+      el.addEventListener('mouseenter', () => { if (canHover()) show(true); });
+      // a short grace period, so the pointer can cross from the button into the panel
+      el.addEventListener('mouseleave', () => { if (canHover() && !pinned) timer = setTimeout(() => show(false), 150); });
+    });
+    all.push({ btn, pop, show });
+  });
+  document.addEventListener('click', e => all.forEach(x => {
+    if (!x.pop.contains(e.target) && e.target !== x.btn) x.show(false);
+  }));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') all.forEach(x => x.show(false)); });
+})();
+
 // ── CUMULATIVE YoY ────────────────────────────────────────────────────────────
 let _cumulChart = null;
 function buildCumulChart(sessions, metric) {
@@ -1936,19 +2060,20 @@ function renderLoadTable(sessions) {
 }
 
 // ── WEEKLY LOAD ───────────────────────────────────────────────────────────────
-// The load table's weekly EP as stacked road/trail bars. Same week buckets as the table
-// (isoWeek), but every calendar week up to today is kept — a week with no runs is a real
-// 0, not skipped — so the bars sit on an even time axis.
+// The load table's weekly distance and elevation gain, side by side on twin axes (km
+// left, m right). Same week buckets as the table (isoWeek), so a row there and a pair of
+// bars here carry the same numbers — but every calendar week up to today is kept, and a
+// week with no runs is a real 0 rather than skipped, so the bars sit on an even time axis.
+// Elevation is the sheet's Elevation Gain: the Activities tab records no descent.
 let _weeklyChart = null;
-let _weeklyWeeks = 8;           // scope in weeks (8 / 13 / 26 / 39 / 52)
-const WEEKLY_AVG_WEEKS = 4;     // trailing average, same 4 weeks as Chronic Load
+let _weeklyWeeks = 8;           // scope in weeks (4 / 8 / 13 / 26)
 
 function weeklyLoadSeries(sessions) {
   if (!sessions.length) return [];
   const byWeek = {};
   sessions.forEach(s => {
-    const w = byWeek[s.week] || (byWeek[s.week] = { road:0, trail:0 });
-    w[s.type] += s.ep;
+    const w = byWeek[s.week] || (byWeek[s.week] = { dist:0, elev:0 });
+    w.dist += s.dist; w.elev += s.elev;
   });
   // Walk the days so an empty week still gets its bucket, dated from its first day
   const out = [], seen = new Set(), f = sessions[0].date, end = new Date();
@@ -1956,14 +2081,9 @@ function weeklyLoadSeries(sessions) {
     const k = isoWeek(d);
     if (seen.has(k)) continue;
     seen.add(k);
-    const w = byWeek[k] || { road:0, trail:0 };
-    out.push({ week:k, start:new Date(d), road:w.road, trail:w.trail, ep:w.road + w.trail });
+    const w = byWeek[k] || { dist:0, elev:0 };
+    out.push({ week:k, start:new Date(d), dist:w.dist, elev:w.elev });
   }
-  // Over full history, then sliced — so the average is already warm at the left edge
-  out.forEach((w, i) => {
-    if (i < WEEKLY_AVG_WEEKS - 1) { w.avg = null; return; }
-    w.avg = out.slice(i - WEEKLY_AVG_WEEKS + 1, i + 1).reduce((a, x) => a + x.ep, 0) / WEEKLY_AVG_WEEKS;
-  });
   return out;
 }
 
@@ -1973,29 +2093,33 @@ function renderWeeklyLoad(sessions) {
   if (!rows.length) { if (noteEl) noteEl.textContent = ''; return; }
   const t = TH(), phone = isPhone(), last = rows.length - 1;   // last = this week, still in progress
   const md = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+  const metres = v => Math.round(v).toLocaleString('en-US');
 
   if (noteEl) {
-    const done = rows.slice(0, last), peak = rows.reduce((a, r) => r.ep > a.ep ? r : a);
-    const avg = done.length ? done.reduce((a, r) => a + r.ep, 0) / done.length : null;
-    noteEl.textContent = (avg != null ? `avg ${avg.toFixed(1)} EP/wk · ` : '')
-      + `peak ${peak.ep.toFixed(1)} (${md(peak.start)}) · faded bar = this week so far`;
+    const done = rows.slice(0, last), n = done.length;
+    noteEl.textContent = (n ? `avg ${(done.reduce((a, r) => a + r.dist, 0) / n).toFixed(1)} km · `
+      + `${metres(done.reduce((a, r) => a + r.elev, 0) / n)} m gain /wk · ` : '')
+      + 'faded bars = this week so far';
   }
 
   // The current week is partial, so it is drawn faded rather than read as a drop
   const fill = c => rows.map((_, i) => rgba(c, i === last ? 0.4 : 0.92));
-  const opts = chartOpts({ stacked:true, yLabel:'EP' });
+  const opts = chartOpts();
+  // Twin axes, each titled with its metric — kept on phones too, so a bar is never
+  // read by colour alone. Distance is always the left bar of the pair, gain the right.
+  const axisTitle = text => ({ display:true, text, color:t.muted, font:{ size: phone ? 10 : 11 } });
+  opts.scales.y.beginAtZero = true;
+  opts.scales.y.title = axisTitle('Distance (km)');
+  opts.scales.y1 = darkScale({ position:'right', beginAtZero:true, grid:{ drawOnChartArea:false },
+    ticks:{ color:t.muted, font:{ size: phone ? 10 : 11 } }, title: axisTitle('Elevation gain (m)') });
   opts.scales.x.ticks.maxTicksLimit = phone ? 6 : 13;
-  // `order` draws the average over the bars, but would also list it first — keep road, trail, avg
-  const byIndex = (a, b) => a.datasetIndex - b.datasetIndex;
-  opts.plugins.legend.labels.sort = byIndex;
-  opts.plugins.tooltip.itemSort = byIndex;
-  // Each dataset's own point style in the legend, so the average keys as a line, not a dot
-  delete opts.plugins.legend.labels.pointStyle;
   opts.plugins.tooltip.callbacks = {
     title: items => { const r = rows[items[0].dataIndex];
       return `${r.week} · from ${r.start.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })}`
         + (items[0].dataIndex === last ? ' (so far)' : ''); },
-    footer: items => `Total ${rows[items[0].dataIndex].ep.toFixed(1)} EP`,
+    label: c => c.datasetIndex === 0 ? `Distance: ${c.parsed.y.toFixed(1)} km`
+                                     : `Elevation gain: ${metres(c.parsed.y)} m`,
+    footer: items => { const r = rows[items[0].dataIndex]; return `EP ${(r.dist + r.elev / 100).toFixed(1)}`; },
   };
   opts.plugins.tooltip.footerColor = t.text;
 
@@ -2004,12 +2128,10 @@ function renderWeeklyLoad(sessions) {
   _weeklyChart = new Chart(ctx, {
     type:'bar',
     data:{ labels: rows.map(r => md(r.start)), datasets:[
-      { label:'Road EP',  data:rows.map(r => +r.road.toFixed(1)),  backgroundColor:fill(t.road),  borderRadius:3, stack:'ep', order:1 },
-      { label:'Trail EP', data:rows.map(r => +r.trail.toFixed(1)), backgroundColor:fill(t.trail), borderRadius:3, stack:'ep', order:1 },
-      // Reference line, so grey like every other one; drawn over the bars (lower order)
-      { type:'line', label:`${WEEKLY_AVG_WEEKS}-wk avg`, data:rows.map(r => r.avg != null ? +r.avg.toFixed(1) : null),
-        borderColor:t.muted, backgroundColor:t.muted, borderWidth:2, borderDash:[5,4],
-        pointRadius:0, pointHoverRadius:4, pointStyle:'line', tension:0.3, spanGaps:true, stack:'avg', order:0 },
+      { label:'Distance (km) · left axis',      data:rows.map(r => +r.dist.toFixed(1)),
+        backgroundColor:fill(t.dist),  borderRadius:3, yAxisID:'y' },
+      { label:'Elevation gain (m) · right axis', data:rows.map(r => Math.round(r.elev)),
+        backgroundColor:fill(t.climb), borderRadius:3, yAxisID:'y1' },
     ]},
     options: opts,
   });

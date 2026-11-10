@@ -167,7 +167,7 @@ same Excellent → Good → Fair → Poor order.
 1. Cumulative EP | Monthly EP
 2. Progressive Overload | 7-Day Acute Load
 3. Recent 8 Weeks — Load Summary *(full width)*
-4. Weekly Load *(full width)* — the table above it, as a chart, over a longer view
+4. Weekly Load *(full width)* — the table's distance and elevation gain, as a chart
 5. Distribution by Category | 專項訓練 Seasonality
 6. 專項訓練 Long Runs *(full width)* — the >20 km bubbles above it, as a table
 7. Course Heatmap, Slope % vs. EP *(full width)* — a static PNG, not a canvas
