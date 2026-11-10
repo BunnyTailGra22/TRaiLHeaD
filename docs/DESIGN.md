@@ -54,30 +54,32 @@ Two status families, because they answer different questions.
 **Load & sleep quality** — a graded scale where both ends are informative:
 green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
 
-**Load charts.** Garmin 7-Day Acute Load uses a two-state palette; Progressive Overload grades
-the same idea into four ACWR zones (gold undertrained · green sweet spot · rose caution ·
-clay danger), because its spec distinguishes a sweet spot from an outright danger zone and
-a binary palette would discard that. Green still means "the state you want" and the warm
-ramp still means "attention", so the pair sitting side by side still reads consistently —
-the four zones refine the two-state scale rather than contradicting it:
+**Load charts.** Both grade their dots by a ratio against chronic load, each in its own
+zones. Progressive Overload uses four ACWR zones (gold undertrained · green sweet spot ·
+rose caution · clay danger), because its spec distinguishes a sweet spot from an outright
+danger zone. Garmin 7-Day Acute Load uses three on Garmin's Load Ratio (green in band
+0.8–1.2 · orange `GARMIN_ORANGE` `#c08552` under 0.8 or over 1.2 · red `GARMIN_RED`
+`#ab5a52` over 1.5) — the dashboard's existing orange and red, from HRV Unbalanced and Low.
+Green still means "the state you want" on both, and warm colours still mean "attention":
 
 | Role | Token | Colour |
 |---|---|---|
 | In range | `LOAD_IN` | green `#7f9d78` |
-| Out of range | `LOAD_OUT` | red `#b3746e` |
-| Reference line (chronic, ceiling, band fill) | `LOAD_REF` | grey `#9d9488` |
+| Reference line, band fill, not-scored dot | `LOAD_REF` | grey `#9d9488` |
 
-On Garmin 7-Day Acute Load only two states, though *above* and *below* its Chronic band
-mean opposite things — spike risk and detraining. The tooltip names which; the palette answers "in range
-or not" so that reading survives a glance. Keeping every reference line grey is what makes
+On Garmin 7-Day Acute Load, *above* and *below* the band share orange though they mean
+opposite things — spike risk and detraining. The tooltip names which, and the dot's
+position against the band says it at a glance. Green and orange share a lightness, so dot
+**size** grows with the zone (2 → 3.5 → 4.5) and the reading survives greyscale and
+colour-blind eyes. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
 rule doing the judging. Progressive Overload's one exception is the danger threshold at
 1.5x chronic, drawn as a thin clay rule — it is a named boundary in the model, not a
 neutral reference, so it carries the colour of the zone it opens.
 
-> Grey doubles as "no data / not scored" on the recovery charts. On the load charts it is
-> unambiguous in practice — it only ever appears as a continuous dashed rule or a band
-> fill, never as a marker, and markers are the only place the no-data meaning applies.
+> Grey doubles as "no data / not scored". On the load charts a grey *marker* means exactly
+> that — a day with no chronic yet to score against — while grey as a continuous dashed
+> rule or a band fill is the reference apparatus; the two never look alike.
 
 Both load charts also shade Garmin's own **Recovery** `rgba(179,116,110,0.11)` and
 **Strained** `rgba(143,63,56,0.16)` stretches as vertical washes behind the curves. They
@@ -174,7 +176,8 @@ same Excellent → Good → Fair → Poor order.
 6. Course Heatmap, Slope % vs. EP *(full width)* — a static PNG, not a canvas
 
 The two load charts are paired in row 2 because they are two readings of the same thing:
-a ratio against your own preparation, and an absolute against a derived ceiling.
+a ratio against your own preparation built from EP, and Garmin's own ratio against its
+own chronic load.
 
 **Recovery tab** — two paired rows, then one full-width card:
 1. Sleep Duration → Score | Sleep Consistency

@@ -130,11 +130,11 @@ twice it. Level and slope are what judge progression, and those are worked out i
 meaningful quantity in its own right — average weekly EP over the last month — so the grey
 line carries information the old second-smoothing version did not.
 
-### Garmin 7-Day Acute Load — Against the Ceiling
+### Garmin 7-Day Acute Load
 
-Garmin's own `Acute Load` (its 7-day exponentially weighted load), plotted against the
-level above which Garmin's own Recovery or Strained flag has always followed. Nothing is
-derived from EP here — this is the second opinion, sitting beside Progressive Overload.
+Garmin's own `Acute Load` (its 7-day exponentially weighted load) against Garmin's own
+`Chronic Load`. Nothing is derived from EP here — this is the second opinion, sitting
+beside Progressive Overload.
 
 An **ⓘ** beside the title carries the owner's description of the model verbatim — Acute
 Load as the short-term fatigue indicator, built on EPOC and an exponentially weighted
@@ -156,48 +156,45 @@ chronic per week. The upper edge is **1.2**, against that chart's 1.3 sweet spot
 Garmin's ratio, not this repo's. Same grey fill and invisible-upper-bound construction as
 the sweet-spot band, and a row with no Chronic Load leaves a gap rather than a guessed band.
 
-The tooltip gives **Load Ratio (ACWR)** recomputed as `Acute / Chronic` to two decimals,
-and names where the day sits against the band (✓ within · ↑ above · ↓ below). It does not
-echo the sheet's `Load Ratio` column: Garmin **truncates** that to one decimal (308 of 313
-rows match a floor, 158 a round), so a 1.29 day would read "1.2" while plotted above the
-1.2× edge.
-
-**The ceiling is computed, not a constant:**
+**Dot colour — the day's Load Ratio:**
 
 ```
-CEIL_LOOKAHEAD = 14 days
-CEIL_MIN_FLAGS = 3
-FLAG_STATES    = RECOVERY | STRAINED
-ceiling = max(acute[i])  over all i where no flagged day falls in (date[i], date[i]+14d]
+ratio = Acute / Chronic                         recomputed, never the sheet's column
+GARMIN_RED_OVER = 1.5
 ```
 
-Deriving it keeps the rule honest as data accumulates instead of freezing a number that
-goes stale. The look-ahead walks **by date, not by row index**, so a gap in the sheet
-cannot silently shorten the window. With fewer than `CEIL_MIN_FLAGS` flagged days the
-ceiling is `null` and the rule is simply not drawn — a missing line, never a guessed one.
+| Load Ratio | Zone | Marker | Colour |
+|---|---|---|---|
+| > 1.5 | Over 1.5× | ● r 4.5 | red `#ab5a52` |
+| > 1.2 – 1.5 | Above band | ● r 3.5 | orange `#c08552` |
+| 0.8 – 1.2 | In band | ● r 2 | green `#7f9d78` |
+| < 0.8 | Below band | ● r 3.5 | orange `#c08552` |
+| no Chronic Load | not scored | ● r 2 | grey `#9d9488` |
 
-On Jan–Jul 2026 it lands at **890**: the three spikes above it (1055, 921, 937) were each
-followed by Recovery within 6–11 days. Below it there is no dose-response —
-days at 400–850 get flagged 30–38% of the time. It is a threshold, not a slope.
+Edges are inclusive of the band: 0.8 and 1.2 are green, 1.5 is orange. Orange and red are
+the dashboard's existing orange and red (HRV Unbalanced and Low), so they mean "drifting"
+and "alarm" here as well. Green and orange share a lightness, so the zone is never carried
+by colour alone — the dot **grows** as it leaves the band, and its position against the
+grey band says the same thing.
 
-| Position | Marker | Colour |
-|---|---|---|
-| Under the ceiling | ● small | green `#7f9d78` |
-| Over | ● large | red `#b3746e` |
+The ratio is recomputed as `Acute / Chronic`, not read from the sheet's `Load Ratio`
+column: Garmin **truncates** that to one decimal (308 of 313 rows match a floor, 158 a
+round), so a 1.29 day would read "1.2" — in band — while plotted above the 1.2× edge.
 
-Same shared load palette as Progressive Overload, and the same grammar: the **ceiling rule
-is grey** `#9d9488` dashed, like Chronic EP is there. The dots that cross already carry the
-warning — a red rule would say it twice. Size doubles on a crossing so the reading survives
-greyscale, per the encoding rule in DESIGN.md.
+**Header note** — `ACWR 0.83 — In band · acute 477 (7d) · chronic 575 (28d)`, for the
+latest row, in the same order as the Progressive Overload note beside it; `chronic n/a`
+when that row has no Chronic Load.
+
+**Tooltip** — Acute Load, Chronic (28d), Load Ratio (ACWR) to two decimals, the band's
+range for that day, the zone (✓ in band · ↑ above · ↓ below · ⚠ over 1.5× chronic) and
+Garmin's Training Status; VO₂ Max and HRV Status join it while their overlays are on.
 
 Garmin's Recovery and Strained stretches are painted as vertical washes behind the line by
 the `_loadStatusBands` plugin — Chart.js has no band primitive on a category axis. Bands
 are passed as **plugin options**, not hung off the config object: Chart.js wraps that in
 its own `Config`, so a stray property on it never reaches the chart.
 
-**View scope** — 4 / 8 / 13 / 26 wk pills (default 8). The ceiling is derived from full
-history, so panning the view never moves the rule; only the crossing count in the header
-note changes.
+**View scope** — 4 / 8 / 13 / 26 wk pills (default 8), panning the x-axis only.
 
 **Overlays** — two toggles, both off by default and independent; each hides itself when
 its column has no data anywhere in history.
@@ -221,11 +218,16 @@ so the axis is held to a minimum span. HRV Status is categorical, so it gets a s
 than a second scale; the load axis is padded at the top only — Chart.js `grace` pads both
 ends and would drag the axis toward zero. Nights with no Sleep row draw no marker.
 
-> Read the flag as the *trough*, not the summit. Every Recovery onset in this data landed
-> on a day when acute load had already fallen to 296–452 at ratio 0.5–0.6, after a peak in
-> the preceding fortnight. 890 is not the load that hurts — it is the load that could not
-> be held. And Training Status is not a load model: Garmin folds in HRV and sleep, which is
-> why the one Strained episode began at a below-median load of 496.
+> Read the Recovery wash as the *trough*, not the summit. Every Recovery onset in this data
+> landed on a day when acute load had already fallen to 296–452 at ratio 0.5–0.6, after a
+> peak in the preceding fortnight — so the orange dots *below* the band often sit inside a
+> Recovery wash, and the spike that caused it is the orange or red run before it. And
+> Training Status is not a load model: Garmin folds in HRV and sleep, which is why the one
+> Strained episode began at a below-median load of 496.
+
+> **History.** Until 2026-11 this chart drew a derived *ceiling* — the highest acute load
+> never followed by a Recovery or Strained flag within 14 days (890 on Jan–Jul 2026) — and
+> coloured dots two-state against it. It was replaced by the ratio zones above.
 
 ### Cumulative EP — Year-over-Year
 Running cumulative total by day-of-year, one line per year, metric switchable between
@@ -535,7 +537,7 @@ Google Sheet, five tabs, read via the Sheets v4 REST API.
 | Activities | `Activities!A1:L5000` | sessions, all Training-tab charts |
 | Sleep | `Sleep!A1:V5000` | sleep map, HRV, vitals, both sleep charts |
 | Biometrics | `Biometrics!A1:J3000` | body composition |
-| TrainingLoad | `TrainingLoad!A1:G1300` | Garmin 7-Day Acute Load vs the ceiling, VO₂ Max overlay |
+| TrainingLoad | `TrainingLoad!A1:G1300` | Garmin 7-Day Acute Load, VO₂ Max overlay |
 | Meta | `Meta!A1:A2` | the *Updated* stamp in the tab bar |
 
 **Activities columns** (name-mapped, configurable): Start Time, Distance (km), Elevation
