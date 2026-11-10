@@ -27,79 +27,109 @@ type string contains `trail`, otherwise `road`.
 
 ## Training tab
 
-### Progressive Overload — Acute EP for Stimulation
+### 7-Day Acute EP
 
-Textbook **ACWR** (acute:chronic workload ratio) over a **gap-free daily EP series**:
-sessions summed per calendar day, from the first session through `max(today, last
-session)`, with **rest days contributing 0**. Rest days are real data points, not gaps —
-that is what makes the decay actually decay.
+*Formerly "Progressive Overload — Acute EP for Stimulation".*
 
-Both windows are computed from that daily series **independently**. Chronic is not derived
+An acute:chronic model over a **gap-free daily EP series**: sessions summed per calendar
+day, from the first session through `max(today, last session)`, with **rest days
+contributing 0**. Rest days are real data points, not gaps — that is what makes the decay
+actually decay.
+
+Both curves are computed from that daily series **independently**. Chronic is not derived
 from acute, so the ratio compares current load against an independent measure of
-preparation, as the literature defines it.
+preparation.
 
-**Acute Load** — exponentially weighted moving *average* of daily EP over 7 days:
+An **ⓘ** beside the title carries the owner's definition verbatim, followed by a definition
+of every mark built from the same constants the chart draws with.
 
-```
-ACUTE_DAYS   = 7
-ACUTE_LAMBDA = 2 / (7 + 1) = 0.25          Williams et al. (2017) EWMA smoothing factor
-acuteDaily[i] = λ·ep[i] + (1 - λ)·acuteDaily[i-1]
-acuteDaily[0] = ep[0]                       (seed)
-```
-
-**Chronic Load** — average *weekly* load over the last 28 days:
+**Acute EP** — exponential decay applied to past workouts. A workout logged today
+contributes **100%** of its EP; as days pass, its influence decays continuously, fading out
+over roughly 7 days:
 
 ```
-CHRONIC_DAYS = 28
-chronic[i]   = sum(ep[i-27 .. i]) / 4       i.e. EP per week
+ACUTE_DAYS  = 7
+ACUTE_DECAY = 1 - 1/7 = 6/7 ≈ 0.857          weight kept per day of age
+acute[i]    = ep[i] + ACUTE_DECAY · acute[i-1]
+acute[-1]   = 0
+```
+
+A workout of age `t` days counts `(6/7)^t = e^(-t/τ)` of its EP, with **τ ≈ 6.5 d** and a
+half-life of ≈ 4.5 d: 86% after a day, 34% after 7, 12% after 14, 4% after 21. The decay is
+set so the weights sum to exactly 7 days (`Σ d^k = 1/(1-d) = 7`), so steady training reads
+as its **7-day total** — that is what "7-Day" in the title means, and it puts the curve in
+EP per week.
+
+**Chronic EP** — exponentially weighted moving *average* of daily EP over 28 days:
+
+```
+CHRONIC_DAYS   = 28
+CHRONIC_LAMBDA = 2 / (28 + 1) ≈ 0.069        Williams et al. (2017) EWMA smoothing factor
+ewma[27]       = mean(ep[0 .. 27])            seed
+ewma[i]        = λ·ep[i] + (1 - λ)·ewma[i-1]
 ```
 
 Null until a full 28 days exist. A short window would flatter the ratio by dividing by
 less preparation than the model claims to measure, so nothing is drawn and the day is
 "not scored" rather than optimistically scored.
 
-**The two are put on one scale before dividing.** Acute is a per-*day* average; chronic is
-a per-*week* total. Comparing them directly would put the ratio near 1/7, where it could
-never reach the sweet spot at all. Acute is therefore expressed as its weekly equivalent
-(`× 7`) and **both axes read EP per week**:
+**The two are put on one scale before dividing.** The EWMA is a per-*day* average, while
+acute's weights total 7 days. Chronic is therefore multiplied by acute's total weight —
+`ACUTE_GAIN = 1/(1 - ACUTE_DECAY) = 7` — so it reads as the acute EP that steady training at
+your 28-day average would carry, and **both curves read EP per week**:
 
 ```
-acute[i] = acuteDaily[i] × 7
-ratio[i] = acute[i] / chronic[i]
+chronic[i] = ewma[i] × 7
+ratio[i]   = acute[i] / chronic[i]
 ```
 
 Steady training at any constant daily load gives exactly `ratio = 1.000000` — verified
-numerically, and the check worth re-running if either window is ever changed.
+numerically, and the check worth re-running if either constant is ever changed.
 
-**The Ratio** — four zones. The spec names two; the gaps between them are named here so
-no day falls into an unlabelled state:
+**The ratio** — three colours, matched most severe first, so a day only ever gets one:
 
-| Ratio | Zone | Colour | Meaning |
+| Ratio | Reading | Colour | Meaning |
 |---|---|---|---|
-| < 0.8 | Undertrained | gold `#bd9a4f` | below the stimulus needed to progress |
-| 0.8 – 1.3 | **Sweet spot** | green `#7f9d78` | safe progression, low relative injury risk |
-| 1.3 – 1.5 | Caution | rose `#b3746e` | above the sweet spot, not yet the danger zone |
-| ≥ 1.5 | **Danger zone** | clay `#a5602a` | sudden 7-day spike against 28-day preparation; significantly raised non-contact injury risk |
-| no chronic yet | Not scored | grey `#9d9488` | fewer than 28 days of history |
+| > 1.5 | Over 1.5× | red `#ab5a52` | sharp spike against 28-day preparation |
+| > 1.2 – 1.5 | Above band | orange `#c08552` | load running ahead of preparation |
+| 0.8 – 1.2 | **In band** | green `#7f9d78` | load matched to preparation |
+| < 0.8 | Below band | orange `#c08552` | load dropping below preparation |
+| no chronic yet | not scored | grey `#9d9488` | fewer than 28 days of history |
 
-Zone matching runs **most severe first**, so a ratio is only ever assigned one zone.
+Every dot is the same size, `LOAD_DOT_R = 3` (5 on hover), whatever its zone. Bounds are
+inclusive on the green side: exactly 0.8 and exactly 1.2 are in band, exactly 1.5 is
+orange. Green and orange share a lightness, so the reading does not rest on hue alone: the
+band and the 1.5× rule give it by position, and the tooltip names the zone. The zones come
+from `loadZones()`, the same builder Garmin 7-Day Acute Load uses, so colours, size and
+wording are identical across the pair — only the thresholds are each chart's own constants.
 
-**Drawn reference lines.** The shaded band is the sweet spot (`0.8 × chronic` to
-`1.3 × chronic`); a thin dashed clay rule marks the danger threshold at `1.5 × chronic`;
-chronic itself is a dashed grey line. All ride with chronic, so every question the chart
-asks is "relative to your own recent preparation", never against a fixed target. All
-reference series use `spanGaps:false`, so nothing is drawn across the first 28 days.
+The card carries **no static key**, like Garmin 7-Day Acute Load beside it. The zones and
+the Recovery / Strained washes are defined in the ⓘ panel and named in the tooltip; the row
+under the header holds only the overlay toggles, plus the HRV key while that overlay is on.
 
-**Header note** — `ACWR 1.72 — Danger zone · acute 85 (7 d exp. avg) · chronic 49 EP/wk
-(28 d)`. The ratio now leads, because it *is* the reading. It was previously withheld
-while chronic was a second smoothing of acute — it self-centred near 1.0 by construction
-and invited being read as a score. With the windows independent that objection no longer
-applies.
+**Drawn reference lines.** The shaded Chronic band is `0.8 × chronic` to
+`1.2 × chronic`; a thin dotted red rule marks `1.5 × chronic`, where dots turn red; chronic
+itself is a dashed grey line. All ride with chronic, so every question the chart asks is
+"relative to your own recent preparation", never against a fixed target. All reference
+series use `spanGaps:false`, so nothing is drawn across the first 28 days.
 
-**Palette note.** This chart uses four zones where its neighbour, Garmin 7-Day Acute Load, uses
-two. Green still means "the state you want" and the warm ramp still means "attention", so
-the shared reading survives; the ramp is the DESIGN load/sleep graded family
-(gold · green · rose · clay) rather than a new set of hues. See DESIGN.md.
+**Header note** — `ACWR 1.15 — In band · acute 88 · chronic 77 EP/wk (28 d EWMA)`. The
+ratio leads because it *is* the reading.
+
+**Tooltip** — Acute EP, Chronic EP, ACWR to two decimals, the band in EP/wk for that day,
+the zone (✓ in band · ↑ above · ↓ below · ⚠ over 1.5× chronic), and the Garmin status if
+the day was flagged; VO₂ Max and HRV Status join it while their overlays are on.
+
+**Overlays** — the same VO₂ Max and HRV Status toggles as on Garmin 7-Day Acute Load, drawn
+by the same shared code (see that section for sources, scales and constants). Each chart
+keeps its own on/off state. Both are joined onto the EP grid **by date key**, like the
+Garmin washes, so they appear only from the date their tabs start (2026-01 here) and
+leave earlier days empty rather than guessing. The VO₂ Max pill hides itself without a
+TrainingLoad tab; the HRV Status pill without an HRV column in Sleep.
+
+**Palette note.** Green, orange and red are the shared load constants `LOAD_IN`,
+`LOAD_ORANGE` and `LOAD_RED`, the same as on Garmin 7-Day Acute Load beside it. Orange and
+red are the DESIGN heat ramp's own `#c08552` and `#ab5a52`, not new hues. See DESIGN.md.
 
 **Garmin Recovery / Strained** are painted as vertical washes behind the curves, the same
 `_loadStatusBands` plugin and the same colours as on Garmin 7-Day Acute Load beside it — so a bad
@@ -116,25 +146,31 @@ timezone behind UTC.
 chronic are computed over full history and then sliced, so the curves themselves never
 change with the scope; only how much of them you see does.
 
-> **On the thresholds.** 0.8–1.3 and the 1.5 danger line follow the commonly cited ACWR
-> figures. They come from team-sport cohorts, mostly with session-RPE or GPS load rather
-> than an elevation-weighted trail metric, so treat them as a calibrated starting point
-> for this dataset, not a law. EP also under-weights climb against the clock relative to
-> what actually drives overnight recovery cost — see
+> **On the thresholds.** 0.8–1.2 and 1.5 follow the commonly cited ACWR figures. They come
+> from team-sport cohorts, mostly with session-RPE or GPS load rather than an
+> elevation-weighted trail metric, so treat them as a calibrated starting point for this
+> dataset, not a law. EP also under-weights climb against the clock relative to what
+> actually drives overnight recovery cost — see
 > [RECOVERY-PATTERN.md](RECOVERY-PATTERN.md#ep-is-not-the-best-dose-variable--duration-is).
+
+> **Reading a single dot.** Acute is a decayed *sum*, so it jumps by the whole EP of a run on
+> the day it is logged, while chronic barely moves. With few runs a week the ratio swings
+> within each week — one 70 EP run a week, nothing else, cycles between about 0.75 the day
+> before and 1.24 the day of it. An orange dot on a long-run day, or the day before one, is
+> that rhythm; a run of orange or any red is the signal.
 
 **The ratio still cannot judge progression.** Being a ratio it is scale-free: a week at
 half your usual volume against a correspondingly low chronic reads the same as a week at
 twice it. Level and slope are what judge progression, and those are worked out in
-[PROGRESSION.md](PROGRESSION.md), not charted. What *is* new is that chronic is now a
-meaningful quantity in its own right — average weekly EP over the last month — so the grey
-line carries information the old second-smoothing version did not.
+[PROGRESSION.md](PROGRESSION.md), not charted. Chronic is still a meaningful quantity in
+its own right — weighted average weekly EP over the last month — so the grey line carries
+information on its own.
 
 ### Garmin 7-Day Acute Load
 
 Garmin's own `Acute Load` (its 7-day exponentially weighted load) against Garmin's own
 `Chronic Load`. Nothing is derived from EP here — this is the second opinion, sitting
-beside Progressive Overload.
+beside 7-Day Acute EP.
 
 An **ⓘ** beside the title carries the owner's description of the model verbatim — Acute
 Load as the short-term fatigue indicator, built on EPOC and an exponentially weighted
@@ -151,10 +187,10 @@ band = Chronic × 0.8  →  Chronic × 1.2        ⇔  Load Ratio (Acute / Chron
 ```
 
 Garmin's acute and chronic share one unit, so the band goes straight onto the acute axis —
-no ×7 rescale, which Progressive Overload needs only because its acute is per day and its
-chronic per week. The upper edge is **1.2**, against that chart's 1.3 sweet spot: this is
-Garmin's ratio, not this repo's. Same grey fill and invisible-upper-bound construction as
-the sweet-spot band, and a row with no Chronic Load leaves a gap rather than a guessed band.
+no ×7 rescale, which 7-Day Acute EP needs only because its chronic is a per-day EWMA. Both
+bands span 0.8–1.2, but they are separate constants: this one is Garmin's ratio, that one
+this repo's. Same grey fill and invisible-upper-bound construction as the Chronic band on
+7-Day Acute EP, and a row with no Chronic Load leaves a gap rather than a guessed band.
 
 **Dot colour — the day's Load Ratio:**
 
@@ -171,7 +207,7 @@ GARMIN_RED_OVER = 1.5
 | < 0.8 | Below band | orange `#c08552` |
 | no Chronic Load | not scored | grey `#9d9488` |
 
-Every dot is the same size, `GARMIN_DOT_R = 3` (5 on hover), whatever its zone. Edges are
+Every dot is the same size, `LOAD_DOT_R = 3` (5 on hover), whatever its zone. Edges are
 inclusive of the band: 0.8 and 1.2 are green, 1.5 is orange. Orange and red are the
 dashboard's existing orange and red (HRV Unbalanced and Low), so they mean "drifting" and
 "alarm" here as well. Green and orange share a lightness, so in / out of range is also
@@ -186,7 +222,7 @@ column: Garmin **truncates** that to one decimal (308 of 313 rows match a floor,
 round), so a 1.29 day would read "1.2" — in band — while plotted above the 1.2× edge.
 
 **Header note** — `ACWR 0.83 — In band · acute 477 (7d) · chronic 575 (28d)`, for the
-latest row, in the same order as the Progressive Overload note beside it; `chronic n/a`
+latest row, in the same order as the 7-Day Acute EP note beside it; `chronic n/a`
 when that row has no Chronic Load.
 
 **Tooltip** — Acute Load, Chronic (28d), Load Ratio (ACWR) to two decimals, the band's
@@ -201,7 +237,9 @@ its own `Config`, so a stray property on it never reaches the chart.
 **View scope** — 4 / 8 / 13 / 26 wk pills (default 8), panning the x-axis only.
 
 **Overlays** — two toggles, both off by default and independent; each hides itself when
-its column has no data anywhere in history.
+its column has no data anywhere in history. The same shared code (`loadOverlays`,
+`addLoadOverlays`) draws them on 7-Day Acute EP, joined by date key; each chart keeps its
+own on/off state.
 
 | Overlay | Source | Drawn as |
 |---|---|---|
@@ -541,7 +579,7 @@ Google Sheet, five tabs, read via the Sheets v4 REST API.
 | Activities | `Activities!A1:L5000` | sessions, all Training-tab charts |
 | Sleep | `Sleep!A1:V5000` | sleep map, HRV, vitals, both sleep charts |
 | Biometrics | `Biometrics!A1:J3000` | body composition |
-| TrainingLoad | `TrainingLoad!A1:G1300` | Garmin 7-Day Acute Load, VO₂ Max overlay |
+| TrainingLoad | `TrainingLoad!A1:G1300` | Garmin 7-Day Acute Load; VO₂ Max overlay and Recovery/Strained washes on both load charts |
 | Meta | `Meta!A1:A2` | the *Updated* stamp in the tab bar |
 
 **Activities columns** (name-mapped, configurable): Start Time, Distance (km), Elevation
@@ -572,7 +610,7 @@ context and never fitted to.
 > covers a shorter window than the rest of the Training tab and **hides itself entirely**
 > when the tab is absent rather than rendering an empty frame.
 >
-> Reading it does **not** make it the source for Progressive Overload. That chart still
+> Reading it does **not** make it the source for 7-Day Acute EP. That chart still
 > computes its own ACWR from EP, so the model stays inspectable and trail elevation is
 > weighted in. The two sit side by side deliberately: one model this repo can explain,
 > one Garmin's, as an independent second opinion.

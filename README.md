@@ -40,7 +40,7 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| Progressive Overload — Acute EP for stimulation | Garmin 7-Day Acute Load |
+| 7-Day Acute EP | Garmin 7-Day Acute Load |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km | Course Heatmap — Slope % vs. EP, a static reference figure |
@@ -58,23 +58,22 @@ Two metrics carry most of the weight:
 - **EP (Effort Points)** = `distance_km + elevation_m/100` — one number for the size of a
   run that treats 100 m of climb as equivalent to 1 km flat. **EPH** = `EP/hours` is its
   density. Every load chart is built on these.
-- **Progressive Overload** is a textbook ACWR model. Acute Load is an exponentially
-  weighted 7-day average of daily EP (λ = 0.25), Chronic Load is the average weekly load
-  over the last 28 days, and both are read in EP per week so the ratio centres on 1.0.
-  0.8–1.3 is the sweet spot, ≥ 1.5 the danger zone, with undertrained below 0.8 and a
-  caution band between. The two windows are computed independently, so the ratio is a
+- **7-Day Acute EP** (formerly Progressive Overload) is an acute:chronic model over EP.
+  **Acute EP** applies exponential decay to past workouts: a workout logged today counts
+  100% of its EP and fades out continuously over roughly 7 days (×6/7 per day, so steady
+  training reads as its 7-day total). **Chronic EP** is a 28-day exponentially weighted
+  moving average of daily EP, read in EP per week so the ratio centres on 1.0. A grey band
+  spans 0.8–1.2× chronic. The two curves are computed independently, so the ratio is a
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
 - **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
   against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
-  0.8–1.2). Each dot is coloured by that day's ratio: green in band, orange under 0.8× or
-  over 1.2×, red over 1.5×, all one size. **VO₂ Max** and
-  **HRV Status** can be overlaid from pills above the chart — both off by default. An ⓘ
-  beside the title explains the model.
+  0.8–1.2).
 
-The two share a colour logic — green is the state you want, warm colours are attention,
-every reference line grey — though each grades it on its own ratio: four ACWR zones on
-Progressive Overload, three on Garmin 7-Day Acute Load. Both shade Garmin's own Recovery and Strained
+Both charts colour each dot by that day's ratio the same way — green in band, orange under
+0.8× or over 1.2×, red over 1.5×, all one size — with every reference line grey. Neither
+card carries a static key: the zones and Garmin's washes are in the ⓘ panel and tooltip. On both, **VO₂ Max** and **HRV Status** can be overlaid from pills above the
+chart, off by default, and an ⓘ beside the title explains the model. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
 See [docs/DESIGN.md](docs/DESIGN.md).
 

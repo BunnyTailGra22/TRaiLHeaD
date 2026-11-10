@@ -31,7 +31,7 @@ printed or seen by a colour-blind viewer: 2024 `#5f7d8c` (L≈120), 2025 `#8a9a5
 
 Biometric series each own a hue: HRV mauve `#9c8196`, sleep powder-blue `#6f97a6`, SpO₂
 sage `#7f9d78`, RHR dusty rose `#b3746e`, respiration slate `#7e8aa2`, weight ochre
-`#b39555`. VO₂ Max, an opt-in overlay on Garmin 7-Day Acute Load, owns steel blue `--vo2`
+`#b39555`. VO₂ Max, an opt-in overlay on both load charts, owns steel blue `--vo2`
 `#4f7396` (dark `#8fb0d2`) — kept off the load palette's green, rose and grey so it never
 reads as a status or a reference rule.
 
@@ -54,28 +54,30 @@ Two status families, because they answer different questions.
 **Load & sleep quality** — a graded scale where both ends are informative:
 green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
 
-**Load charts.** Both grade their dots by a ratio against chronic load, each in its own
-zones. Progressive Overload uses four ACWR zones (gold undertrained · green sweet spot ·
-rose caution · clay danger), because its spec distinguishes a sweet spot from an outright
-danger zone. Garmin 7-Day Acute Load uses three on Garmin's Load Ratio (green in band
-0.8–1.2 · orange `GARMIN_ORANGE` `#c08552` under 0.8 or over 1.2 · red `GARMIN_RED`
-`#ab5a52` over 1.5) — the dashboard's existing orange and red, from HRV Unbalanced and Low.
-Green still means "the state you want" on both, and warm colours still mean "attention":
+**Load charts.** Both grade their dots by a ratio against chronic load, on the same three
+zones: green in band 0.8–1.2 · orange `LOAD_ORANGE` `#c08552` under 0.8 or over 1.2 · red
+`LOAD_RED` `#ab5a52` over 1.5 — the dashboard's existing orange and red, from HRV
+Unbalanced and Low. 7-Day Acute EP scores its own EP ratio and Garmin 7-Day Acute Load
+scores Garmin's Load Ratio, but colours, dot size and wording are shared constants, so
+the pair reads as one system. Green means "the state you want" on both, and warm colours
+mean "attention":
 
 | Role | Token | Colour |
 |---|---|---|
-| In range | `LOAD_IN` | green `#7f9d78` |
+| In band | `LOAD_IN` | green `#7f9d78` |
+| Under 0.8× or over 1.2× | `LOAD_ORANGE` | orange `#c08552` |
+| Over 1.5× | `LOAD_RED` | red `#ab5a52` |
 | Reference line, band fill, not-scored dot | `LOAD_REF` | grey `#9d9488` |
 
-On Garmin 7-Day Acute Load, *above* and *below* the band share orange though they mean
+On both load charts, *above* and *below* the band share orange though they mean
 opposite things — spike risk and detraining. The tooltip names which, and the dot's
-position against the band says it at a glance. Every dot is one size; green and orange
-share a lightness, so position against the band is what carries in / out of range in
-greyscale and for colour-blind eyes. Keeping every reference line grey is what makes
+position against the band says it at a glance. Every dot is one size (`LOAD_DOT_R` 3);
+green and orange share a lightness, so position against the band is what carries in / out
+of range in greyscale and for colour-blind eyes. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
-rule doing the judging. Progressive Overload's one exception is the danger threshold at
-1.5x chronic, drawn as a thin clay rule — it is a named boundary in the model, not a
-neutral reference, so it carries the colour of the zone it opens.
+rule doing the judging. 7-Day Acute EP's one exception is the 1.5× chronic threshold,
+drawn as a thin dotted red rule — it is where dots turn red, a named boundary in the
+model rather than a neutral reference, so it carries the colour of the tier it opens.
 
 > Grey doubles as "no data / not scored". On the load charts a grey *marker* means exactly
 > that — a day with no chronic yet to score against — while grey as a continuous dashed
@@ -94,9 +96,9 @@ not a goal, and kept clearly distinct from green.
 
 Grey `#9d9488` means "no data / not scored" in both families.
 
-The two families deliberately share green and diverge after it: green always means "this
-is the state you want", while the warning hues differ so a recovery chart never reads as a
-training chart.
+The two families share green: it always means "this is the state you want". The load
+charts' out-of-band tiers now borrow the recovery ramp's orange and red as well, because
+they are severity tiers too; gold, rose and clay remain the load/sleep quality scale's own.
 
 ## Encoding rules
 
@@ -156,8 +158,9 @@ Two idioms, kept visually consistent (both render as a coloured dot plus a label
   useful (Sleep Duration → Score, the EP charts). Configured with `usePointStyle:true`.
 - **HTML `.shape-key`** in the card header — used where the categories are per-point
   encodings inside a single dataset, which Chart.js cannot legend on its own: HRV Status,
-  Recovery Vitals, Sleep Consistency, Progressive Overload. Garmin 7-Day Acute Load
-  deliberately has none: its dot zones and washes live in the ⓘ panel and the tooltip.
+  Recovery Vitals, Sleep Consistency. The two load charts deliberately have none: their dot
+  zones and Garmin's washes live in the ⓘ panel and the tooltip, so the row under each
+  header holds only the overlay toggles (and the HRV key while that overlay is on).
 
 Where two charts sit side by side, their legends must agree in **colour, label, and
 order**. The sleep pair is the reference case: both use the shared quality scale in the
@@ -170,7 +173,7 @@ same Excellent → Good → Fair → Poor order.
 
 **Training tab** — Year-over-Year summary cards, then:
 1. Cumulative EP | Monthly EP
-2. Progressive Overload | Garmin 7-Day Acute Load
+2. 7-Day Acute EP | Garmin 7-Day Acute Load
 3. Recent 8 Weeks — Load Summary *(full width)*
 4. Distribution by Category | 專項訓練 Seasonality
 5. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
@@ -221,18 +224,19 @@ Chart.js manages only the bitmap and DPR. Paired cards get their heights tuned s
 
 - `.rpill` — **scope**. Changes the time window shown. Never changes what is computed:
   derived series are calculated over full history and sliced afterwards.
-- `.mpill` — **metric**. Changes which series the chart plots. On Garmin 7-Day Acute Load
-  the `.overlay-pills` toggles (VO₂ Max, HRV Status) sit at the right end of the shape-key
-  row: each adds a series, off by default, independent of the other, and hidden when its
-  column has no data. The HRV key joins the shape-key only while that overlay is on.
+- `.mpill` — **metric**. Changes which series the chart plots. On both load charts the
+  `.overlay-pills` toggles (VO₂ Max, HRV Status) sit at the right end of the shape-key
+  row: each adds a series, off by default, independent of the other and of the other
+  chart's, and hidden when its column has no data. The HRV key joins the shape-key only
+  while that overlay is on. Both cards carry the same rows, so their plot areas stay level.
 
 An **ⓘ** beside a chart title opens a glossary panel (`.info-btn` + `.info-pop`): hover on a
 pointer device, tap or click to pin, Escape or a click elsewhere to close. It sits outside
 `.section-title`, so PNG export still writes the bare title.
 
 A pill row is for view state only. A parameter that defines what a metric *means* does not
-get pills — Chronic EP's 4-week window is fixed for exactly this reason, and the header
-note names it (`chronic … (4 wk)`) so the constant stays visible.
+get pills — Chronic EP's 28-day window is fixed for exactly this reason, and the header
+note names it (`chronic … (28 d EWMA)`) so the constant stays visible.
 
 ## Responsive
 
