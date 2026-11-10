@@ -47,6 +47,11 @@ initGate()
                                  └─ every chart renderer, in order
 ```
 
+Each `fetchRange` aborts after `FETCH_TIMEOUT_MS` (30 s), covering the body read as well as
+the headers. Activities is required, so its timeout surfaces in the status bar as an error;
+the other four are optional and fall back to empty. Without the timer, a Sheets request
+that is accepted but never answered leaves the status on "Loading…" indefinitely.
+
 `loadSampleData()` bypasses the fetch entirely and synthesises three years of sessions
 plus a sleep map, then calls `renderAll` — the same path the real data takes.
 
