@@ -145,7 +145,10 @@ re-analysis a re-run rather than a rebuild.
 
 **Nothing from this document.** A Progression chart carrying chronic EP and its ramp rate
 shipped briefly and was removed; the Training tab now runs Progressive Overload beside
-7-Day Acute Load, and neither claims to judge progression.
+Garmin 7-Day Acute Load, and neither claims to judge progression. VO₂ Max can be overlaid
+on the second as raw context — opt-in, off by default, and on an axis that always spans at
+least 4 points so a single 0.1 step can't read as a trend. Nothing is fitted to it, for the
+reasons above.
 
 That is not a retraction of the findings — the tab simply doesn't chart them. The ramp
 band is a coaching conclusion rather than a reading you check daily, and it rests on one

@@ -96,13 +96,13 @@ while chronic was a second smoothing of acute — it self-centred near 1.0 by co
 and invited being read as a score. With the windows independent that objection no longer
 applies.
 
-**Palette note.** This chart uses four zones where its neighbour, 7-Day Acute Load, uses
+**Palette note.** This chart uses four zones where its neighbour, Garmin 7-Day Acute Load, uses
 two. Green still means "the state you want" and the warm ramp still means "attention", so
 the shared reading survives; the ramp is the DESIGN load/sleep graded family
 (gold · green · rose · clay) rather than a new set of hues. See DESIGN.md.
 
 **Garmin Recovery / Strained** are painted as vertical washes behind the curves, the same
-`_loadStatusBands` plugin and the same colours as on 7-Day Acute Load beside it — so a bad
+`_loadStatusBands` plugin and the same colours as on Garmin 7-Day Acute Load beside it — so a bad
 stretch lines up visually across both models.
 
 They are joined **by date key, not by index**: this series starts with the first activity
@@ -130,11 +130,37 @@ twice it. Level and slope are what judge progression, and those are worked out i
 meaningful quantity in its own right — average weekly EP over the last month — so the grey
 line carries information the old second-smoothing version did not.
 
-### 7-Day Acute Load — Against the Ceiling
+### Garmin 7-Day Acute Load — Against the Ceiling
 
 Garmin's own `Acute Load` (its 7-day exponentially weighted load), plotted against the
 level above which Garmin's own Recovery or Strained flag has always followed. Nothing is
 derived from EP here — this is the second opinion, sitting beside Progressive Overload.
+
+An **ⓘ** beside the title carries the owner's description of the model verbatim — Acute
+Load as the short-term fatigue indicator, built on EPOC and an exponentially weighted
+moving average, and Load Ratio (ACWR) = Acute Load / Chronic Load comparing ~7 days of
+fatigue against ~28 days of fitness — followed by a definition of every mark, built from
+the same constants the chart draws with.
+
+**Chronic band** — Garmin's own `Chronic Load`, scaled:
+
+```
+GARMIN_BAND_LO = 0.8
+GARMIN_BAND_HI = 1.2
+band = Chronic × 0.8  →  Chronic × 1.2        ⇔  Load Ratio (Acute / Chronic) 0.8–1.2
+```
+
+Garmin's acute and chronic share one unit, so the band goes straight onto the acute axis —
+no ×7 rescale, which Progressive Overload needs only because its acute is per day and its
+chronic per week. The upper edge is **1.2**, against that chart's 1.3 sweet spot: this is
+Garmin's ratio, not this repo's. Same grey fill and invisible-upper-bound construction as
+the sweet-spot band, and a row with no Chronic Load leaves a gap rather than a guessed band.
+
+The tooltip gives **Load Ratio (ACWR)** recomputed as `Acute / Chronic` to two decimals,
+and names where the day sits against the band (✓ within · ↑ above · ↓ below). It does not
+echo the sheet's `Load Ratio` column: Garmin **truncates** that to one decimal (308 of 313
+rows match a floor, 158 a round), so a 1.29 day would read "1.2" while plotted above the
+1.2× edge.
 
 **The ceiling is computed, not a constant:**
 
@@ -172,6 +198,28 @@ its own `Config`, so a stray property on it never reaches the chart.
 **View scope** — 4 / 8 / 13 / 26 wk pills (default 8). The ceiling is derived from full
 history, so panning the view never moves the rule; only the crossing count in the header
 note changes.
+
+**Overlays** — two toggles, both off by default and independent; each hides itself when
+its column has no data anywhere in history.
+
+| Overlay | Source | Drawn as |
+|---|---|---|
+| VO₂ Max | TrainingLoad `VO₂ Max` (`VO2 Max` accepted) | stepped line, `--vo2` steel blue, right axis in ml/kg/min; latest value in the legend |
+| HRV Status | Sleep `HRV Status`, joined on the date key | strip of status markers along the top, HRV Status chart's shapes and colours |
+
+```
+VO2_MIN_SPAN = 4                    right axis spans ≥ 4 ml/kg/min, centred on the view
+half = max((max − min)/2 + 0.5, VO2_MIN_SPAN/2)
+y1   = floor(mid − half) … ceil(mid + half)
+HRV_STRIP_Y  = 0.955                strip height on a hidden 0–1 axis
+HRV_HEADROOM = 0.14                 load axis suggestedMax = top + 14% of the data range
+```
+
+VO₂ Max moves in 0.1 steps and spanned 1.4 points over seven months
+([PROGRESSION.md](PROGRESSION.md)); auto-scaling would stretch one step across the plot,
+so the axis is held to a minimum span. HRV Status is categorical, so it gets a strip rather
+than a second scale; the load axis is padded at the top only — Chart.js `grace` pads both
+ends and would drag the axis toward zero. Nights with no Sleep row draw no marker.
 
 > Read the flag as the *trough*, not the summit. Every Recovery onset in this data landed
 > on a day when acute load had already fallen to 296–452 at ratio 0.5–0.6, after a peak in
@@ -487,7 +535,7 @@ Google Sheet, five tabs, read via the Sheets v4 REST API.
 | Activities | `Activities!A1:L5000` | sessions, all Training-tab charts |
 | Sleep | `Sleep!A1:V5000` | sleep map, HRV, vitals, both sleep charts |
 | Biometrics | `Biometrics!A1:J3000` | body composition |
-| TrainingLoad | `TrainingLoad!A1:G1300` | 7-Day Acute Load vs the ceiling |
+| TrainingLoad | `TrainingLoad!A1:G1300` | Garmin 7-Day Acute Load vs the ceiling, VO₂ Max overlay |
 | Meta | `Meta!A1:A2` | the *Updated* stamp in the tab bar |
 
 **Activities columns** (name-mapped, configurable): Start Time, Distance (km), Elevation
@@ -507,12 +555,13 @@ Lookup is by header name, case-insensitive, so column order in the sheet does no
 A missing column resolves to `-1` and yields `null` values rather than an error.
 
 **TrainingLoad columns** (all hardcoded): Date, Acute Load, Chronic Load, Load Ratio,
-Training Status. VO₂ Max and Training Readiness are in the tab but **not read** — see the
-Progression section for why VO₂max is kept out of the charts.
+Training Status, and VO₂ Max for the opt-in overlay only. Training Readiness is in the tab
+but **not read**. See [PROGRESSION.md](PROGRESSION.md) for why VO₂max is shown only as raw
+context and never fitted to.
 
 > The `TrainingLoad` tab *upserts* rather than appending, because Garmin revises recent
 > load figures for days afterwards. Anything reading it must expect rows to change, not
-> just accumulate — the last week of 7-Day Acute Load can move without any new training.
+> just accumulate — the last week of Garmin 7-Day Acute Load can move without any new training.
 > It also starts far later than Activities (2026-01 here, against 2024-01), so the chart
 > covers a shorter window than the rest of the Training tab and **hides itself entirely**
 > when the tab is absent rather than rendering an empty frame.

@@ -27,7 +27,8 @@
       "spo2":   { "value": "#7f9d78", "description": "SpO2 — sage" },
       "rhr":    { "value": "#b3746e", "description": "Resting HR — dusty rose" },
       "weight": { "value": "#b39555", "description": "Weight — ochre" },
-      "bb":     { "value": "#bd9a4f", "description": "Body Battery — gold" }
+      "bb":     { "value": "#bd9a4f", "description": "Body Battery — gold" },
+      "vo2":    { "value": "#4f7396", "description": "VO₂ Max overlay on Garmin 7-Day Acute Load — steel blue, off the load palette (dark #8fb0d2)" }
     },
     "status": {
       "green":  { "value": "#7f9d78", "description": "Success / positive" },
