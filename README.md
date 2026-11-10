@@ -40,7 +40,7 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| 7-Day Acute EP | Garmin 7-Day Acute Load vs the ceiling |
+| 7-Day Acute EP | Garmin 7-Day Acute Load |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
@@ -64,21 +64,17 @@ Two metrics carry most of the weight:
   100% of its EP and fades out continuously over roughly 7 days (×6/7 per day, so steady
   training reads as its 7-day total). **Chronic EP** is a 28-day exponentially weighted
   moving average of daily EP, read in EP per week so the ratio centres on 1.0. A grey band
-  spans 0.8–1.2× chronic; dots are green inside it, orange over 1.2× or under 0.8×, and red
-  over 1.5×. The two curves are computed independently, so the ratio is a genuine comparison
-  against preparation — though being a ratio it stays scale-free and still cannot judge
-  progression. An ⓘ beside the title explains the model.
-- **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted
-  against a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery
-  or Strained flag within 14 days. It computes from the data rather than being hardcoded, and
-  isn't drawn at all until there are enough flagged days to calibrate on. A grey **Chronic
-  band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio 0.8–1.2) sits behind the line,
-  and **VO₂ Max** and **HRV Status** can be overlaid from pills above the chart — both off
-  by default. An ⓘ beside the title explains the model.
+  spans 0.8–1.2× chronic. The two curves are computed independently, so the ratio is a
+  genuine comparison against preparation — though being a ratio it stays scale-free and
+  still cannot judge progression.
+- **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
+  against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
+  0.8–1.2).
 
-The two share a colour logic — green is the state you want, the warm ramp is attention,
-every reference line grey — though 7-Day Acute EP grades it into three (green · orange ·
-red) while Garmin 7-Day Acute Load stays two-state. Both shade Garmin's own Recovery and Strained
+Both charts colour each dot by that day's ratio the same way — green in band, orange under
+0.8× or over 1.2×, red over 1.5×, and larger the further out it is — with every reference
+line grey. On both, **VO₂ Max** and **HRV Status** can be overlaid from pills above the
+chart, off by default, and an ⓘ beside the title explains the model. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
 See [docs/DESIGN.md](docs/DESIGN.md).
 

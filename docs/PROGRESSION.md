@@ -146,7 +146,7 @@ re-analysis a re-run rather than a rebuild.
 **Nothing from this document.** A Progression chart carrying chronic EP and its ramp rate
 shipped briefly and was removed; the Training tab now runs 7-Day Acute EP beside
 Garmin 7-Day Acute Load, and neither claims to judge progression. VO₂ Max can be overlaid
-on the second as raw context — opt-in, off by default, and on an axis that always spans at
+on either as raw context — opt-in, off by default, and on an axis that always spans at
 least 4 points so a single 0.1 step can't read as a trend. Nothing is fitted to it, for the
 reasons above.
 
