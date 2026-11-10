@@ -245,19 +245,6 @@ statistics.
 Table of the last 8 ISO weeks: EP, distance, elevation, hours, session count, EPH, and
 the road/trail split as a percentage of that week's EP.
 
-### Weekly Load — Distance & Elevation Gain
-The table's weekly distance and elevation gain as side-by-side bars on twin axes — km on
-the left, m on the right, each axis titled — scoped 4, 8, 13 or 26 wk. Same week buckets as
-the table (`isoWeek`), so a row there and a pair of bars here carry the same numbers — but
-every calendar week from the first session to today gets bars, and a week with no runs is
-a real 0 rather than skipped, so the bars sit on an even time axis. Labels are each
-bucket's first day; the hover adds the week's EP.
-
-Elevation is the sheet's `Elevation Gain (m)`. The Activities tab records no descent, so
-none is charted. The last pair is the current week, still in progress, and is drawn faded
-so a partial week is not read as a drop. The header gives the per-week average over the
-scope's complete weeks.
-
 ---
 
 ## Recovery tab
