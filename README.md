@@ -40,7 +40,7 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| Progressive Overload — Acute EP for stimulation | Garmin 7-Day Acute Load vs the ceiling |
+| 7-Day Acute EP | Garmin 7-Day Acute Load vs the ceiling |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
@@ -59,13 +59,15 @@ Two metrics carry most of the weight:
 - **EP (Effort Points)** = `distance_km + elevation_m/100` — one number for the size of a
   run that treats 100 m of climb as equivalent to 1 km flat. **EPH** = `EP/hours` is its
   density. Every load chart is built on these.
-- **Progressive Overload** is a textbook ACWR model. Acute Load is an exponentially
-  weighted 7-day average of daily EP (λ = 0.25), Chronic Load is the average weekly load
-  over the last 28 days, and both are read in EP per week so the ratio centres on 1.0.
-  0.8–1.3 is the sweet spot, ≥ 1.5 the danger zone, with undertrained below 0.8 and a
-  caution band between. The two windows are computed independently, so the ratio is a
-  genuine comparison against preparation — though being a ratio it stays scale-free and
-  still cannot judge progression.
+- **7-Day Acute EP** (formerly Progressive Overload) is an acute:chronic model over EP.
+  **Acute EP** applies exponential decay to past workouts: a workout logged today counts
+  100% of its EP and fades out continuously over roughly 7 days (×6/7 per day, so steady
+  training reads as its 7-day total). **Chronic EP** is a 28-day exponentially weighted
+  moving average of daily EP, read in EP per week so the ratio centres on 1.0. A grey band
+  spans 0.8–1.2× chronic; dots are green inside it, orange over 1.2× or under 0.8×, and red
+  over 1.5×. The two curves are computed independently, so the ratio is a genuine comparison
+  against preparation — though being a ratio it stays scale-free and still cannot judge
+  progression. An ⓘ beside the title explains the model.
 - **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted
   against a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery
   or Strained flag within 14 days. It computes from the data rather than being hardcoded, and
@@ -75,8 +77,8 @@ Two metrics carry most of the weight:
   by default. An ⓘ beside the title explains the model.
 
 The two share a colour logic — green is the state you want, the warm ramp is attention,
-every reference line grey — though Progressive Overload grades it into four ACWR zones
-while Garmin 7-Day Acute Load stays two-state. Both shade Garmin's own Recovery and Strained
+every reference line grey — though 7-Day Acute EP grades it into three (green · orange ·
+red) while Garmin 7-Day Acute Load stays two-state. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
 See [docs/DESIGN.md](docs/DESIGN.md).
 

@@ -54,26 +54,29 @@ Two status families, because they answer different questions.
 **Load & sleep quality** — a graded scale where both ends are informative:
 green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
 
-**Load charts.** Garmin 7-Day Acute Load uses a two-state palette; Progressive Overload grades
-the same idea into four ACWR zones (gold undertrained · green sweet spot · rose caution ·
-clay danger), because its spec distinguishes a sweet spot from an outright danger zone and
-a binary palette would discard that. Green still means "the state you want" and the warm
-ramp still means "attention", so the pair sitting side by side still reads consistently —
-the four zones refine the two-state scale rather than contradicting it:
+**Load charts.** Garmin 7-Day Acute Load uses a two-state palette; 7-Day Acute EP grades
+"out of range" into two severities — green in range (0.8–1.2×) · orange over 1.2× or under
+0.8× · red over 1.5× — because its spec calls out a spike past 1.5× on its own. The orange
+and red are the recovery heat ramp's own `#c08552` and `#ab5a52`, borrowed rather than
+invented: this chart's states are severity tiers, which is what that ramp encodes. Green
+still means "the state you want" across the pair, so the two still read consistently side
+by side, and dot size grows with severity (2 · 3 · 4 px) so the tiers survive greyscale:
 
 | Role | Token | Colour |
 |---|---|---|
 | In range | `LOAD_IN` | green `#7f9d78` |
-| Out of range | `LOAD_OUT` | red `#b3746e` |
+| Out of range (Garmin 7-Day Acute Load) | `LOAD_OUT` | rose `#b3746e` |
+| Over 1.2× or under 0.8× (7-Day Acute EP) | `ACUTE_ORANGE` | orange `#c08552` |
+| Over 1.5× (7-Day Acute EP) | `ACUTE_RED` | red `#ab5a52` |
 | Reference line (chronic, ceiling, band fill) | `LOAD_REF` | grey `#9d9488` |
 
 On Garmin 7-Day Acute Load only two states, though *above* and *below* its Chronic band
 mean opposite things — spike risk and detraining. The tooltip names which; the palette answers "in range
 or not" so that reading survives a glance. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
-rule doing the judging. Progressive Overload's one exception is the danger threshold at
-1.5x chronic, drawn as a thin clay rule — it is a named boundary in the model, not a
-neutral reference, so it carries the colour of the zone it opens.
+rule doing the judging. 7-Day Acute EP's one exception is the 1.5× chronic threshold,
+drawn as a thin dotted red rule — it is where dots turn red, a named boundary in the
+model rather than a neutral reference, so it carries the colour of the tier it opens.
 
 > Grey doubles as "no data / not scored" on the recovery charts. On the load charts it is
 > unambiguous in practice — it only ever appears as a continuous dashed rule or a band
@@ -167,7 +170,7 @@ same Excellent → Good → Fair → Poor order.
 
 **Training tab** — Year-over-Year summary cards, then:
 1. Cumulative EP | Monthly EP
-2. Progressive Overload | Garmin 7-Day Acute Load
+2. 7-Day Acute EP | Garmin 7-Day Acute Load
 3. Recent 8 Weeks — Load Summary *(full width)*
 4. Distribution by Category | 專項訓練 Seasonality
 5. 專項訓練 Long Runs *(full width)* — the >20 km bubbles above it, as a table
@@ -220,8 +223,8 @@ pointer device, tap or click to pin, Escape or a click elsewhere to close. It si
 `.section-title`, so PNG export still writes the bare title.
 
 A pill row is for view state only. A parameter that defines what a metric *means* does not
-get pills — Chronic EP's 4-week window is fixed for exactly this reason, and the header
-note names it (`chronic … (4 wk)`) so the constant stays visible.
+get pills — Chronic EP's 28-day window is fixed for exactly this reason, and the header
+note names it (`chronic … (28 d EWMA)`) so the constant stays visible.
 
 ## Responsive
 

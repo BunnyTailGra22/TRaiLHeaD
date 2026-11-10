@@ -66,7 +66,7 @@ time (ISO UTC) after every other tab is written, and `renderLastSync` shows it a
 when the sheet last took data, not when the page fetched it. With no `Meta` tab, or on
 sample data, the element is left empty and hides itself.
 
-Reading the TrainingLoad tab does not change what Progressive Overload is built on; it still derives its
+Reading the TrainingLoad tab does not change what 7-Day Acute EP is built on; it still derives its
 own ACWR from EP. `analysis/progression.py` reads the same tab offline for VO₂max. The
 dashboard reads VO₂ Max too, but only for an opt-in overlay on Garmin 7-Day Acute Load —
 off by default, and drawn on a right-hand axis held to at least a 4-point span.
