@@ -150,7 +150,7 @@ main { padding: 20px 24px; }
 #cumul-box, #monthly-box, #box-box, #focus-box { height: 280px; }
 /* The two load charts are paired and BOTH now carry a shape key above the plot, so
    they give back the same height and their plot areas stay level with each other. */
-#rolling-box, #acuteceil-box { height: 260px; }
+#rolling-box, #garminload-box { height: 260px; }
 /* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
    its chart, so bio-box gets that height back to keep the two plot areas level. */
 #bio-box   { height: 330px; }
@@ -459,7 +459,7 @@ main { padding: 20px 24px; }
   </div>
 
   <!-- ROW 2: the two load models side by side — this dashboard's own ACWR over EP,
-       and Garmin's raw Acute Load against the level its Recovery flag always follows. -->
+       and Garmin's own Acute Load against its own Chronic Load. -->
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
@@ -487,16 +487,16 @@ main { padding: 20px 24px; }
     </div>
 
     <!-- hidden by the renderer when the TrainingLoad tab is missing -->
-    <div class="chart-card" id="acuteceil-card">
+    <div class="chart-card" id="garminload-card">
       <div class="chart-header">
         <div class="title-wrap">
-          <div class="section-title" style="margin:0">Garmin 7-Day Acute Load — Against the Ceiling</div>
-          <button type="button" class="info-btn" aria-label="About this chart" aria-expanded="false" aria-controls="acuteceil-info">i</button>
-          <div class="info-pop" id="acuteceil-info"></div>
+          <div class="section-title" style="margin:0">Garmin 7-Day Acute Load</div>
+          <button type="button" class="info-btn" aria-label="About this chart" aria-expanded="false" aria-controls="garminload-info">i</button>
+          <div class="info-pop" id="garminload-info"></div>
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <div id="acuteceil-note" style="font-size:11px;color:var(--muted)"></div>
-          <div class="range-pills" id="acuteceil-scope-pills">
+          <div id="garminload-note" style="font-size:11px;color:var(--muted)"></div>
+          <div class="range-pills" id="garminload-scope-pills">
             <div class="rpill" data-weeks="4">4 wk</div>
             <div class="rpill active" data-weeks="8">8 wk</div>
             <div class="rpill" data-weeks="13">13 wk</div>
@@ -505,20 +505,21 @@ main { padding: 20px 24px; }
         </div>
       </div>
       <div class="shape-key" style="margin-bottom:8px">
-        <span><i style="color:#7f9d78">●</i> under ceiling</span>
-        <span><i style="color:#b3746e">●</i> over</span>
+        <span><i style="color:#7f9d78">●</i> 0.8–1.2× in band</span>
+        <span><i style="color:#c08552">●</i> &lt;0.8× or &gt;1.2×</span>
+        <span><i style="color:#ab5a52">●</i> &gt;1.5×</span>
         <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
         <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
         <!-- filled from HRV_STATUS by the renderer, shown only while the HRV overlay is on -->
-        <span id="acuteceil-hrv-key" hidden></span>
+        <span id="garminload-hrv-key" hidden></span>
         <!-- optional overlays, off by default; each hides itself when its column is absent -->
-        <div class="overlay-pills" id="acuteceil-overlay-pills">
+        <div class="overlay-pills" id="garminload-overlay-pills">
           <span class="mpill-hint">Overlay</span>
           <button type="button" class="mpill" data-overlay="vo2" aria-pressed="false">VO₂ Max</button>
           <button type="button" class="mpill" data-overlay="hrv" aria-pressed="false">HRV Status</button>
         </div>
       </div>
-      <div class="chart-box" id="acuteceil-box"><canvas id="acuteceil-chart"></canvas></div>
+      <div class="chart-box" id="garminload-box"><canvas id="garminload-chart"></canvas></div>
     </div>
   </div>
 
@@ -1294,7 +1295,7 @@ function renderAll(sessions, sleepMap) {
   renderSummaryCards(sessions);
   buildMonthlyYearPills(sessions);
   renderRollingChart(sessions);
-  renderAcuteCeiling();
+  renderGarminLoad();
   buildCumulChart(sessions, _activeCumulMetric);
   renderFocusChart(sessions);   // running activities only
   renderBoxChart(sessions);
@@ -1635,13 +1636,12 @@ const ACWR_SWEET_LO = 0.8;   // below this: undertrained / detraining
 const ACWR_SWEET_HI = 1.3;   // 0.8-1.3 is the sweet spot
 const ACWR_DANGER   = 1.5;   // >= 1.5 is the danger zone; 1.3-1.5 is caution
 
-// Shared palette for BOTH load charts — Progressive Overload and 7-Day Acute Load —
-// so "in range" and "out of range" read identically across the pair sitting side by
-// side. Green is the state you want, red is the deviation (DESIGN.md status family);
-// the reference lines stay grey so nothing competes with the reading.
+// Shared by BOTH load charts — Progressive Overload and Garmin 7-Day Acute Load — so the
+// state you want reads the same green across the pair sitting side by side, and the
+// reference apparatus (chronic line, band fill) stays grey so nothing competes with the
+// reading. Each chart grades "out of range" in its own zone colours.
 const LOAD_IN  = '#7f9d78';   // in range — sage green
-const LOAD_OUT = '#b3746e';   // out of range — dusty rose
-const LOAD_REF = '#9d9488';   // chronic / ceiling reference lines — warm grey
+const LOAD_REF = '#9d9488';   // chronic reference line, not-scored dots — warm grey
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
 function computeAcuteChronic(sessions) {
@@ -1794,17 +1794,13 @@ function renderRollingChart(sessions) {
   });
 }
 
-// ── GARMIN 7-DAY ACUTE LOAD vs CEILING ────────────────────────────────────────
-// Garmin's own Acute Load against the level above which its Recovery/Strained flag
-// has always followed. The ceiling is DERIVED, not a constant: it is the highest
-// acute load never followed by a flag within CEIL_LOOKAHEAD days. Deriving it keeps
-// the chart honest as data accumulates instead of freezing a number that goes stale.
-// On this athlete's Jan–Jul 2026 data it lands at 890, and the three spikes above it
-// were each followed by Recovery within 6–11 days. See docs/PROGRESSION.md.
-let _acuteCeilChart = null;
-let _acuteCeilWeeks = 8;                   // x-axis scope (4 / 8 / 13 / 26 wk)
-const CEIL_LOOKAHEAD = 14;                 // days a spike gets to produce a flag
-const CEIL_MIN_FLAGS = 3;                  // below this there is nothing to calibrate on
+// ── GARMIN 7-DAY ACUTE LOAD ───────────────────────────────────────────────────
+// Garmin's own Acute Load against its own Chronic Load: a grey band at Chronic x 0.8 to
+// x 1.2, and each day's dot coloured by its Load Ratio (Acute / Chronic). Nothing here
+// is derived from EP — this is the second opinion beside Progressive Overload.
+let _garminLoadChart = null;
+let _garminLoadWeeks = 8;                   // x-axis scope (4 / 8 / 13 / 26 wk)
+// Garmin's flagged states, painted as washes behind BOTH load charts.
 const FLAG_STATES = ['RECOVERY', 'STRAINED'];
 
 // Chronic band — Garmin's own Chronic Load x 0.8 to x 1.2, which is exactly where its
@@ -1814,11 +1810,34 @@ const FLAG_STATES = ['RECOVERY', 'STRAINED'];
 // edge is 1.2 here against that chart's 1.3: this band is Garmin's ratio, not ours.
 const GARMIN_BAND_LO = 0.8;
 const GARMIN_BAND_HI = 1.2;
+const GARMIN_RED_OVER = 1.5;   // past this the dot turns red
+
+// Dot colour = which zone the day's Load Ratio falls in. Most severe first. Orange and
+// red are the dashboard's existing orange and red (HRV Unbalanced and Low), so they mean
+// "drifting" and "alarm" here too. Green and orange share a lightness, so the zone is
+// also carried by dot SIZE and by position against the band — never by colour alone.
+const GARMIN_ORANGE = '#c08552';
+const GARMIN_RED    = '#ab5a52';
+const GARMIN_ZONES = [
+  { key: 'red',   test: r => r > GARMIN_RED_OVER, color: GARMIN_RED,    radius: 4.5,
+    label: `Over ${GARMIN_RED_OVER}×`,  tip: `⚠ over ${GARMIN_RED_OVER}× chronic` },
+  { key: 'above', test: r => r > GARMIN_BAND_HI,  color: GARMIN_ORANGE, radius: 3.5,
+    label: 'Above band',                tip: `↑ above the band (> ${GARMIN_BAND_HI}×)` },
+  { key: 'in',    test: r => r >= GARMIN_BAND_LO, color: LOAD_IN,       radius: 2,
+    label: 'In band',                   tip: `✓ in band (${GARMIN_BAND_LO}–${GARMIN_BAND_HI}×)` },
+  { key: 'below', test: () => true,               color: GARMIN_ORANGE, radius: 3.5,
+    label: 'Below band',                tip: `↓ below the band (< ${GARMIN_BAND_LO}×)` },
+];
+// Recomputed from the two loads rather than read from the sheet's Load Ratio column:
+// Garmin TRUNCATES that column to one decimal (308 of 313 rows match a floor), so a
+// 1.29 day reads "1.2" — inside the band — while plotted above its edge.
+const garminRatio = d => (d.acute != null && d.chronic) ? d.acute / d.chronic : null;
+const garminZone  = r => r == null ? null : GARMIN_ZONES.find(z => z.test(r));
 
 // Optional overlays, both off by default and independent of each other. VO₂ Max is a
 // number, so it gets a right-hand axis; HRV Status is a category, so it gets a strip of
 // status markers along the top rather than a second scale it has no use for.
-const _acuteOverlay = { vo2: false, hrv: false };
+const _garminOverlay = { vo2: false, hrv: false };
 // Garmin reports VO₂ Max in 0.1 steps and it moved 1.4 points in seven months
 // (docs/PROGRESSION.md). Auto-scaling would stretch a single step across the plot, so
 // the right axis always spans at least this many ml/kg/min.
@@ -1826,29 +1845,9 @@ const VO2_MIN_SPAN = 4;
 const HRV_STRIP_Y  = 0.955;   // strip height on a hidden 0–1 axis
 const HRV_HEADROOM = 0.14;    // extra room above the load data, as a share of its range
 
-// Highest acute load never followed by a flag inside the lookahead. null when the
-// history is too thin to support the claim — a missing rule, not a guessed one.
-function computeLoadCeiling(tl) {
-  const flagged = tl.map(d => FLAG_STATES.includes(d.status));
-  if (flagged.filter(Boolean).length < CEIL_MIN_FLAGS) return null;
-  const dayMs = 86400000;
-  let ceiling = null;
-  tl.forEach((d, i) => {
-    if (d.acute === null) return;
-    // Look ahead by DATE, not by index — a gap in the sheet must not shorten the window.
-    const until = d.date.getTime() + CEIL_LOOKAHEAD * dayMs;
-    let hit = false;
-    for (let j = i + 1; j < tl.length && tl[j].date.getTime() <= until; j++) {
-      if (flagged[j]) { hit = true; break; }
-    }
-    if (!hit && (ceiling === null || d.acute > ceiling)) ceiling = d.acute;
-  });
-  return ceiling;
-}
-
 // HRV Status for the night logged on a TrainingLoad row's date, joined on the date key.
 // A day with no Sleep row returns null, and the strip leaves a gap there.
-const acuteHrvOf = d => {
+const garminHrvOf = d => {
   const n = _sleepMap && _sleepMap[d.key];
   return n && n.hrvStatus ? n.hrvStatus : null;
 };
@@ -1857,28 +1856,27 @@ const HRV_GLYPH = { circle: '●', rect: '■', triangle: '▲' };
 
 // Each overlay pill shows only when its column has data anywhere in history — a
 // missing column hides the pill rather than toggling onto an empty chart.
-function syncAcuteOverlayPills(have) {
-  const wrap = document.getElementById('acuteceil-overlay-pills');
+function syncGarminOverlayPills(have) {
+  const wrap = document.getElementById('garminload-overlay-pills');
   if (!wrap) return;
   wrap.hidden = !have.vo2 && !have.hrv;
   wrap.querySelectorAll('.mpill').forEach(p => {
-    const k = p.dataset.overlay, on = !!(_acuteOverlay[k] && have[k]);
+    const k = p.dataset.overlay, on = !!(_garminOverlay[k] && have[k]);
     p.hidden = !have[k];
     p.classList.toggle('active', on);
     p.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
 }
 
-function renderAcuteCeiling() {
-  const card = document.getElementById('acuteceil-card');
+function renderGarminLoad() {
+  const card = document.getElementById('garminload-card');
   const tl = _trainingLoad;
   // The TrainingLoad tab starts far later than Activities, and may be absent entirely.
   if (!tl.length) { if (card) card.style.display = 'none'; return; }
   if (card) card.style.display = '';
 
-  const phone   = isPhone();
-  const ceiling = computeLoadCeiling(tl);
-  const series = tl.slice(Math.max(0, tl.length - _acuteCeilWeeks * 7));
+  const phone  = isPhone();
+  const series = tl.slice(Math.max(0, tl.length - _garminLoadWeeks * 7));
   const acute  = series.map(d => d.acute);
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   // Null-safe: a row with no Chronic Load leaves a gap in the band, never an invented one.
@@ -1887,28 +1885,30 @@ function renderAcuteCeiling() {
 
   const have = { vo2: tl.some(d => d.vo2 != null),
                  hrv: Object.values(_sleepMap || {}).some(n => n.hrvStatus) };
-  syncAcuteOverlayPills(have);
+  syncGarminOverlayPills(have);
   const vo2InView = series.map(d => d.vo2).filter(v => v != null);
-  const hrvInView = series.map(acuteHrvOf);
-  const showVo2 = _acuteOverlay.vo2 && vo2InView.length > 0;
-  const showHrv = _acuteOverlay.hrv && have.hrv;
+  const hrvInView = series.map(garminHrvOf);
+  const showVo2 = _garminOverlay.vo2 && vo2InView.length > 0;
+  const showHrv = _garminOverlay.hrv && have.hrv;
 
-  const OVER = LOAD_OUT, UNDER = LOAD_IN;
-  const dotColors = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? OVER : UNDER);
-  const dotRadii  = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? 4 : 2);
+  // A day with no Chronic Load can't be scored: a small grey dot, as on Progressive Overload.
+  const zones     = series.map(d => garminZone(garminRatio(d)));
+  const dotColors = zones.map(z => z ? z.color : LOAD_REF);
+  const dotRadii  = zones.map(z => z ? z.radius : 2);
 
-  const crossings = acute.filter(v => ceiling !== null && v !== null && v > ceiling).length;
-  const noteEl = document.getElementById('acuteceil-note');
+  // Ratio leads, the way the Progressive Overload note beside it reads.
+  const noteEl = document.getElementById('garminload-note');
   if (noteEl) {
-    const t = series[series.length - 1];
-    noteEl.textContent = `acute ${t.acute === null ? '—' : t.acute.toFixed(0)} (7d)`
-      + (ceiling === null ? ' · ceiling n/a' : ` · ceiling ${ceiling.toFixed(0)}`)
-      + ` · ${crossings} crossing${crossings === 1 ? '' : 's'} in view`;
+    const t = series[series.length - 1], r = garminRatio(t), z = garminZone(r);
+    const acuteTxt = `acute ${t.acute === null ? '—' : t.acute.toFixed(0)} (7d)`;
+    noteEl.textContent = z
+      ? `ACWR ${r.toFixed(2)} — ${z.label} · ${acuteTxt} · chronic ${t.chronic.toFixed(0)} (28d)`
+      : `${acuteTxt} · chronic n/a`;
   }
 
   // HRV key in the shape-key row: only while the overlay is on, and only the statuses
   // that actually appear in view, in HRV_STATUS order.
-  const hrvKey = document.getElementById('acuteceil-hrv-key');
+  const hrvKey = document.getElementById('garminload-hrv-key');
   if (hrvKey) {
     const seen = new Set(hrvInView.filter(Boolean).map(s => hrvStatusStyle(s)));
     hrvKey.hidden = !showHrv || !seen.size;
@@ -1918,21 +1918,11 @@ function renderAcuteCeiling() {
   }
 
   const datasets = [{
-    label: 'Acute Load', data: acute, borderColor: UNDER, borderWidth: 2,
+    label: 'Acute Load', data: acute, borderColor: LOAD_IN, borderWidth: 2,
     pointRadius: dotRadii, pointHoverRadius: 5,
     pointBackgroundColor: dotColors, pointBorderColor: dotColors,
     spanGaps: false, fill: false, tension: 0.25, order: 1,
   }];
-  if (ceiling !== null) {
-    // Grey, like Chronic EP on the chart beside it: the reference apparatus is grey on
-    // both, so green/red always means the reading rather than the rule. The dots that
-    // cross already carry the warning — a red rule would say it twice.
-    datasets.push({
-      label: `Ceiling ${ceiling.toFixed(0)}`, data: acute.map(() => ceiling),
-      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [5, 4],
-      pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2,
-    });
-  }
   if (showVo2) {
     const last = [...series].reverse().find(d => d.vo2 != null);
     datasets.push({
@@ -1977,7 +1967,7 @@ function renderAcuteCeiling() {
   if (showHrv) {
     // Room above the highest line for the strip to sit in. Top only: Chart.js `grace`
     // pads both ends, which would drag the load axis down to zero for nothing.
-    const vals = [...acute, ...bandLo, ...bandHi, ceiling].filter(v => v != null);
+    const vals = [...acute, ...bandLo, ...bandHi].filter(v => v != null);
     if (vals.length) {
       const top = Math.max(...vals), bottom = Math.min(...vals);
       opts.scales.y.suggestedMax = top + (top - bottom) * HRV_HEADROOM;
@@ -1992,19 +1982,15 @@ function renderAcuteCeiling() {
     afterBody: (items) => {
       const i = items[0].dataIndex, d = series[i], out = [];
       if (d.chronic !== null) out.push('Chronic (28d): ' + d.chronic.toFixed(0));
-      // Recomputed from the two loads. Garmin's own Load Ratio column is TRUNCATED to one
-      // decimal (308 of 313 rows match a floor), so a 1.29 day reads "1.2" while sitting
-      // visibly above the 1.2x band edge. Two decimals of Acute / Chronic always agree.
-      if (d.acute !== null && d.chronic) out.push('Load Ratio (ACWR): ' + (d.acute / d.chronic).toFixed(2));
-      else if (d.ratio !== null)        out.push('Load Ratio (ACWR): ' + d.ratio);
-      if (bandLo[i] !== null && d.acute !== null) {
-        const pos = d.acute > bandHi[i] ? '↑ above' : d.acute < bandLo[i] ? '↓ below' : '✓ within';
-        out.push(`Chronic band: ${bandLo[i].toFixed(0)}–${bandHi[i].toFixed(0)} · ${pos}`);
-      }
+      const r = garminRatio(d), z = garminZone(r);
+      if (z) {
+        out.push('Load Ratio (ACWR): ' + r.toFixed(2));
+        out.push(`Chronic band: ${bandLo[i].toFixed(0)}–${bandHi[i].toFixed(0)}`);
+        out.push(z.tip);
+      } else if (d.ratio !== null) out.push('Load Ratio (ACWR): ' + d.ratio);
       if (d.status) out.push('Status: ' + titleCase(d.status));
       if (showVo2 && d.vo2 != null) out.push('VO₂ Max: ' + d.vo2.toFixed(1));
-      if (showHrv && acuteHrvOf(d)) out.push('HRV Status: ' + prettyHrv(acuteHrvOf(d)));
-      if (ceiling !== null && d.acute !== null && d.acute > ceiling) out.push('⚠ Above the ceiling');
+      if (showHrv && garminHrvOf(d)) out.push('HRV Status: ' + prettyHrv(garminHrvOf(d)));
       return out;
     },
   };
@@ -2020,9 +2006,9 @@ function renderAcuteCeiling() {
 
   opts.plugins.loadStatusBands = { bands };
 
-  const ctx = document.getElementById('acuteceil-chart').getContext('2d');
-  if (_acuteCeilChart) _acuteCeilChart.destroy();
-  _acuteCeilChart = new Chart(ctx, {
+  const ctx = document.getElementById('garminload-chart').getContext('2d');
+  if (_garminLoadChart) _garminLoadChart.destroy();
+  _garminLoadChart = new Chart(ctx, {
     type: 'line', data: { labels, datasets }, options: opts, plugins: [_loadStatusBands],
   });
 }
@@ -2309,24 +2295,23 @@ document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   });
 });
 
-// Acute-vs-ceiling VIEW scope pills (4 / 8 / 13 / 26 wk). The ceiling itself is derived
-// from FULL history, so panning the view never moves the rule.
-document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(p => {
+// Garmin 7-Day Acute Load VIEW scope pills (4 / 8 / 13 / 26 wk). Pan the x-axis only.
+document.querySelectorAll('#garminload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
-    document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('#garminload-scope-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
-    _acuteCeilWeeks = parseInt(p.dataset.weeks);
-    renderAcuteCeiling();
+    _garminLoadWeeks = parseInt(p.dataset.weeks);
+    renderGarminLoad();
   });
 });
 
-// Acute-vs-ceiling overlays — VO₂ Max and HRV Status toggle independently, both off
-// until asked for, and survive a scope change because the state lives in _acuteOverlay.
-document.querySelectorAll('#acuteceil-overlay-pills .mpill').forEach(p => {
+// Garmin 7-Day Acute Load overlays — VO₂ Max and HRV Status toggle independently, both off
+// until asked for, and survive a scope change because the state lives in _garminOverlay.
+document.querySelectorAll('#garminload-overlay-pills .mpill').forEach(p => {
   p.addEventListener('click', () => {
     const k = p.dataset.overlay;
-    _acuteOverlay[k] = !_acuteOverlay[k];
-    renderAcuteCeiling();
+    _garminOverlay[k] = !_garminOverlay[k];
+    renderGarminLoad();
   });
 });
 
@@ -2335,8 +2320,8 @@ document.querySelectorAll('#acuteceil-overlay-pills .mpill').forEach(p => {
 // owner's own wording, kept verbatim. The definitions under it are built from the
 // constants the chart draws with, so a changed threshold can't leave its explanation
 // behind, and the swatches copy the chart's own marks.
-(function buildAcuteCeilGlossary() {
-  const el = document.getElementById('acuteceil-info');
+(function buildGarminLoadGlossary() {
+  const el = document.getElementById('garminload-info');
   if (!el) return;
   const sw = (c, ch, extra = '') => `<i style="color:${c}${extra}">${ch}</i>`;
   // Box-drawing dashes fall back to a plain hyphen in some fonts; a bordered span doesn't
@@ -2344,7 +2329,7 @@ document.querySelectorAll('#acuteceil-overlay-pills .mpill').forEach(p => {
     `<i style="display:inline-block;width:16px;vertical-align:middle;border-top:${w}px ${style} ${c}"></i>`;
   const hrvKeys = HRV_STATUS.filter(c => c.key !== 'POOR')
     .map(c => `${sw(c.color, HRV_GLYPH[c.shape])} ${prettyHrv(c.key)}`).join(' · ');
-  const lo = GARMIN_BAND_LO, hi = GARMIN_BAND_HI;
+  const lo = GARMIN_BAND_LO, hi = GARMIN_BAND_HI, red = GARMIN_RED_OVER;
   el.innerHTML = `
     <div class="info-head">About this chart</div>
     <p class="info-lead">Garmin Acute Training Load is a primary indicator of short-term
@@ -2354,15 +2339,14 @@ document.querySelectorAll('#acuteceil-overlay-pills .mpill').forEach(p => {
       (Chronic, ~28 days) to ensure safe training volume progression.</p>
     <dl>
       <dt>${sw(LOAD_IN, '━●')} Acute Load</dt>
-      <dd>${sw(LOAD_IN, '●')} at or under the ceiling ·
-        ${sw(LOAD_OUT, '●', ';font-size:15px')} larger, above it</dd>
+      <dd>Each dot is coloured by that day's Load Ratio, Acute ÷ Chronic:<br>
+        ${sw(LOAD_IN, '●')} ${lo}–${hi} in band ·
+        ${sw(GARMIN_ORANGE, '●', ';font-size:14px')} under ${lo} or over ${hi} ·
+        ${sw(GARMIN_RED, '●', ';font-size:16px')} over ${red}.
+        Larger dots are further out.</dd>
       <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Chronic band</dt>
-      <dd>Chronic Load × ${lo} to × ${hi}. Acute inside the band means Load Ratio (ACWR)
-        is ${lo}–${hi}; above it is a spike, below it a drop in load.</dd>
-      <dt>${rule(LOAD_REF, 'dashed', 1.5)} Ceiling</dt>
-      <dd>The highest acute load never followed by a Garmin Recovery or Strained flag
-        within ${CEIL_LOOKAHEAD} days. Derived from all history, and not drawn until
-        ${CEIL_MIN_FLAGS} days have been flagged.</dd>
+      <dd>Chronic Load × ${lo} to × ${hi}, the loads where Load Ratio (ACWR) is ${lo}–${hi}.
+        Above it is a spike, below it a drop in load.</dd>
       <dt>${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')} Background</dt>
       <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
       <dt>${rule('var(--vo2)', 'solid', 2)} VO₂ Max overlay</dt>
@@ -3456,8 +3440,8 @@ function loadSampleData() {
       resp:       Math.round(rnd(12,17)*10)/10,
     };
   }
-  // Nothing here synthesises Garmin's own load model, so the acute-vs-ceiling card
-  // hides itself rather than showing a made-up ceiling.
+  // Nothing here synthesises Garmin's own load model, so the Garmin 7-Day Acute Load
+  // card hides itself rather than showing made-up Garmin numbers.
   _trainingLoad = [];
   renderAll(sessions, sleepMap);
   renderLastSync(null);

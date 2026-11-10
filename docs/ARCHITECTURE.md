@@ -56,9 +56,9 @@ that is accepted but never answered leaves the status on "Loading…" indefinite
 plus a sleep map, then calls `renderAll` — the same path the real data takes.
 
 The **`TrainingLoad`** fetch is optional: it `.catch(() => [])` like Sleep and Biometrics,
-and `renderAcuteCeiling` hides its whole card when the tab is missing rather than drawing an
+and `renderGarminLoad` hides its whole card when the tab is missing rather than drawing an
 empty frame. `loadSampleData` clears `_trainingLoad` for the same reason — nothing there
-synthesises Garmin's load model, and a made-up ceiling would be worse than no chart.
+synthesises Garmin's load model, and made-up Garmin numbers would be worse than no chart.
 
 The **`Meta`** fetch is optional in the same way. The sync stamps `Meta!A2` with its finish
 time (ISO UTC) after every other tab is written, and `renderLastSync` shows it as
@@ -131,8 +131,8 @@ module global for exactly this reason.
 baselines, EWMAs — are always computed over **full history and then sliced** to the
 visible window, so a band is already warmed up at the left edge instead of ramping from
 zero. `renderHrvStatus` is the one exception: it filters by date cutoff first.
-`renderAcuteCeiling` derives its ceiling from full history for the same reason — panning
-the view must never move the rule it is judging against.
+`renderGarminLoad` needs no warm-up — Garmin's Acute and Chronic arrive already computed —
+so it simply slices the tail.
 
 **Tab switching re-renders.** A chart built while its panel is `display:none` measures
 0×0, so `switchTab()` re-runs every renderer for the panel being shown.

@@ -40,7 +40,7 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| Progressive Overload — Acute EP for stimulation | Garmin 7-Day Acute Load vs the ceiling |
+| Progressive Overload — Acute EP for stimulation | Garmin 7-Day Acute Load |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
@@ -66,17 +66,16 @@ Two metrics carry most of the weight:
   caution band between. The two windows are computed independently, so the ratio is a
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
-- **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own load, plotted
-  against a *derived* ceiling: the highest acute load never followed by Garmin's own Recovery
-  or Strained flag within 14 days. It computes from the data rather than being hardcoded, and
-  isn't drawn at all until there are enough flagged days to calibrate on. A grey **Chronic
-  band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio 0.8–1.2) sits behind the line,
-  and **VO₂ Max** and **HRV Status** can be overlaid from pills above the chart — both off
-  by default. An ⓘ beside the title explains the model.
+- **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
+  against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
+  0.8–1.2). Each dot is coloured by that day's ratio: green in band, orange under 0.8× or
+  over 1.2×, red over 1.5×, and larger the further out it is. **VO₂ Max** and
+  **HRV Status** can be overlaid from pills above the chart — both off by default. An ⓘ
+  beside the title explains the model.
 
-The two share a colour logic — green is the state you want, the warm ramp is attention,
-every reference line grey — though Progressive Overload grades it into four ACWR zones
-while Garmin 7-Day Acute Load stays two-state. Both shade Garmin's own Recovery and Strained
+The two share a colour logic — green is the state you want, warm colours are attention,
+every reference line grey — though each grades it on its own ratio: four ACWR zones on
+Progressive Overload, three on Garmin 7-Day Acute Load. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
 See [docs/DESIGN.md](docs/DESIGN.md).
 
