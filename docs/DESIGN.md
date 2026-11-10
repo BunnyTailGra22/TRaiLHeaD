@@ -58,7 +58,7 @@ green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
 zones: green in band 0.8–1.2 · orange `LOAD_ORANGE` `#c08552` under 0.8 or over 1.2 · red
 `LOAD_RED` `#ab5a52` over 1.5 — the dashboard's existing orange and red, from HRV
 Unbalanced and Low. 7-Day Acute EP scores its own EP ratio and Garmin 7-Day Acute Load
-scores Garmin's Load Ratio, but colours, dot sizes and key labels are shared constants, so
+scores Garmin's Load Ratio, but colours, dot size and wording are shared constants, so
 the pair reads as one system. Green means "the state you want" on both, and warm colours
 mean "attention":
 
@@ -71,9 +71,9 @@ mean "attention":
 
 On both load charts, *above* and *below* the band share orange though they mean
 opposite things — spike risk and detraining. The tooltip names which, and the dot's
-position against the band says it at a glance. Green and orange share a lightness, so dot
-**size** grows with the zone (2 → 3.5 → 4.5) and the reading survives greyscale and
-colour-blind eyes. Keeping every reference line grey is what makes
+position against the band says it at a glance. Every dot is one size (`LOAD_DOT_R` 3);
+green and orange share a lightness, so position against the band is what carries in / out
+of range in greyscale and for colour-blind eyes. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
 rule doing the judging. 7-Day Acute EP's one exception is the 1.5× chronic threshold,
 drawn as a thin dotted red rule — it is where dots turn red, a named boundary in the
@@ -158,7 +158,9 @@ Two idioms, kept visually consistent (both render as a coloured dot plus a label
   useful (Sleep Duration → Score, the EP charts). Configured with `usePointStyle:true`.
 - **HTML `.shape-key`** in the card header — used where the categories are per-point
   encodings inside a single dataset, which Chart.js cannot legend on its own: HRV Status,
-  Recovery Vitals, Sleep Consistency.
+  Recovery Vitals, Sleep Consistency. The two load charts deliberately have none: their dot
+  zones and Garmin's washes live in the ⓘ panel and the tooltip, so the row under each
+  header holds only the overlay toggles (and the HRV key while that overlay is on).
 
 Where two charts sit side by side, their legends must agree in **colour, label, and
 order**. The sleep pair is the reference case: both use the shared quality scale in the

@@ -479,12 +479,9 @@ main { padding: 20px 24px; }
           </div>
         </div>
       </div>
+      <!-- No static key: the dot zones and the Recovery/Strained washes are defined in the
+           ⓘ panel and named in the tooltip. The row holds only the overlay toggles. -->
       <div class="shape-key" style="margin-bottom:8px">
-        <span><i style="color:#7f9d78">●</i> 0.8–1.2× in band</span>
-        <span><i style="color:#c08552">●</i> &lt;0.8× or &gt;1.2×</span>
-        <span><i style="color:#ab5a52">●</i> &gt;1.5×</span>
-        <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
-        <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
         <!-- filled from HRV_STATUS by the renderer, shown only while the HRV overlay is on -->
         <span id="overload-hrv-key" hidden></span>
         <!-- optional overlays, off by default; each hides itself when its column is absent -->
@@ -515,12 +512,9 @@ main { padding: 20px 24px; }
           </div>
         </div>
       </div>
+      <!-- No static key: the dot zones and the Recovery/Strained washes are defined in the
+           ⓘ panel and named in the tooltip. The row holds only the overlay toggles. -->
       <div class="shape-key" style="margin-bottom:8px">
-        <span><i style="color:#7f9d78">●</i> 0.8–1.2× in band</span>
-        <span><i style="color:#c08552">●</i> &lt;0.8× or &gt;1.2×</span>
-        <span><i style="color:#ab5a52">●</i> &gt;1.5×</span>
-        <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
-        <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
         <!-- filled from HRV_STATUS by the renderer, shown only while the HRV overlay is on -->
         <span id="garminload-hrv-key" hidden></span>
         <!-- optional overlays, off by default; each hides itself when its column is absent -->
@@ -1664,6 +1658,7 @@ const LOAD_IN     = '#7f9d78';   // in band — sage green
 const LOAD_ORANGE = '#c08552';   // under 0.8x or over 1.2x
 const LOAD_RED    = '#ab5a52';   // over 1.5x
 const LOAD_REF    = '#9d9488';   // chronic reference line, not-scored dots — warm grey
+const LOAD_DOT_R  = 3;           // one radius for every dot, every zone, both charts
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
 function computeAcuteChronic(sessions) {
@@ -1699,18 +1694,18 @@ function computeAcuteChronic(sessions) {
 
 // Which zone a day's ratio falls in — one table for BOTH load charts, built from each
 // chart's own thresholds, so colours, sizes and wording can't drift apart across the pair.
-// Most severe first, so a ratio only ever gets one zone. Green and orange share a
-// lightness, so the zone is also carried by dot SIZE and by position against the band —
-// never by colour alone.
+// Most severe first, so a ratio only ever gets one zone. Every dot is the same size
+// (LOAD_DOT_R): green and orange share a lightness, so in / out of range is carried by
+// position against the grey band as well as by colour, and the tooltip names the zone.
 function loadZones(lo, hi, over) {
   return [
-    { key: 'red',   test: r => r > over, color: LOAD_RED,    radius: 4.5,
+    { key: 'red',   test: r => r > over, color: LOAD_RED,
       label: `Over ${over}×`,  tip: `⚠ over ${over}× chronic` },
-    { key: 'above', test: r => r > hi,   color: LOAD_ORANGE, radius: 3.5,
+    { key: 'above', test: r => r > hi,   color: LOAD_ORANGE,
       label: 'Above band',     tip: `↑ above the band (> ${hi}×)` },
-    { key: 'in',    test: r => r >= lo,  color: LOAD_IN,     radius: 2,
+    { key: 'in',    test: r => r >= lo,  color: LOAD_IN,
       label: 'In band',        tip: `✓ in band (${lo}–${hi}×)` },
-    { key: 'below', test: () => true,    color: LOAD_ORANGE, radius: 3.5,
+    { key: 'below', test: () => true,    color: LOAD_ORANGE,
       label: 'Below band',     tip: `↓ below the band (< ${lo}×)` },
   ];
 }
@@ -1736,10 +1731,9 @@ function renderRollingChart(sessions) {
   // Local date keys: the join for Garmin's washes and for both overlays.
   const keys    = series.map(d => localDayKey(d.date));
 
-  // A day with no chronic yet can't be scored: a small grey dot.
+  // A day with no chronic yet can't be scored: a grey dot.
   const zones     = series.map(d => acwrZone(d.ratio));
   const dotColors = zones.map(z => z ? z.color : LOAD_REF);
-  const dotRadii  = zones.map(z => z ? z.radius : 2);
 
   const noteEl = document.getElementById('overload-note');
   if (noteEl) {
@@ -1784,7 +1778,7 @@ function renderRollingChart(sessions) {
       borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
       pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2, spanGaps: false },
     { label: 'Acute EP', data: acute, borderColor: LOAD_IN, borderWidth: 2,
-      pointRadius: dotRadii, pointHoverRadius: 5,
+      pointRadius: LOAD_DOT_R, pointHoverRadius: LOAD_DOT_R + 2,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.25, order: 1 },
   ];
@@ -1981,10 +1975,9 @@ function renderGarminLoad() {
 
   const ov = loadOverlays(_garminOverlay, 'garminload', series.map(d => d.key));
 
-  // A day with no Chronic Load can't be scored: a small grey dot, as on 7-Day Acute EP.
+  // A day with no Chronic Load can't be scored: a grey dot, as on 7-Day Acute EP.
   const zones     = series.map(d => garminZone(garminRatio(d)));
   const dotColors = zones.map(z => z ? z.color : LOAD_REF);
-  const dotRadii  = zones.map(z => z ? z.radius : 2);
 
   // Ratio leads, the way the 7-Day Acute EP note beside it reads.
   const noteEl = document.getElementById('garminload-note');
@@ -1998,7 +1991,7 @@ function renderGarminLoad() {
 
   const datasets = [{
     label: 'Acute Load', data: acute, borderColor: LOAD_IN, borderWidth: 2,
-    pointRadius: dotRadii, pointHoverRadius: 5,
+    pointRadius: LOAD_DOT_R, pointHoverRadius: LOAD_DOT_R + 2,
     pointBackgroundColor: dotColors, pointBorderColor: dotColors,
     spanGaps: false, fill: false, tension: 0.25, order: 1,
   }];
@@ -2405,9 +2398,8 @@ const glossOverlays = () => {
         at × ${ACWR_SPIKE}.</dd>
       <dt>Dots — Acute ÷ Chronic</dt>
       <dd>${sw(LOAD_IN, '●')} ${ACWR_LO}–${ACWR_HI} in band ·
-        ${sw(LOAD_ORANGE, '●', ';font-size:14px')} under ${ACWR_LO} or over ${ACWR_HI} ·
-        ${sw(LOAD_RED, '●', ';font-size:16px')} over ${ACWR_SPIKE}.
-        Larger dots are further out.</dd>
+        ${sw(LOAD_ORANGE, '●')} under ${ACWR_LO} or over ${ACWR_HI} ·
+        ${sw(LOAD_RED, '●')} over ${ACWR_SPIKE}</dd>
       <dt>${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')} Background</dt>
       <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>${glossOverlays()}
     </dl>`;
@@ -2433,9 +2425,8 @@ const glossOverlays = () => {
       <dt>${sw(LOAD_IN, '━●')} Acute Load</dt>
       <dd>Each dot is coloured by that day's Load Ratio, Acute ÷ Chronic:<br>
         ${sw(LOAD_IN, '●')} ${lo}–${hi} in band ·
-        ${sw(LOAD_ORANGE, '●', ';font-size:14px')} under ${lo} or over ${hi} ·
-        ${sw(LOAD_RED, '●', ';font-size:16px')} over ${red}.
-        Larger dots are further out.</dd>
+        ${sw(LOAD_ORANGE, '●')} under ${lo} or over ${hi} ·
+        ${sw(LOAD_RED, '●')} over ${red}</dd>
       <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Chronic band</dt>
       <dd>Chronic Load × ${lo} to × ${hi}, the loads where Load Ratio (ACWR) is ${lo}–${hi}.
         Above it is a spike, below it a drop in load.</dd>
