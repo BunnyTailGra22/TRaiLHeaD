@@ -173,8 +173,15 @@ same Excellent → Good → Fair → Poor order.
 2. Progressive Overload | Garmin 7-Day Acute Load
 3. Recent 8 Weeks — Load Summary *(full width)*
 4. Distribution by Category | 專項訓練 Seasonality
-5. 專項訓練 Long Runs *(full width)* — the >20 km bubbles above it, as a table
-6. Course Heatmap, Slope % vs. EP *(full width)* — a static PNG, not a canvas
+5. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
+   table, beside a static PNG of the route plan (not a canvas)
+
+Row 5 is sized by the figure, not by a `.chart-box`: the square PNG sets the row height
+and the Long Runs card stretches to match, its table scrolling inside a `.longrun-fill`
+box that takes whatever height is left under the header. The Activity column absorbs the
+width the other nine columns leave and ellipsizes the rest (full name on hover). At
+1440px the table fits its half without scrolling sideways; narrower than that it scrolls
+inside the card.
 
 The two load charts are paired in row 2 because they are two readings of the same thing:
 a ratio against your own preparation built from EP, and Garmin's own ratio against its
@@ -231,7 +238,7 @@ note names it (`chronic … (4 wk)`) so the constant stays visible.
 
 | Breakpoint | Behaviour |
 |---|---|
-| ≤ 1200px | stat grids **inside** a `.two-col` drop to 2×2 — 4 across in a half-width column crushes to ~110px per card |
+| ≤ 1200px | stat grids **inside** a `.two-col` drop to 2×2 — 4 across in a half-width column crushes to ~110px per card; the Long Runs \| Course Heatmap row stacks, and the table goes back to a 440px cap |
 | ≤ 900px | `.two-col` and `.grid-2x2` collapse to one column; all stat grids 2×2; chart heights reduced |
 | ≤ 600px | `isPhone()` — smaller fonts, fewer axis ticks, legends move to the bottom, some point radii shrink |
 

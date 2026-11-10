@@ -232,10 +232,20 @@ main { padding: 20px 24px; }
   border: 1px solid var(--border); border-radius: 10px; }
 /* Long-run log: can run to dozens of rows, so cap the height and pin the header. */
 .longrun-scroll { max-height: 440px; overflow: auto; }
-.longrun-scroll .load-table { min-width: 820px; }
+.longrun-scroll .load-table { min-width: 600px; }
+.longrun-scroll .load-table th, .longrun-scroll .load-table td { padding-left: 8px; padding-right: 8px; }
 .longrun-scroll .load-table thead th { position: sticky; top: 0; background: var(--card); z-index: 1; }
 .load-table th.num, .load-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
-.load-table td.lr-name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+/* Activity absorbs whatever width the other nine columns leave and ellipsizes the rest;
+   the full name is on the cell's title. The table's min-width keeps it from vanishing. */
+.load-table td.lr-name { width: 100%; max-width: 1px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Long Runs | Course Heatmap row. The square figure sets the row height; the table card
+   stretches to match and its scroll box fills what is left under the header, so the two
+   cards end level however many sessions there are. */
+.lr-pair > .chart-card { display: flex; flex-direction: column; }
+.lr-pair .longrun-fill { position: relative; flex: 1 1 auto; min-height: 320px; }
+.lr-pair .longrun-fill > .longrun-scroll { position: absolute; inset: 0; max-height: none; }
 
 /* EMPTY */
 .empty { text-align: center; padding: 40px; color: var(--muted); }
@@ -254,6 +264,11 @@ main { padding: 20px 24px; }
    one lands at ~110px per card and the labels crush. Go 2×2 inside two-col only. */
 @media (max-width: 1200px) {
   .two-col .bio-stat-grid { grid-template-columns: repeat(2, 1fr); }
+  /* A 10-column table and a 1600px figure both crush in a ~500px column: stack them,
+     and the table goes back to its own capped height. */
+  .lr-pair { grid-template-columns: 1fr; }
+  .lr-pair .longrun-fill { min-height: 0; }
+  .lr-pair .longrun-fill > .longrun-scroll { position: static; max-height: 440px; }
 }
 
 /* ── TABLET (≤ 900px) ──────────────────────────────────────────────────── */
@@ -553,18 +568,23 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 5: every >20 km session the Seasonality chart plots, newest first -->
+  <!-- ROW 5: Long Runs | Course Heatmap. The square figure sets the row height and the
+       table fills it, scrolling inside its own card. Stacks again at ≤ 1200px. -->
+  <div class="two-col lr-pair">
+  <!-- every >20 km session the Seasonality chart plots, newest first -->
   <div class="chart-card">
     <div class="chart-header">
       <div class="section-title" style="margin:0">專項訓練 Long Runs — sessions over 20 km</div>
       <div id="longrun-note" style="font-size:11px;color:var(--muted)"></div>
     </div>
-    <div class="table-scroll longrun-scroll">
-      <div id="longrun-table-wrap"><div class="empty">No data loaded.</div></div>
+    <div class="longrun-fill">
+      <div class="table-scroll longrun-scroll">
+        <div id="longrun-table-wrap"><div class="empty">No data loaded.</div></div>
+      </div>
     </div>
   </div>
 
-  <!-- ROW 6: static route-plan reference. This one is NOT live sheet data — it is a
+  <!-- static route-plan reference. This one is NOT live sheet data — it is a
        rendered PNG of the Notion route table, so it is labelled as such in the header. -->
   <div class="chart-card">
     <div class="chart-header">
@@ -579,6 +599,7 @@ main { padding: 20px 24px; }
            alt="Course Heatmap: slope % against EP, colour = total ascent, bubble size = distance, dashed lines = equal-distance guides">
     </a>
   </div>
+  </div><!-- /ROW 5 -->
 
   </div><!-- ══ /TRAINING TAB ══ -->
 
