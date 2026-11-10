@@ -245,6 +245,19 @@ statistics.
 Table of the last 8 ISO weeks: EP, distance, elevation, hours, session count, EPH, and
 the road/trail split as a percentage of that week's EP.
 
+### Weekly Load — EP per week
+The table's weekly EP as stacked road / trail bars, scoped 8 wk, 13 wk, 2 qtr (26),
+3 qtr (39) or 1 yr (52). Same week buckets as the table (`isoWeek`), so a row there and a
+bar here always carry the same EP — but every calendar week from the first session to
+today gets a bar, and a week with no runs is a real 0 rather than skipped, so the bars sit
+on an even time axis. Labels are each bucket's first day.
+
+The dashed grey line is the trailing **4-week average** of weekly EP — the same 4 weeks
+as Chronic Load — computed over full history and then sliced, so it is warm at the left
+edge of every scope. The last bar is the current week, still in progress, and is drawn
+faded so a partial week is not read as a drop. The header gives the average over the
+scope's complete weeks and the scope's peak week.
+
 ---
 
 ## Recovery tab

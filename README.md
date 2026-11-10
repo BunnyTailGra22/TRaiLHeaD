@@ -42,6 +42,7 @@ same render path as real data.
 | Cumulative EP | Monthly EP, road vs trail |
 | Progressive Overload — Acute EP for stimulation | 7-Day Acute Load vs the ceiling |
 | Recent 8 Weeks load table (full width) | |
+| Weekly Load — the table's weekly EP as a chart, 8 wk to 1 yr (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km (full width) | |
 | Course Heatmap — Slope % vs. EP, a static reference figure (full width) | |

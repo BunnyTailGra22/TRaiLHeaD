@@ -148,7 +148,7 @@ main { padding: 20px 24px; }
 #cumul-box, #monthly-box, #box-box, #focus-box { height: 280px; }
 /* The two load charts are paired and BOTH now carry a shape key above the plot, so
    they give back the same height and their plot areas stay level with each other. */
-#rolling-box, #acuteceil-box { height: 260px; }
+#rolling-box, #acuteceil-box, #weekly-box { height: 260px; }
 /* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
    its chart, so bio-box gets that height back to keep the two plot areas level. */
 #bio-box   { height: 330px; }
@@ -238,7 +238,7 @@ main { padding: 20px 24px; }
   .config-grid   { grid-template-columns: 1fr; }
   .config-cols   { grid-template-columns: repeat(2, 1fr); }
   .grid-2x2 .chart-box { height: 200px; }
-  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 240px; }
+  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box, #weekly-box { height: 240px; }
   #bio-box   { height: 240px; }
   #vitals-box { height: 260px; }
 }
@@ -263,7 +263,7 @@ main { padding: 20px 24px; }
   .chart-card { padding: 14px; }
   .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .grid-2x2 .chart-box { height: 180px; }
-  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 220px; }
+  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box, #weekly-box { height: 220px; }
   #bio-box   { height: 220px; }
   #vitals-box { height: 240px; }
 
@@ -491,6 +491,24 @@ main { padding: 20px 24px; }
     <div class="table-scroll">
       <div id="load-table-wrap"><div class="empty">No data loaded.</div></div>
     </div>
+  </div>
+
+  <!-- ROW 3b: the table's weekly EP as a chart, over a longer view -->
+  <div class="chart-card">
+    <div class="chart-header">
+      <div class="section-title" style="margin:0">Weekly Load — EP per week</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div id="weekly-note" style="font-size:11px;color:var(--muted)"></div>
+        <div class="range-pills" id="weekly-scope-pills">
+          <div class="rpill active" data-weeks="8">8 wk</div>
+          <div class="rpill" data-weeks="13">13 wk</div>
+          <div class="rpill" data-weeks="26">2 qtr</div>
+          <div class="rpill" data-weeks="39">3 qtr</div>
+          <div class="rpill" data-weeks="52">1 yr</div>
+        </div>
+      </div>
+    </div>
+    <div class="chart-box" id="weekly-box"><canvas id="weekly-chart"></canvas></div>
   </div>
 
   <!-- ROW 4: Distribution by Category | 專項訓練 Seasonality -->
@@ -730,7 +748,7 @@ const TH = () => {
   const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   return { text:v('--text'), muted:v('--muted'), border:v('--border'),
            card:v('--card'), bg:v('--bg'), grid:v('--grid'), band:v('--band'),
-           tipBg:v('--tip-bg'), tipTitle:v('--tip-title'),
+           tipBg:v('--tip-bg'), tipTitle:v('--tip-title'), road:v('--road'), trail:v('--trail'),
            recovery:v('--shade-recovery'), strained:v('--shade-strained') };
 };
 const rgba = (hex, a) => {
@@ -1228,6 +1246,7 @@ function renderAll(sessions, sleepMap) {
   renderFocusChart(sessions);   // running activities only
   renderBoxChart(sessions);
   renderLoadTable(sessions);
+  renderWeeklyLoad(sessions);
   renderLongRunTable(sessions);
   renderHrvStatus(sleepMap);
   renderVitals(sleepMap);
@@ -1514,8 +1533,8 @@ function renderMonthlyChart(sessions, year) {
   _monthlyChart = new Chart(ctx, {
     type: 'bar',
     data: { labels: MONTHS, datasets: [
-      { label:'Road EP',  data:roadEP,  backgroundColor:'rgba(95,125,140,0.92)', borderRadius:3, stack:'ep' },
-      { label:'Trail EP', data:trailEP, backgroundColor:'rgba(138,154,91,0.92)', borderRadius:3, stack:'ep' },
+      { label:'Road EP',  data:roadEP,  backgroundColor:rgba(TH().road, 0.92),  borderRadius:3, stack:'ep' },
+      { label:'Trail EP', data:trailEP, backgroundColor:rgba(TH().trail, 0.92), borderRadius:3, stack:'ep' },
     ]},
     options: chartOpts({ stacked:true, yLabel:'EP', yStep:50 })
   });
@@ -1915,6 +1934,95 @@ function renderLoadTable(sessions) {
   });
   wrap.innerHTML = html + '</tbody></table>';
 }
+
+// ── WEEKLY LOAD ───────────────────────────────────────────────────────────────
+// The load table's weekly EP as stacked road/trail bars. Same week buckets as the table
+// (isoWeek), but every calendar week up to today is kept — a week with no runs is a real
+// 0, not skipped — so the bars sit on an even time axis.
+let _weeklyChart = null;
+let _weeklyWeeks = 8;           // scope in weeks (8 / 13 / 26 / 39 / 52)
+const WEEKLY_AVG_WEEKS = 4;     // trailing average, same 4 weeks as Chronic Load
+
+function weeklyLoadSeries(sessions) {
+  if (!sessions.length) return [];
+  const byWeek = {};
+  sessions.forEach(s => {
+    const w = byWeek[s.week] || (byWeek[s.week] = { road:0, trail:0 });
+    w[s.type] += s.ep;
+  });
+  // Walk the days so an empty week still gets its bucket, dated from its first day
+  const out = [], seen = new Set(), f = sessions[0].date, end = new Date();
+  for (const d = new Date(f.getFullYear(), f.getMonth(), f.getDate()); d <= end; d.setDate(d.getDate() + 1)) {
+    const k = isoWeek(d);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const w = byWeek[k] || { road:0, trail:0 };
+    out.push({ week:k, start:new Date(d), road:w.road, trail:w.trail, ep:w.road + w.trail });
+  }
+  // Over full history, then sliced — so the average is already warm at the left edge
+  out.forEach((w, i) => {
+    if (i < WEEKLY_AVG_WEEKS - 1) { w.avg = null; return; }
+    w.avg = out.slice(i - WEEKLY_AVG_WEEKS + 1, i + 1).reduce((a, x) => a + x.ep, 0) / WEEKLY_AVG_WEEKS;
+  });
+  return out;
+}
+
+function renderWeeklyLoad(sessions) {
+  const rows = weeklyLoadSeries(sessions).slice(-_weeklyWeeks);
+  const noteEl = document.getElementById('weekly-note');
+  if (!rows.length) { if (noteEl) noteEl.textContent = ''; return; }
+  const t = TH(), phone = isPhone(), last = rows.length - 1;   // last = this week, still in progress
+  const md = d => d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+
+  if (noteEl) {
+    const done = rows.slice(0, last), peak = rows.reduce((a, r) => r.ep > a.ep ? r : a);
+    const avg = done.length ? done.reduce((a, r) => a + r.ep, 0) / done.length : null;
+    noteEl.textContent = (avg != null ? `avg ${avg.toFixed(1)} EP/wk · ` : '')
+      + `peak ${peak.ep.toFixed(1)} (${md(peak.start)}) · faded bar = this week so far`;
+  }
+
+  // The current week is partial, so it is drawn faded rather than read as a drop
+  const fill = c => rows.map((_, i) => rgba(c, i === last ? 0.4 : 0.92));
+  const opts = chartOpts({ stacked:true, yLabel:'EP' });
+  opts.scales.x.ticks.maxTicksLimit = phone ? 6 : 13;
+  // `order` draws the average over the bars, but would also list it first — keep road, trail, avg
+  const byIndex = (a, b) => a.datasetIndex - b.datasetIndex;
+  opts.plugins.legend.labels.sort = byIndex;
+  opts.plugins.tooltip.itemSort = byIndex;
+  // Each dataset's own point style in the legend, so the average keys as a line, not a dot
+  delete opts.plugins.legend.labels.pointStyle;
+  opts.plugins.tooltip.callbacks = {
+    title: items => { const r = rows[items[0].dataIndex];
+      return `${r.week} · from ${r.start.toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })}`
+        + (items[0].dataIndex === last ? ' (so far)' : ''); },
+    footer: items => `Total ${rows[items[0].dataIndex].ep.toFixed(1)} EP`,
+  };
+  opts.plugins.tooltip.footerColor = t.text;
+
+  const ctx = document.getElementById('weekly-chart').getContext('2d');
+  if (_weeklyChart) _weeklyChart.destroy();
+  _weeklyChart = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: rows.map(r => md(r.start)), datasets:[
+      { label:'Road EP',  data:rows.map(r => +r.road.toFixed(1)),  backgroundColor:fill(t.road),  borderRadius:3, stack:'ep', order:1 },
+      { label:'Trail EP', data:rows.map(r => +r.trail.toFixed(1)), backgroundColor:fill(t.trail), borderRadius:3, stack:'ep', order:1 },
+      // Reference line, so grey like every other one; drawn over the bars (lower order)
+      { type:'line', label:`${WEEKLY_AVG_WEEKS}-wk avg`, data:rows.map(r => r.avg != null ? +r.avg.toFixed(1) : null),
+        borderColor:t.muted, backgroundColor:t.muted, borderWidth:2, borderDash:[5,4],
+        pointRadius:0, pointHoverRadius:4, pointStyle:'line', tension:0.3, spanGaps:true, stack:'avg', order:0 },
+    ]},
+    options: opts,
+  });
+}
+
+document.querySelectorAll('#weekly-scope-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#weekly-scope-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _weeklyWeeks = parseInt(p.dataset.weeks);
+    if (_sessions.length) renderWeeklyLoad(_sessions);
+  });
+});
 
 // ── 專項 LONG RUNS TABLE ──────────────────────────────────────────────────────
 // Every session the Seasonality chart plots with distance > 20 km. It uses the chart's
