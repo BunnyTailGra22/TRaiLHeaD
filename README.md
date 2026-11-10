@@ -43,8 +43,7 @@ same render path as real data.
 | 7-Day Acute EP | Garmin 7-Day Acute Load |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
-| 專項訓練 Long Runs — every session over 20 km (full width) | |
-| Course Heatmap — Slope % vs. EP, a static reference figure (full width) | |
+| 專項訓練 Long Runs — every session over 20 km | Course Heatmap — Slope % vs. EP, a static reference figure |
 
 **Recovery tab**
 
