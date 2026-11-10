@@ -35,6 +35,7 @@
   --hrv: #9c8196; --sleep: #6f97a6; --weight: #b39555; --spo2: #7f9d78;
   --rhr: #b3746e; --bb: #bd9a4f; --resp: #7e8aa2;
   --red: #b3746e; --yellow: #bd9a4f; --green: #7f9d78;
+  --vo2: #4f7396;                      /* VO₂ Max overlay — its own hue, off the load palette */
 }
 
 /* ── Dark theme ───────────────────────────────────────────────────────────────
@@ -55,6 +56,7 @@ html[data-theme="dark"] {
   --hrv: #bb9db3; --sleep: #8fb8c7; --weight: #d0b069; --spo2: #9bbb93;
   --rhr: #d08f88; --bb: #d7b465; --resp: #98a5bf;
   --red: #d08f88; --yellow: #d7b465; --green: #9bbb93;
+  --vo2: #8fb0d2;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { max-width: 100%; overflow-x: hidden; }
@@ -197,6 +199,32 @@ main { padding: 20px 24px; }
 .chart-card:hover .card-dl, .card-dl:focus { opacity: 1; }
 .card-dl:hover { background: var(--card2); color: var(--text); }
 @media (hover: none) { .card-dl { opacity: 1; } }   /* touch: no hover to reveal it */
+/* Chart glossary: an ⓘ beside the title opens a panel explaining the chart.
+   Kept outside .section-title so PNG export still writes the bare title. */
+.title-wrap { position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.info-btn { flex: none; width: 18px; height: 18px; padding: 0; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent; color: var(--muted);
+  font: italic 600 11px/1 Georgia, 'Times New Roman', serif; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; }
+.info-btn:hover, .info-btn[aria-expanded="true"] { background: var(--card2); color: var(--text); }
+.info-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.info-pop { display: none; position: absolute; top: calc(100% + 6px); left: 0; z-index: 50;
+  width: min(420px, calc(100vw - 56px)); padding: 12px 14px; border-radius: 10px;
+  background: var(--tip-bg); border: 1px solid var(--border); color: var(--text);
+  font-size: 12px; line-height: 1.5; }
+.info-pop.open { display: block; }
+.info-pop .info-head { font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.info-pop .info-lead { margin-bottom: 10px; }
+.info-pop dl { padding-top: 8px; border-top: 1px solid var(--border); }
+.info-pop dt { font-weight: 600; margin-top: 7px; }
+.info-pop dt:first-of-type { margin-top: 0; }
+.info-pop dd { color: var(--muted); }
+.info-pop i { font-style: normal; }
+/* Overlay toggles share the shape-key row, pushed to its right edge. */
+.overlay-pills { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.overlay-pills .mpill { padding: 2px 10px; min-height: 26px; font: inherit; font-size: 11px; }
+.shape-key [hidden] { display: none !important; }   /* .shape-key span would override it */
 
 /* Static reference figure — a PNG, not a canvas, so it scales by width alone. */
 .static-figure { display: block; max-width: 760px; margin: 0 auto; }
@@ -461,7 +489,11 @@ main { padding: 20px 24px; }
     <!-- hidden by the renderer when the TrainingLoad tab is missing -->
     <div class="chart-card" id="acuteceil-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">7-Day Acute Load — Against the Ceiling</div>
+        <div class="title-wrap">
+          <div class="section-title" style="margin:0">Garmin 7-Day Acute Load — Against the Ceiling</div>
+          <button type="button" class="info-btn" aria-label="About this chart" aria-expanded="false" aria-controls="acuteceil-info">i</button>
+          <div class="info-pop" id="acuteceil-info"></div>
+        </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="acuteceil-note" style="font-size:11px;color:var(--muted)"></div>
           <div class="range-pills" id="acuteceil-scope-pills">
@@ -477,6 +509,14 @@ main { padding: 20px 24px; }
         <span><i style="color:#b3746e">●</i> over</span>
         <span><i style="color:#b3746e;opacity:.5">▮</i> Garmin Recovery</span>
         <span><i style="color:#8f3f38;opacity:.7">▮</i> Strained</span>
+        <!-- filled from HRV_STATUS by the renderer, shown only while the HRV overlay is on -->
+        <span id="acuteceil-hrv-key" hidden></span>
+        <!-- optional overlays, off by default; each hides itself when its column is absent -->
+        <div class="overlay-pills" id="acuteceil-overlay-pills">
+          <span class="mpill-hint">Overlay</span>
+          <button type="button" class="mpill" data-overlay="vo2" aria-pressed="false">VO₂ Max</button>
+          <button type="button" class="mpill" data-overlay="hrv" aria-pressed="false">HRV Status</button>
+        </div>
       </div>
       <div class="chart-box" id="acuteceil-box"><canvas id="acuteceil-chart"></canvas></div>
     </div>
@@ -730,7 +770,7 @@ const TH = () => {
   const v = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
   return { text:v('--text'), muted:v('--muted'), border:v('--border'),
            card:v('--card'), bg:v('--bg'), grid:v('--grid'), band:v('--band'),
-           tipBg:v('--tip-bg'), tipTitle:v('--tip-title'),
+           tipBg:v('--tip-bg'), tipTitle:v('--tip-title'), vo2:v('--vo2'),
            recovery:v('--shade-recovery'), strained:v('--shade-strained') };
 };
 const rgba = (hex, a) => {
@@ -808,12 +848,20 @@ function exportCardPng(btn) {
 
   const title = (card.querySelector('.section-title') || {}).textContent || 'chart';
   const note  = (card.querySelector('.chart-header div[id$="-note"]') || {}).textContent || '';
+  // Text shrinks to fit the card rather than running off its edge. The bitmap is only
+  // as wide as the canvas, so on a 1x display a long title would otherwise clip.
+  const fitFont = (text, weight, px) => {
+    const maxW = out.width - PAD * 2.8;
+    let size = px;
+    do c.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    while (c.measureText(text).width > maxW && (size -= S / 2) >= 8 * S);
+  };
   c.fillStyle = t.text;
-  c.font = `600 ${15*S}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+  fitFont(title.trim(), 600, 15 * S);
   c.fillText(title.trim(), PAD * 1.4, TOP * 0.52);
   if (note) {
     c.fillStyle = t.muted;
-    c.font = `${11*S}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    fitFont(note.trim(), 400, 11 * S);
     c.fillText(note.trim(), PAD * 1.4, TOP * 0.82);
   }
   c.drawImage(src, PAD, TOP);
@@ -1105,6 +1153,9 @@ function toDateKey(v) {
 //
 // This tab UPSERTS rather than appends — Garmin revises recent rows for days
 // afterwards — so the last week of this series can move without any new training.
+//
+// VO₂ Max is read only for the optional overlay on that chart. The sheet writes the
+// header with a subscript two ('VO₂ Max'); the ASCII spelling is accepted as well.
 let _trainingLoad = [];
 function parseTrainingLoad(rows) {
   if (!rows || rows.length < 2) return [];
@@ -1112,6 +1163,7 @@ function parseTrainingLoad(rows) {
   const iDate = ci(h, 'Date'), iAcute = ci(h, 'Acute Load');
   const iChronic = ci(h, 'Chronic Load'), iRatio = ci(h, 'Load Ratio');
   const iStatus = ci(h, 'Training Status');
+  const iVo2 = ci(h, 'VO₂ Max') >= 0 ? ci(h, 'VO₂ Max') : ci(h, 'VO2 Max');
   if (iDate < 0 || iAcute < 0) return [];
   const out = [];
   for (let i = 1; i < rows.length; i++) {
@@ -1127,6 +1179,7 @@ function parseTrainingLoad(rows) {
       acute:   iAcute   >= 0 ? num(r[iAcute])   : null,
       chronic: iChronic >= 0 ? num(r[iChronic]) : null,
       ratio:   iRatio   >= 0 ? num(r[iRatio])   : null,
+      vo2:     iVo2     >= 0 ? num(r[iVo2])     : null,
       // Garmin suffixes a feedback-phrase index onto the status (STRAINED_4); the
       // family before the underscore is the part that means anything here.
       status: (iStatus >= 0 ? String(r[iStatus] || '') : '').trim().toUpperCase().split('_')[0],
@@ -1741,7 +1794,7 @@ function renderRollingChart(sessions) {
   });
 }
 
-// ── 7-DAY ACUTE LOAD vs CEILING ───────────────────────────────────────────────
+// ── GARMIN 7-DAY ACUTE LOAD vs CEILING ────────────────────────────────────────
 // Garmin's own Acute Load against the level above which its Recovery/Strained flag
 // has always followed. The ceiling is DERIVED, not a constant: it is the highest
 // acute load never followed by a flag within CEIL_LOOKAHEAD days. Deriving it keeps
@@ -1753,6 +1806,25 @@ let _acuteCeilWeeks = 8;                   // x-axis scope (4 / 8 / 13 / 26 wk)
 const CEIL_LOOKAHEAD = 14;                 // days a spike gets to produce a flag
 const CEIL_MIN_FLAGS = 3;                  // below this there is nothing to calibrate on
 const FLAG_STATES = ['RECOVERY', 'STRAINED'];
+
+// Chronic band — Garmin's own Chronic Load x 0.8 to x 1.2, which is exactly where its
+// Load Ratio (ACWR = Acute / Chronic) sits between 0.8 and 1.2. Garmin's two loads share
+// one unit, so the band goes straight onto the acute axis; Progressive Overload needs
+// its x7 rescale only because its acute is per day and its chronic per week. The upper
+// edge is 1.2 here against that chart's 1.3: this band is Garmin's ratio, not ours.
+const GARMIN_BAND_LO = 0.8;
+const GARMIN_BAND_HI = 1.2;
+
+// Optional overlays, both off by default and independent of each other. VO₂ Max is a
+// number, so it gets a right-hand axis; HRV Status is a category, so it gets a strip of
+// status markers along the top rather than a second scale it has no use for.
+const _acuteOverlay = { vo2: false, hrv: false };
+// Garmin reports VO₂ Max in 0.1 steps and it moved 1.4 points in seven months
+// (docs/PROGRESSION.md). Auto-scaling would stretch a single step across the plot, so
+// the right axis always spans at least this many ml/kg/min.
+const VO2_MIN_SPAN = 4;
+const HRV_STRIP_Y  = 0.955;   // strip height on a hidden 0–1 axis
+const HRV_HEADROOM = 0.14;    // extra room above the load data, as a share of its range
 
 // Highest acute load never followed by a flag inside the lookahead. null when the
 // history is too thin to support the claim — a missing rule, not a guessed one.
@@ -1774,6 +1846,29 @@ function computeLoadCeiling(tl) {
   return ceiling;
 }
 
+// HRV Status for the night logged on a TrainingLoad row's date, joined on the date key.
+// A day with no Sleep row returns null, and the strip leaves a gap there.
+const acuteHrvOf = d => {
+  const n = _sleepMap && _sleepMap[d.key];
+  return n && n.hrvStatus ? n.hrvStatus : null;
+};
+const prettyHrv = s => titleCase(String(s).trim().toUpperCase().replace(/_/g, ' '));
+const HRV_GLYPH = { circle: '●', rect: '■', triangle: '▲' };
+
+// Each overlay pill shows only when its column has data anywhere in history — a
+// missing column hides the pill rather than toggling onto an empty chart.
+function syncAcuteOverlayPills(have) {
+  const wrap = document.getElementById('acuteceil-overlay-pills');
+  if (!wrap) return;
+  wrap.hidden = !have.vo2 && !have.hrv;
+  wrap.querySelectorAll('.mpill').forEach(p => {
+    const k = p.dataset.overlay, on = !!(_acuteOverlay[k] && have[k]);
+    p.hidden = !have[k];
+    p.classList.toggle('active', on);
+    p.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+}
+
 function renderAcuteCeiling() {
   const card = document.getElementById('acuteceil-card');
   const tl = _trainingLoad;
@@ -1781,10 +1876,22 @@ function renderAcuteCeiling() {
   if (!tl.length) { if (card) card.style.display = 'none'; return; }
   if (card) card.style.display = '';
 
+  const phone   = isPhone();
   const ceiling = computeLoadCeiling(tl);
   const series = tl.slice(Math.max(0, tl.length - _acuteCeilWeeks * 7));
   const acute  = series.map(d => d.acute);
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+  // Null-safe: a row with no Chronic Load leaves a gap in the band, never an invented one.
+  const bandLo = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_LO);
+  const bandHi = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_HI);
+
+  const have = { vo2: tl.some(d => d.vo2 != null),
+                 hrv: Object.values(_sleepMap || {}).some(n => n.hrvStatus) };
+  syncAcuteOverlayPills(have);
+  const vo2InView = series.map(d => d.vo2).filter(v => v != null);
+  const hrvInView = series.map(acuteHrvOf);
+  const showVo2 = _acuteOverlay.vo2 && vo2InView.length > 0;
+  const showHrv = _acuteOverlay.hrv && have.hrv;
 
   const OVER = LOAD_OUT, UNDER = LOAD_IN;
   const dotColors = acute.map(v => (ceiling !== null && v !== null && v > ceiling) ? OVER : UNDER);
@@ -1797,6 +1904,17 @@ function renderAcuteCeiling() {
     noteEl.textContent = `acute ${t.acute === null ? '—' : t.acute.toFixed(0)} (7d)`
       + (ceiling === null ? ' · ceiling n/a' : ` · ceiling ${ceiling.toFixed(0)}`)
       + ` · ${crossings} crossing${crossings === 1 ? '' : 's'} in view`;
+  }
+
+  // HRV key in the shape-key row: only while the overlay is on, and only the statuses
+  // that actually appear in view, in HRV_STATUS order.
+  const hrvKey = document.getElementById('acuteceil-hrv-key');
+  if (hrvKey) {
+    const seen = new Set(hrvInView.filter(Boolean).map(s => hrvStatusStyle(s)));
+    hrvKey.hidden = !showHrv || !seen.size;
+    hrvKey.style.gap = '8px';
+    hrvKey.innerHTML = 'HRV' + HRV_STATUS.filter(c => seen.has(c)).map(c =>
+      `<span><i style="color:${c.color}">${HRV_GLYPH[c.shape]}</i> ${prettyHrv(c.key)}</span>`).join('');
   }
 
   const datasets = [{
@@ -1815,18 +1933,77 @@ function renderAcuteCeiling() {
       pointRadius: 0, pointHoverRadius: 0, fill: false, order: 2,
     });
   }
+  if (showVo2) {
+    const last = [...series].reverse().find(d => d.vo2 != null);
+    datasets.push({
+      label: `VO₂ Max ${last.vo2.toFixed(1)} · right axis`, data: series.map(d => d.vo2),
+      yAxisID: 'y1', borderColor: TH().vo2, backgroundColor: TH().vo2, borderWidth: 1.5,
+      stepped: true, pointRadius: 0, pointHoverRadius: 3, fill: false, spanGaps: false, order: 3,
+    });
+  }
+  // Band last in the legend and drawn first: an invisible upper bound, then the lower
+  // bound filled up to it — the same construction, grey and fill as the sweet-spot band
+  // on Progressive Overload, so a grey band means one thing across the pair.
+  datasets.push(
+    { label: 'upper', data: bandHi, borderColor: 'transparent', pointRadius: 0,
+      pointHoverRadius: 0, fill: false, tension: 0.25, order: 4, spanGaps: false },
+    { label: `Chronic Band (${GARMIN_BAND_LO}–${GARMIN_BAND_HI}×)`, data: bandLo,
+      borderColor: 'transparent', backgroundColor: TH().band, pointRadius: 0,
+      pointHoverRadius: 0, fill: '-1', tension: 0.25, order: 4, spanGaps: false },
+  );
+  if (showHrv) {
+    datasets.push({
+      label: 'HRV Status', data: hrvInView.map(s => s ? HRV_STRIP_Y : null), yAxisID: 'yHrv',
+      showLine: false, clip: false, order: 0,
+      pointStyle: hrvInView.map(s => hrvStatusShape(s)),
+      pointRadius: phone ? 3 : 3.5, pointHoverRadius: phone ? 4 : 5,
+      pointBackgroundColor: hrvInView.map(s => hrvStatusColor(s)),
+      pointBorderColor: hrvInView.map(s => hrvStatusColor(s)),
+    });
+  }
 
   const opts = chartOpts({ yLabel: 'Garmin load' });
+  // 'upper' is the band's invisible edge; the HRV strip is keyed in the shape-key row.
+  opts.plugins.legend.labels.filter = (item) => item.text !== 'upper' && item.text !== 'HRV Status';
+  if (showVo2) {
+    const lo = Math.min(...vo2InView), hi = Math.max(...vo2InView), mid = (lo + hi) / 2;
+    const half = Math.max((hi - lo) / 2 + 0.5, VO2_MIN_SPAN / 2);
+    const font = { size: phone ? 10 : 11 };
+    // Titled even on phones, so the right-hand side is never read by colour alone.
+    opts.scales.y1 = darkScale({ position: 'right', min: Math.floor(mid - half), max: Math.ceil(mid + half),
+      grid: { drawOnChartArea: false }, ticks: { color: TH().muted, font, stepSize: 1 },
+      title: { display: true, text: phone ? 'VO₂ Max' : 'VO₂ Max (ml/kg/min)', color: TH().muted, font } });
+  }
+  if (showHrv) {
+    // Room above the highest line for the strip to sit in. Top only: Chart.js `grace`
+    // pads both ends, which would drag the load axis down to zero for nothing.
+    const vals = [...acute, ...bandLo, ...bandHi, ceiling].filter(v => v != null);
+    if (vals.length) {
+      const top = Math.max(...vals), bottom = Math.min(...vals);
+      opts.scales.y.suggestedMax = top + (top - bottom) * HRV_HEADROOM;
+    }
+    opts.scales.yHrv = { display: false, min: 0, max: 1 };
+  }
   opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute Load';
   opts.plugins.tooltip.callbacks = {
     title: (items) => series[items[0].dataIndex].date
       .toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' }),
     label: (item) => 'Acute Load: ' + item.parsed.y.toFixed(0),
     afterBody: (items) => {
-      const d = series[items[0].dataIndex], out = [];
+      const i = items[0].dataIndex, d = series[i], out = [];
       if (d.chronic !== null) out.push('Chronic (28d): ' + d.chronic.toFixed(0));
-      if (d.ratio !== null)   out.push('Ratio: ' + d.ratio.toFixed(2));
-      if (d.status) out.push('Status: ' + d.status.charAt(0) + d.status.slice(1).toLowerCase());
+      // Recomputed from the two loads. Garmin's own Load Ratio column is TRUNCATED to one
+      // decimal (308 of 313 rows match a floor), so a 1.29 day reads "1.2" while sitting
+      // visibly above the 1.2x band edge. Two decimals of Acute / Chronic always agree.
+      if (d.acute !== null && d.chronic) out.push('Load Ratio (ACWR): ' + (d.acute / d.chronic).toFixed(2));
+      else if (d.ratio !== null)        out.push('Load Ratio (ACWR): ' + d.ratio);
+      if (bandLo[i] !== null && d.acute !== null) {
+        const pos = d.acute > bandHi[i] ? '↑ above' : d.acute < bandLo[i] ? '↓ below' : '✓ within';
+        out.push(`Chronic band: ${bandLo[i].toFixed(0)}–${bandHi[i].toFixed(0)} · ${pos}`);
+      }
+      if (d.status) out.push('Status: ' + titleCase(d.status));
+      if (showVo2 && d.vo2 != null) out.push('VO₂ Max: ' + d.vo2.toFixed(1));
+      if (showHrv && acuteHrvOf(d)) out.push('HRV Status: ' + prettyHrv(acuteHrvOf(d)));
       if (ceiling !== null && d.acute !== null && d.acute > ceiling) out.push('⚠ Above the ceiling');
       return out;
     },
@@ -2142,6 +2319,93 @@ document.querySelectorAll('#acuteceil-scope-pills .rpill').forEach(p => {
     renderAcuteCeiling();
   });
 });
+
+// Acute-vs-ceiling overlays — VO₂ Max and HRV Status toggle independently, both off
+// until asked for, and survive a scope change because the state lives in _acuteOverlay.
+document.querySelectorAll('#acuteceil-overlay-pills .mpill').forEach(p => {
+  p.addEventListener('click', () => {
+    const k = p.dataset.overlay;
+    _acuteOverlay[k] = !_acuteOverlay[k];
+    renderAcuteCeiling();
+  });
+});
+
+// ── CHART GLOSSARY (ⓘ) ────────────────────────────────────────────────────────
+// The panel beside the Garmin 7-Day Acute Load title. The lead paragraph is the
+// owner's own wording, kept verbatim. The definitions under it are built from the
+// constants the chart draws with, so a changed threshold can't leave its explanation
+// behind, and the swatches copy the chart's own marks.
+(function buildAcuteCeilGlossary() {
+  const el = document.getElementById('acuteceil-info');
+  if (!el) return;
+  const sw = (c, ch, extra = '') => `<i style="color:${c}${extra}">${ch}</i>`;
+  // Box-drawing dashes fall back to a plain hyphen in some fonts; a bordered span doesn't
+  const rule = (c, style, w = 2) =>
+    `<i style="display:inline-block;width:16px;vertical-align:middle;border-top:${w}px ${style} ${c}"></i>`;
+  const hrvKeys = HRV_STATUS.filter(c => c.key !== 'POOR')
+    .map(c => `${sw(c.color, HRV_GLYPH[c.shape])} ${prettyHrv(c.key)}`).join(' · ');
+  const lo = GARMIN_BAND_LO, hi = GARMIN_BAND_HI;
+  el.innerHTML = `
+    <div class="info-head">About this chart</div>
+    <p class="info-lead">Garmin Acute Training Load is a primary indicator of short-term
+      fatigue. Based on the Excess Post-Exercise Oxygen Consumption (EPOC) and Exponentially
+      Weighted Moving Average, calculate Load Ratio (ACWR) as Acute Load/Chronic Load. It
+      compares short-term fatigue (Acute, ~7 days) against long-term fitness/habituation
+      (Chronic, ~28 days) to ensure safe training volume progression.</p>
+    <dl>
+      <dt>${sw(LOAD_IN, '━●')} Acute Load</dt>
+      <dd>${sw(LOAD_IN, '●')} at or under the ceiling ·
+        ${sw(LOAD_OUT, '●', ';font-size:15px')} larger, above it</dd>
+      <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Chronic band</dt>
+      <dd>Chronic Load × ${lo} to × ${hi}. Acute inside the band means Load Ratio (ACWR)
+        is ${lo}–${hi}; above it is a spike, below it a drop in load.</dd>
+      <dt>${rule(LOAD_REF, 'dashed', 1.5)} Ceiling</dt>
+      <dd>The highest acute load never followed by a Garmin Recovery or Strained flag
+        within ${CEIL_LOOKAHEAD} days. Derived from all history, and not drawn until
+        ${CEIL_MIN_FLAGS} days have been flagged.</dd>
+      <dt>${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')} Background</dt>
+      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
+      <dt>${rule('var(--vo2)', 'solid', 2)} VO₂ Max overlay</dt>
+      <dd>Garmin's estimate in ml/kg/min, on the right axis. It moves in 0.1 steps, so the
+        axis always spans at least ${VO2_MIN_SPAN} to keep one step from looking like a trend.</dd>
+      <dt>HRV Status overlay</dt>
+      <dd>Garmin's nightly status from the Sleep tab, as a strip along the top:
+        ${hrvKeys}.</dd>
+    </dl>`;
+})();
+
+// Hover opens on a pointer device; a click or tap pins it open. Escape, a second click
+// or a tap anywhere else closes it.
+(function wireInfoPopovers() {
+  const canHover = () => window.matchMedia && matchMedia('(hover: hover)').matches;
+  const all = [];
+  document.querySelectorAll('.info-btn').forEach(btn => {
+    const pop = document.getElementById(btn.getAttribute('aria-controls'));
+    if (!pop) return;
+    let pinned = false, timer = null;
+    const show = on => {
+      clearTimeout(timer);
+      pop.classList.toggle('open', on);
+      btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (!on) pinned = false;
+    };
+    btn.addEventListener('click', e => { e.stopPropagation(); pinned = !pinned; show(pinned); });
+    [btn, pop].forEach(el => {
+      el.addEventListener('mouseenter', () => { if (canHover()) show(true); });
+      // a short grace period, so the pointer can cross from the button into the panel
+      el.addEventListener('mouseleave', () => {
+        if (canHover() && !pinned) timer = setTimeout(() => show(false), 150);
+      });
+    });
+    all.push({ btn, pop, show });
+  });
+  document.addEventListener('click', e => all.forEach(x => {
+    if (!x.pop.contains(e.target) && e.target !== x.btn) x.show(false);
+  }));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') all.forEach(x => x.show(false));
+  });
+})();
 
 // HRV status scope pills (4 / 8 / 13 / 26 wk)
 document.querySelectorAll('#hrv-scope-pills .rpill').forEach(p => {
