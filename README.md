@@ -64,12 +64,12 @@ Two metrics carry most of the weight:
   100% of its EP and fades out continuously over roughly 7 days (×6/7 per day, so steady
   training reads as its 7-day total). **Chronic EP** is a 28-day exponentially weighted
   moving average of daily EP, read in EP per week so the ratio centres on 1.0. A grey band
-  spans 0.8–1.5× chronic; the Chronic EP line itself is an overlay, hidden by default. The two curves are computed independently, so the ratio is a
+  spans 0.8–1.2× chronic; the Chronic EP line itself is an overlay, hidden by default. The two curves are computed independently, so the ratio is a
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
 - **Garmin 7-Day Acute Load** is the second opinion, in the row below it — Garmin's own Acute Load
-  against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.5, i.e. Load Ratio
-  0.8–1.5).
+  against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
+  0.8–1.2).
 
 Both charts colour each dot by that day's ratio the same way — green 0.8–1.2×, orange under
 0.8× or over 1.2×, red over 1.5×, all one size in a view (smaller in the 1-year view) —
