@@ -55,7 +55,7 @@ Two status families, because they answer different questions.
 green `#7f9d78` · gold `#bd9a4f` · rose `#b3746e` · clay `#a5602a`.
 
 **Load charts.** Both grade their dots by a ratio against chronic load, on the same three
-zones: green in band 0.8–1.2 · orange `LOAD_ORANGE` `#c08552` under 0.8 or over 1.2 · red
+zones: green 0.8–1.2 · orange `LOAD_ORANGE` `#c08552` under 0.8 or over 1.2 · red
 `LOAD_RED` `#ab5a52` over 1.5 — the dashboard's existing orange and red, from HRV
 Unbalanced and Low. 7-Day Acute EP scores its own EP ratio and Garmin 7-Day Acute Load
 scores Garmin's Load Ratio, but colours, dot size and wording are shared constants, so
@@ -64,14 +64,16 @@ mean "attention":
 
 | Role | Token | Colour |
 |---|---|---|
-| In band | `LOAD_IN` | green `#7f9d78` |
+| In range (0.8–1.2×) | `LOAD_IN` | green `#7f9d78` |
 | Under 0.8× or over 1.2× | `LOAD_ORANGE` | orange `#c08552` |
 | Over 1.5× | `LOAD_RED` | red `#ab5a52` |
 | Reference line, band fill, not-scored dot | `LOAD_REF` | grey `#9d9488` |
 
-On both load charts, *above* and *below* the band share orange though they mean
-opposite things — spike risk and detraining. The tooltip names which, and the dot's
-position against the band says it at a glance. Every dot is one size (`LOAD_DOT_R` 3);
+The grey band runs 0.8–1.2× chronic — exactly the green range — so orange sits just
+outside it on either side and red is further above it, past 1.5×. Orange above 1.2 and
+under 0.8 means opposite things — spike risk and detraining. The tooltip names which, and the dot's
+position against the band says it at a glance. Every dot in a view is one size
+(`LOAD_DOT_R` 3, or 1.5 in the dense 1-year view);
 green and orange share a lightness, so position against the band is what carries in / out
 of range in greyscale and for colour-blind eyes. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
@@ -172,22 +174,25 @@ same Excellent → Good → Fair → Poor order.
 
 **Training tab** — Year-over-Year summary cards, then:
 1. Cumulative EP | Monthly EP
-2. 7-Day Acute EP | Garmin 7-Day Acute Load
-3. Recent 8 Weeks — Load Summary *(full width)*
-4. Distribution by Category | 專項訓練 Seasonality
-5. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
+2. 7-Day Acute EP *(full width)*
+3. Garmin 7-Day Acute Load *(full width)*
+4. Recent 8 Weeks — Load Summary *(full width)*
+5. Distribution by Category | 專項訓練 Seasonality
+6. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
    table, beside a static PNG of the route plan (not a canvas)
 
-Row 5 is sized by the figure, not by a `.chart-box`: the square PNG sets the row height
+Row 6 is sized by the figure, not by a `.chart-box`: the square PNG sets the row height
 and the Long Runs card stretches to match, its table scrolling inside a `.longrun-fill`
 box that takes whatever height is left under the header. The Activity column absorbs the
 width the other nine columns leave and ellipsizes the rest (full name on hover). At
 1440px the table fits its half without scrolling sideways; narrower than that it scrolls
 inside the card.
 
-The two load charts are paired in row 2 because they are two readings of the same thing:
-a ratio against your own preparation built from EP, and Garmin's own ratio against its
-own chronic load.
+The two load charts sit one above the other, each with a full-width row, because they are
+two readings of the same thing — a ratio against your own preparation built from EP, and
+Garmin's own ratio against its own chronic load — and the 1-year scope needs the width.
+Both plots share one height (`#rolling-box`, `#garminload-box`: 300px, then 240px and
+220px at the tablet and phone breakpoints), so the two read at the same size.
 
 **Recovery tab** — two paired rows, then one full-width card:
 1. Sleep Duration → Score | Sleep Consistency
@@ -225,12 +230,13 @@ Chart.js manages only the bitmap and DPR. Paired cards get their heights tuned s
   derived series are calculated over full history and sliced afterwards. The two load
   charts offer 4 wk · 8 wk · 13 wk · 1 year (28 / 56 / 91 / 365 days); the Recovery charts
   keep 26 wk as their longest.
-- `.mpill` — **metric**. Changes which series the chart plots. On both load charts the
-  `.overlay-pills` toggles (VO₂ Max, HRV Status, plus Chronic EP on 7-Day Acute EP — a
-  reference line, so it is grey and opt-in like the rest) sit at the right end of the shape-key
-  row: each adds a series, off by default, independent of the other and of the other
-  chart's, and hidden when its column has no data. The HRV key joins the shape-key only
-  while that overlay is on. Both cards carry the same rows, so their plot areas stay level.
+- `.mpill` — **metric**. Changes which series the chart plots.
+
+On both load charts the optional series — the chronic line (Chronic EP / Chronic Load, grey
+like every reference), VO₂ Max and HRV Status — are **Chart.js legend entries**, not pills:
+the same show/hide as Acute and the Chronic band, hidden (struck through) by default, and
+absent when their column has no data. The HRV key joins the shape-key row only while that
+overlay is showing.
 
 An **ⓘ** beside a chart title opens a glossary panel (`.info-btn` + `.info-pop`): hover on a
 pointer device, tap or click to pin, Escape or a click elsewhere to close. It sits outside

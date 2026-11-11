@@ -40,7 +40,8 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| 7-Day Acute EP | Garmin 7-Day Acute Load |
+| 7-Day Acute EP (full width) | |
+| Garmin 7-Day Acute Load (full width) | |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km | Course Heatmap — Slope % vs. EP, a static reference figure |
@@ -63,17 +64,18 @@ Two metrics carry most of the weight:
   100% of its EP and fades out continuously over roughly 7 days (×6/7 per day, so steady
   training reads as its 7-day total). **Chronic EP** is a 28-day exponentially weighted
   moving average of daily EP, read in EP per week so the ratio centres on 1.0. A grey band
-  spans 0.8–1.2× chronic; the Chronic EP line itself is an overlay, off by default. The two curves are computed independently, so the ratio is a
+  spans 0.8–1.2× chronic; the Chronic EP line itself is an overlay, hidden by default. The two curves are computed independently, so the ratio is a
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
-- **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
+- **Garmin 7-Day Acute Load** is the second opinion, in the row below it — Garmin's own Acute Load
   against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
   0.8–1.2).
 
-Both charts colour each dot by that day's ratio the same way — green in band, orange under
-0.8× or over 1.2×, red over 1.5×, all one size — with every reference line grey. Neither
-card carries a static key: the zones and Garmin's washes are in the ⓘ panel and tooltip. On both, **VO₂ Max** and **HRV Status** can be overlaid from pills above the
-chart, off by default, the scope runs from 4 wk to 1 year, and an ⓘ beside the title
+Both charts colour each dot by that day's ratio the same way — green 0.8–1.2×, orange under
+0.8× or over 1.2×, red over 1.5×, all one size in a view (smaller in the 1-year view) —
+with every reference line grey. Neither
+card carries a static key: the zones and Garmin's washes are in the ⓘ panel and tooltip. On both, the chronic line (**Chronic EP** / **Chronic Load**), **VO₂ Max** and **HRV Status** are
+legend entries like Acute and the Chronic band — hidden (struck through) by default, a click shows them — the scope runs from 4 wk to 1 year, and an ⓘ beside the title
 explains the model. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
 See [docs/DESIGN.md](docs/DESIGN.md).
