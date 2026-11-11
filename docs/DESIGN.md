@@ -173,22 +173,25 @@ same Excellent → Good → Fair → Poor order.
 
 **Training tab** — Year-over-Year summary cards, then:
 1. Cumulative EP | Monthly EP
-2. 7-Day Acute EP | Garmin 7-Day Acute Load
-3. Recent 8 Weeks — Load Summary *(full width)*
-4. Distribution by Category | 專項訓練 Seasonality
-5. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
+2. 7-Day Acute EP *(full width)*
+3. Garmin 7-Day Acute Load *(full width)*
+4. Recent 8 Weeks — Load Summary *(full width)*
+5. Distribution by Category | 專項訓練 Seasonality
+6. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
    table, beside a static PNG of the route plan (not a canvas)
 
-Row 5 is sized by the figure, not by a `.chart-box`: the square PNG sets the row height
+Row 6 is sized by the figure, not by a `.chart-box`: the square PNG sets the row height
 and the Long Runs card stretches to match, its table scrolling inside a `.longrun-fill`
 box that takes whatever height is left under the header. The Activity column absorbs the
 width the other nine columns leave and ellipsizes the rest (full name on hover). At
 1440px the table fits its half without scrolling sideways; narrower than that it scrolls
 inside the card.
 
-The two load charts are paired in row 2 because they are two readings of the same thing:
-a ratio against your own preparation built from EP, and Garmin's own ratio against its
-own chronic load.
+The two load charts sit one above the other, each with a full-width row, because they are
+two readings of the same thing — a ratio against your own preparation built from EP, and
+Garmin's own ratio against its own chronic load — and the 1-year scope needs the width.
+Both plots share one height (`#rolling-box`, `#garminload-box`: 300px, then 240px and
+220px at the tablet and phone breakpoints), so the two read at the same size.
 
 **Recovery tab** — two paired rows, then one full-width card:
 1. Sleep Duration → Score | Sleep Consistency
