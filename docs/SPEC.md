@@ -91,7 +91,7 @@ numerically, and the check worth re-running if either constant is ever changed.
 | Ratio | Reading | Colour | Meaning |
 |---|---|---|---|
 | > 1.5 | Over 1.5× | red `#ab5a52` | sharp spike against 28-day preparation |
-| > 1.2 – 1.5 | Over 1.2× | orange `#c08552` | load running ahead of preparation (upper part of the band) |
+| > 1.2 – 1.5 | Over 1.2× | orange `#c08552` | load running ahead of preparation (above the band) |
 | 0.8 – 1.2 | **In range** | green `#7f9d78` | load matched to preparation |
 | < 0.8 | Under 0.8× | orange `#c08552` | load dropping below preparation |
 | no chronic yet | not scored | grey `#9d9488` | fewer than 28 days of history |
@@ -109,9 +109,9 @@ The card carries **no static key**, like Garmin 7-Day Acute Load below it. The z
 the Recovery / Strained washes are defined in the ⓘ panel and named in the tooltip; the row
 under the header holds only the HRV key, while that overlay is showing.
 
-**Drawn reference.** The shaded Chronic band, `0.8 × chronic` to `1.5 × chronic`
-(`ACWR_LO` → `ACWR_SPIKE`), is the only reference drawn by default. Its top edge is where a
-dot turns red; green is the narrower 0.8–1.2 inside it, orange the 1.2–1.5 strip above. It rides with chronic, so every question the chart asks is
+**Drawn reference.** The shaded Chronic band, `0.8 × chronic` to `1.2 × chronic`
+(`ACWR_LO` → `ACWR_HI`), is the only reference drawn by default. It is exactly the green
+range: orange dots sit just outside it on either side, red ones past 1.5×. It rides with chronic, so every question the chart asks is
 "relative to your own recent preparation", never against a fixed target. There is no rule
 at 1.5×: the red dots carry that threshold on their own, as on Garmin 7-Day Acute Load.
 Chronic itself is a dashed grey line, but only as an **overlay** (below). Both use
@@ -121,7 +121,7 @@ Chronic itself is a dashed grey line, but only as an **overlay** (below). Both u
 ratio leads because it *is* the reading.
 
 **Tooltip** — Acute EP, Chronic EP, ACWR to two decimals, the band in EP/wk for that day,
-the zone (✓ in range · ↑ 1.2–1.5× · ↓ under 0.8× · ⚠ over 1.5× chronic), and the Garmin status if
+the zone (✓ in range, inside the band · ↑ 1.2–1.5×, above it · ↓ under 0.8×, below it · ⚠ over 1.5× chronic), and the Garmin status if
 the day was flagged; VO₂ Max and HRV Status join it while their overlays are on.
 
 **Overlays** — three legend entries, hidden by default and independent (see the Garmin
@@ -197,15 +197,15 @@ the same constants the chart draws with.
 **Chronic band** — Garmin's own `Chronic Load`, scaled:
 
 ```
-GARMIN_BAND_LO  = 0.8
-GARMIN_RED_OVER = 1.5
-band = Chronic × 0.8  →  Chronic × 1.5        ⇔  Load Ratio (Acute / Chronic) 0.8–1.5
+GARMIN_BAND_LO = 0.8
+GARMIN_BAND_HI = 1.2
+band = Chronic × 0.8  →  Chronic × 1.2        ⇔  Load Ratio (Acute / Chronic) 0.8–1.2
 ```
 
 Garmin's acute and chronic share one unit, so the band goes straight onto the acute axis —
 no ×7 rescale, which 7-Day Acute EP needs only because its chronic is a per-day EWMA. Both
-bands span 0.8–1.5 — top edge at the red threshold, green the 0.8–1.2 inside — but they are
-separate constants: this one is Garmin's ratio, that one
+bands span 0.8–1.2 — exactly the green range — but they are separate constants: this one is
+Garmin's ratio, that one
 this repo's. Same grey fill and invisible-upper-bound construction as the Chronic band on
 7-Day Acute EP, and a row with no Chronic Load leaves a gap rather than a guessed band.
 
@@ -245,7 +245,7 @@ latest row, in the same order as the 7-Day Acute EP note above it; `chronic n/a`
 when that row has no Chronic Load.
 
 **Tooltip** — Acute Load, Chronic (28d), Load Ratio (ACWR) to two decimals, the band's
-range for that day, the zone (✓ in range · ↑ 1.2–1.5× · ↓ under 0.8× · ⚠ over 1.5× chronic) and
+range for that day, the zone (✓ in range, inside the band · ↑ 1.2–1.5×, above it · ↓ under 0.8×, below it · ⚠ over 1.5× chronic) and
 Garmin's Training Status; VO₂ Max and HRV Status join it while their overlays are on.
 
 Garmin's Recovery and Strained stretches are painted as vertical washes behind the line by
