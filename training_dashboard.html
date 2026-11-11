@@ -485,12 +485,12 @@ main { padding: 20px 24px; }
         </div>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="overload-note" style="font-size:11px;color:var(--muted)"></div>
-          <!-- view scope only — the chronic window itself is fixed at 28 d -->
+          <!-- view scope only, in days — the chronic window itself is fixed at 28 d -->
           <div class="range-pills" id="overload-scope-pills">
-            <div class="rpill" data-weeks="4">4 wk</div>
-            <div class="rpill active" data-weeks="8">8 wk</div>
-            <div class="rpill" data-weeks="13">13 wk</div>
-            <div class="rpill" data-weeks="26">26 wk</div>
+            <div class="rpill" data-days="28">4 wk</div>
+            <div class="rpill active" data-days="56">8 wk</div>
+            <div class="rpill" data-days="91">13 wk</div>
+            <div class="rpill" data-days="365">1 year</div>
           </div>
         </div>
       </div>
@@ -502,6 +502,7 @@ main { padding: 20px 24px; }
         <!-- optional overlays, off by default; each hides itself when its column is absent -->
         <div class="overlay-pills" id="overload-overlay-pills">
           <span class="mpill-hint">Overlay</span>
+          <button type="button" class="mpill" data-overlay="chronic" aria-pressed="false">Chronic EP</button>
           <button type="button" class="mpill" data-overlay="vo2" aria-pressed="false">VO₂ Max</button>
           <button type="button" class="mpill" data-overlay="hrv" aria-pressed="false">HRV Status</button>
         </div>
@@ -520,10 +521,10 @@ main { padding: 20px 24px; }
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <div id="garminload-note" style="font-size:11px;color:var(--muted)"></div>
           <div class="range-pills" id="garminload-scope-pills">
-            <div class="rpill" data-weeks="4">4 wk</div>
-            <div class="rpill active" data-weeks="8">8 wk</div>
-            <div class="rpill" data-weeks="13">13 wk</div>
-            <div class="rpill" data-weeks="26">26 wk</div>
+            <div class="rpill" data-days="28">4 wk</div>
+            <div class="rpill active" data-days="56">8 wk</div>
+            <div class="rpill" data-days="91">13 wk</div>
+            <div class="rpill" data-days="365">1 year</div>
           </div>
         </div>
       </div>
@@ -1639,7 +1640,7 @@ let _rollingChart = null;
 // daily EP. Both read the same gap-free daily series independently — chronic is not a
 // second smoothing of acute — so the ratio compares current load against an independent
 // measure of preparation.
-let _overloadWeeks = 8;     // x-axis scope in weeks (4 / 8 / 13 / 26), daily resolution
+let _overloadDays = 56;     // x-axis scope in days: 28 / 56 / 91 / 365 (4 / 8 / 13 wk, 1 year)
 
 // Acute EP — exponential decay applied to past workouts. A workout logged today
 // contributes 100% of its EP; every day after, its weight is multiplied by ACUTE_DECAY,
@@ -1734,12 +1735,13 @@ const ACWR_ZONES = loadZones(ACWR_LO, ACWR_HI, ACWR_SPIKE);
 const acwrZone = r => r == null ? null : ACWR_ZONES.find(z => z.test(r));
 
 // Overlay toggles for this chart — its own state, independent of Garmin 7-Day Acute Load's.
-const _acuteEpOverlay = { vo2: false, hrv: false };
+// Chronic EP is an overlay here too: the band is always drawn from it, the line only on ask.
+const _acuteEpOverlay = { chronic: false, vo2: false, hrv: false };
 
 function renderRollingChart(sessions) {
   // Computed over FULL history so the band is already "warmed up" at the left edge
   const all = computeAcuteChronic(sessions);
-  const series = all.slice(Math.max(0, all.length - _overloadWeeks * 7));
+  const series = all.slice(Math.max(0, all.length - _overloadDays));
 
   const r1 = v => v == null ? null : +v.toFixed(1);
   const acute   = series.map(d => r1(d.acute));
@@ -1747,7 +1749,6 @@ function renderRollingChart(sessions) {
   const chronic = series.map(d => r1(d.chronic));
   const lower   = series.map(d => d.chronic == null ? null : r1(d.chronic * ACWR_LO));
   const upper   = series.map(d => d.chronic == null ? null : r1(d.chronic * ACWR_HI));
-  const spike   = series.map(d => d.chronic == null ? null : r1(d.chronic * ACWR_SPIKE));
   const labels  = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   // Local date keys: the join for Garmin's washes and for both overlays.
   const keys    = series.map(d => localDayKey(d.date));
@@ -1783,7 +1784,10 @@ function renderRollingChart(sessions) {
   });
 
   // VO₂ Max and HRV Status, by the same date keys. Days before those tabs start carry none.
-  const ov = loadOverlays(_acuteEpOverlay, 'overload', keys);
+  // Chronic EP is this chart's own overlay, available once 28 days of history exist.
+  const ov = loadOverlays(_acuteEpOverlay, 'overload', keys,
+                          { chronic: all.some(d => d.chronic != null) });
+  const showChronic = !!(_acuteEpOverlay.chronic && ov.have.chronic);
 
   const datasets = [
     { label: 'upper', data: upper, borderColor: 'transparent', pointRadius: 0,
@@ -1791,21 +1795,18 @@ function renderRollingChart(sessions) {
     { label: `Chronic Band (${ACWR_LO}–${ACWR_HI}×)`, data: lower, borderColor: 'transparent',
       backgroundColor: TH().band, pointRadius: 0, pointHoverRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 4, spanGaps: false },            // fills up to `upper`
-    // The one coloured rule: it marks where a dot turns red, so it carries that colour.
-    { label: `${ACWR_SPIKE}×`, data: spike,
-      borderColor: LOAD_RED, borderWidth: 1, borderDash: [2,3],
-      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 3, spanGaps: false },
-    { label: `Chronic EP (${CHRONIC_DAYS} d EWMA)`, data: chronic,
-      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
-      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2, spanGaps: false },
     { label: 'Acute EP', data: acute, borderColor: LOAD_IN, borderWidth: 2,
       pointRadius: LOAD_DOT_R, pointHoverRadius: LOAD_DOT_R + 2,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.25, order: 1 },
   ];
+  if (showChronic) datasets.push(
+    { label: `Chronic EP (${CHRONIC_DAYS} d EWMA)`, data: chronic,
+      borderColor: LOAD_REF, borderWidth: 1.5, borderDash: [4,3],
+      pointRadius: 0, pointHoverRadius: 0, fill: false, tension: 0.35, order: 2, spanGaps: false });
 
   const opts = chartOpts({ yLabel: 'EP per week' });
-  addLoadOverlays(ov, datasets, opts, [...acute, ...upper, ...spike, ...chronic, ...lower]);
+  addLoadOverlays(ov, datasets, opts, [...acute, ...upper, ...lower]);
   // 'upper' is the band's invisible edge; the HRV strip is keyed in the shape-key row.
   opts.plugins.legend.labels.filter = (item) => item.text !== 'upper' && item.text !== 'HRV Status';
   greenLegendSwatch(opts, 'Acute EP');
@@ -1863,8 +1864,9 @@ const HRV_GLYPH = { circle: '●', rect: '■', triangle: '▲' };
 function syncOverlayPills(wrapId, state, have) {
   const wrap = document.getElementById(wrapId);
   if (!wrap) return;
-  wrap.hidden = !have.vo2 && !have.hrv;
-  wrap.querySelectorAll('.mpill').forEach(p => {
+  const pills = [...wrap.querySelectorAll('.mpill')];
+  wrap.hidden = !pills.some(p => have[p.dataset.overlay]);
+  pills.forEach(p => {
     const k = p.dataset.overlay, on = !!(state[k] && have[k]);
     p.hidden = !have[k];
     p.classList.toggle('active', on);
@@ -1873,16 +1875,18 @@ function syncOverlayPills(wrapId, state, have) {
 }
 
 // The overlay series for a run of date keys, and whether each is showing. Also syncs the
-// chart's pills (#<prefix>-overlay-pills) and its HRV key (#<prefix>-hrv-key).
-function loadOverlays(state, prefix, keys) {
+// chart's pills (#<prefix>-overlay-pills) and its HRV key (#<prefix>-hrv-key). `own` adds
+// availability for a chart's own overlays (7-Day Acute EP's Chronic EP line).
+function loadOverlays(state, prefix, keys, own = {}) {
   const have = { vo2: _trainingLoad.some(d => d.vo2 != null),
-                 hrv: Object.values(_sleepMap || {}).some(n => n.hrvStatus) };
+                 hrv: Object.values(_sleepMap || {}).some(n => n.hrvStatus), ...own };
   syncOverlayPills(prefix + '-overlay-pills', state, have);
   const vo2ByKey = {};
   _trainingLoad.forEach(d => { if (d.vo2 != null) vo2ByKey[d.key] = d.vo2; });
   const vo2 = keys.map(k => k in vo2ByKey ? vo2ByKey[k] : null);
   const hrv = keys.map(hrvOnKey);
-  const ov = { vo2, hrv, showVo2: state.vo2 && vo2.some(v => v != null), showHrv: state.hrv && have.hrv };
+  const ov = { have, vo2, hrv,
+               showVo2: state.vo2 && vo2.some(v => v != null), showHrv: state.hrv && have.hrv };
 
   // HRV key in the shape-key row: only while the overlay is on, and only the statuses
   // that actually appear in view, in HRV_STATUS order.
@@ -1955,7 +1959,7 @@ const overlayTip = (ov, i) => [
 // x 1.2, and each day's dot coloured by its Load Ratio (Acute / Chronic). Nothing here
 // is derived from EP — this is the second opinion beside 7-Day Acute EP.
 let _garminLoadChart = null;
-let _garminLoadWeeks = 8;                   // x-axis scope (4 / 8 / 13 / 26 wk)
+let _garminLoadDays = 56;                   // x-axis scope in days: 28 / 56 / 91 / 365
 // Garmin's flagged states, painted as washes behind BOTH load charts.
 const FLAG_STATES = ['RECOVERY', 'STRAINED'];
 
@@ -1987,7 +1991,7 @@ function renderGarminLoad() {
   if (!tl.length) { if (card) card.style.display = 'none'; return; }
   if (card) card.style.display = '';
 
-  const series = tl.slice(Math.max(0, tl.length - _garminLoadWeeks * 7));
+  const series = tl.slice(Math.max(0, tl.length - _garminLoadDays));
   const acute  = series.map(d => d.acute);
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   // Null-safe: a row with no Chronic Load leaves a gap in the band, never an invented one.
@@ -2339,23 +2343,23 @@ function renderHrvStatus(sleepMap) {
   _bioChart = new Chart(ctx, { type:'line', data:{ labels, datasets }, options: opts });
 }
 
-// 7-Day Acute EP VIEW scope pills (4 / 8 / 13 / 26 wk). These pan the x-axis only —
+// 7-Day Acute EP VIEW scope pills (4 / 8 / 13 wk, 1 year). These pan the x-axis only —
 // acute/chronic are computed over full history, so the curves don't change with scope.
 document.querySelectorAll('#overload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
     document.querySelectorAll('#overload-scope-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
-    _overloadWeeks = parseInt(p.dataset.weeks);
+    _overloadDays = parseInt(p.dataset.days);
     if (_sessions.length) renderRollingChart(_sessions);
   });
 });
 
-// Garmin 7-Day Acute Load VIEW scope pills (4 / 8 / 13 / 26 wk). Pan the x-axis only.
+// Garmin 7-Day Acute Load VIEW scope pills (4 / 8 / 13 wk, 1 year). Pan the x-axis only.
 document.querySelectorAll('#garminload-scope-pills .rpill').forEach(p => {
   p.addEventListener('click', () => {
     document.querySelectorAll('#garminload-scope-pills .rpill').forEach(x => x.classList.remove('active'));
     p.classList.add('active');
-    _garminLoadWeeks = parseInt(p.dataset.weeks);
+    _garminLoadDays = parseInt(p.dataset.days);
     renderGarminLoad();
   });
 });
@@ -2411,18 +2415,18 @@ const glossOverlays = () => {
       <dd>Today's EP in full, plus every earlier workout at what is left of it:
         ${left(1)} after a day, ${left(ACUTE_DAYS)} after ${ACUTE_DAYS}, ${left(2 * ACUTE_DAYS)} after
         ${2 * ACUTE_DAYS}. Steady training reads as its ${ACUTE_DAYS}-day total.</dd>
-      <dt>${rule(LOAD_REF, 'dashed', 1.5)} Chronic EP</dt>
-      <dd>${CHRONIC_DAYS}-day EWMA of daily EP, rest days counted as 0, read in EP per week so it
-        sits on the same scale as acute. Not drawn until ${CHRONIC_DAYS} days of history exist.</dd>
       <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Chronic band</dt>
-      <dd>Chronic EP × ${ACWR_LO} to × ${ACWR_HI}, with a thin ${sw(LOAD_RED, 'red')} rule
-        at × ${ACWR_SPIKE}.</dd>
+      <dd>Chronic EP × ${ACWR_LO} to × ${ACWR_HI}. Not drawn until ${CHRONIC_DAYS} days of
+        history exist.</dd>
       <dt>Dots — Acute ÷ Chronic</dt>
       <dd>${sw(LOAD_IN, '●')} ${ACWR_LO}–${ACWR_HI} in band ·
         ${sw(LOAD_ORANGE, '●')} under ${ACWR_LO} or over ${ACWR_HI} ·
         ${sw(LOAD_RED, '●')} over ${ACWR_SPIKE}</dd>
       <dt>${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')} Background</dt>
-      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>${glossOverlays()}
+      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
+      <dt>${rule(LOAD_REF, 'dashed', 1.5)} Chronic EP overlay</dt>
+      <dd>${CHRONIC_DAYS}-day EWMA of daily EP, rest days counted as 0, read in EP per week so it
+        sits on the same scale as acute. The band is drawn from it whether the line is on or off.</dd>${glossOverlays()}
     </dl>`;
 })();
 

@@ -99,7 +99,7 @@ numerically, and the check worth re-running if either constant is ever changed.
 Every dot is the same size, `LOAD_DOT_R = 3` (5 on hover), whatever its zone. Bounds are
 inclusive on the green side: exactly 0.8 and exactly 1.2 are in band, exactly 1.5 is
 orange. Green and orange share a lightness, so the reading does not rest on hue alone: the
-band and the 1.5× rule give it by position, and the tooltip names the zone. The zones come
+band gives it by position, and the tooltip names the zone. The zones come
 from `loadZones()`, the same builder Garmin 7-Day Acute Load uses, so colours, size and
 wording are identical across the pair — only the thresholds are each chart's own constants.
 
@@ -107,11 +107,12 @@ The card carries **no static key**, like Garmin 7-Day Acute Load beside it. The 
 the Recovery / Strained washes are defined in the ⓘ panel and named in the tooltip; the row
 under the header holds only the overlay toggles, plus the HRV key while that overlay is on.
 
-**Drawn reference lines.** The shaded Chronic band is `0.8 × chronic` to
-`1.2 × chronic`; a thin dotted red rule marks `1.5 × chronic`, where dots turn red; chronic
-itself is a dashed grey line. All ride with chronic, so every question the chart asks is
-"relative to your own recent preparation", never against a fixed target. All reference
-series use `spanGaps:false`, so nothing is drawn across the first 28 days.
+**Drawn reference.** The shaded Chronic band, `0.8 × chronic` to `1.2 × chronic`, is the
+only reference drawn by default. It rides with chronic, so every question the chart asks is
+"relative to your own recent preparation", never against a fixed target. There is no rule
+at 1.5×: the red dots carry that threshold on their own, as on Garmin 7-Day Acute Load.
+Chronic itself is a dashed grey line, but only as an **overlay** (below). Both use
+`spanGaps:false`, so nothing is drawn across the first 28 days.
 
 **Header note** — `ACWR 1.15 — In band · acute 88 · chronic 77 EP/wk (28 d EWMA)`. The
 ratio leads because it *is* the reading.
@@ -120,9 +121,19 @@ ratio leads because it *is* the reading.
 the zone (✓ in band · ↑ above · ↓ below · ⚠ over 1.5× chronic), and the Garmin status if
 the day was flagged; VO₂ Max and HRV Status join it while their overlays are on.
 
-**Overlays** — the same VO₂ Max and HRV Status toggles as on Garmin 7-Day Acute Load, drawn
-by the same shared code (see that section for sources, scales and constants). Each chart
-keeps its own on/off state. Both are joined onto the EP grid **by date key**, like the
+**Overlays** — three toggles, all off by default and independent:
+
+| Overlay | Drawn as |
+|---|---|
+| Chronic EP | dashed grey `#9d9488` line, 28 d EWMA in EP/wk, on the load axis; this chart only |
+| VO₂ Max | as on Garmin 7-Day Acute Load |
+| HRV Status | as on Garmin 7-Day Acute Load |
+
+The Chronic EP toggle shows or hides the line only — the band is drawn from chronic either
+way, and the header note and tooltip always give its value. It hides itself until 28 days
+of history exist. VO₂ Max and HRV Status are drawn by the same shared code as on Garmin
+7-Day Acute Load (see that section for sources, scales and constants). Each chart keeps its
+own on/off state. Both are joined onto the EP grid **by date key**, like the
 Garmin washes, so they appear only from the date their tabs start (2026-01 here) and
 leave earlier days empty rather than guessing. The VO₂ Max pill hides itself without a
 TrainingLoad tab; the HRV Status pill without an HRV column in Sleep.
@@ -142,7 +153,8 @@ meaningless. Days with no TrainingLoad row simply carry no band. The key is buil
 sheet's date strings parse as UTC — comparing `Date` objects directly slips a day in any
 timezone behind UTC.
 
-**View scope** — 4 / 8 / 13 / 26 wk pills (default 8) pan the x-axis only. Acute and
+**View scope** — 4 wk / 8 wk / 13 wk / 1 year pills, i.e. the last 28 / 56 / 91 / 365 days
+(default 8 wk), pan the x-axis only. Acute and
 chronic are computed over full history and then sliced, so the curves themselves never
 change with the scope; only how much of them you see does.
 
@@ -163,8 +175,8 @@ change with the scope; only how much of them you see does.
 half your usual volume against a correspondingly low chronic reads the same as a week at
 twice it. Level and slope are what judge progression, and those are worked out in
 [PROGRESSION.md](PROGRESSION.md), not charted. Chronic is still a meaningful quantity in
-its own right — weighted average weekly EP over the last month — so the grey line carries
-information on its own.
+its own right — weighted average weekly EP over the last month — so the Chronic EP overlay
+carries information on its own.
 
 ### Garmin 7-Day Acute Load
 
@@ -234,7 +246,9 @@ the `_loadStatusBands` plugin — Chart.js has no band primitive on a category a
 are passed as **plugin options**, not hung off the config object: Chart.js wraps that in
 its own `Config`, so a stray property on it never reaches the chart.
 
-**View scope** — 4 / 8 / 13 / 26 wk pills (default 8), panning the x-axis only.
+**View scope** — 4 wk / 8 wk / 13 wk / 1 year pills, the last 28 / 56 / 91 / 365 rows
+(default 8 wk), panning the x-axis only. The TrainingLoad tab starts 2026-01, so until it
+holds a year of rows "1 year" simply shows all of it.
 
 **Overlays** — two toggles, both off by default and independent; each hides itself when
 its column has no data anywhere in history. The same shared code (`loadOverlays`,

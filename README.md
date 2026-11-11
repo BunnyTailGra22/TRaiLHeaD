@@ -63,7 +63,7 @@ Two metrics carry most of the weight:
   100% of its EP and fades out continuously over roughly 7 days (×6/7 per day, so steady
   training reads as its 7-day total). **Chronic EP** is a 28-day exponentially weighted
   moving average of daily EP, read in EP per week so the ratio centres on 1.0. A grey band
-  spans 0.8–1.2× chronic. The two curves are computed independently, so the ratio is a
+  spans 0.8–1.2× chronic; the Chronic EP line itself is an overlay, off by default. The two curves are computed independently, so the ratio is a
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
 - **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
@@ -73,7 +73,8 @@ Two metrics carry most of the weight:
 Both charts colour each dot by that day's ratio the same way — green in band, orange under
 0.8× or over 1.2×, red over 1.5×, all one size — with every reference line grey. Neither
 card carries a static key: the zones and Garmin's washes are in the ⓘ panel and tooltip. On both, **VO₂ Max** and **HRV Status** can be overlaid from pills above the
-chart, off by default, and an ⓘ beside the title explains the model. Both shade Garmin's own Recovery and Strained
+chart, off by default, the scope runs from 4 wk to 1 year, and an ⓘ beside the title
+explains the model. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.
 See [docs/DESIGN.md](docs/DESIGN.md).
 
