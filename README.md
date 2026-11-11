@@ -68,8 +68,8 @@ Two metrics carry most of the weight:
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
 - **Garmin 7-Day Acute Load** is the second opinion, in the row below it — Garmin's own Acute Load
-  against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
-  0.8–1.2).
+  against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.5, i.e. Load Ratio
+  0.8–1.5 — wider than 7-Day Acute EP's 0.8–1.2, its top edge at the red threshold).
 
 Both charts colour each dot by that day's ratio the same way — green 0.8–1.2×, orange under
 0.8× or over 1.2×, red over 1.5×, all one size in a view (smaller in the 1-year view) —

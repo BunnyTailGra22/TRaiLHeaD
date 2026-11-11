@@ -1710,16 +1710,19 @@ function computeAcuteChronic(sessions) {
 // Most severe first, so a ratio only ever gets one zone. Every dot is the same size
 // (LOAD_DOT_R): green and orange share a lightness, so in / out of range is carried by
 // position against the grey band as well as by colour, and the tooltip names the zone.
-// The grey band runs Chronic x lo to x hi — exactly the green range — so orange sits just
-// outside it on either side and red past x over.
-function loadZones(lo, hi, over) {
+// The grey band runs Chronic x lo to x top, and the two charts differ there: 7-Day Acute
+// EP's band is exactly the green range (top = hi), Garmin's reaches the red threshold
+// (top = over), so its 1.2–1.5 orange strip sits inside the band. Only the tips that
+// describe a dot's place against the band depend on it.
+function loadZones(lo, hi, over, top = hi) {
+  const wide = top > hi;
   return [
     { key: 'red',   test: r => r > over, color: LOAD_RED,
       label: `Over ${over}×`,     tip: `⚠ over ${over}× chronic — above the band` },
     { key: 'above', test: r => r > hi,   color: LOAD_ORANGE,
-      label: `Over ${hi}×`,       tip: `↑ ${hi}–${over}× — above the band` },
+      label: `Over ${hi}×`,       tip: `↑ ${hi}–${over}× — ${wide ? 'upper part of' : 'above'} the band` },
     { key: 'in',    test: r => r >= lo,  color: LOAD_IN,
-      label: 'In range',          tip: `✓ in range (${lo}–${hi}×) — inside the band` },
+      label: 'In range',          tip: `✓ in range (${lo}–${hi}×)${wide ? '' : ' — inside the band'}` },
     { key: 'below', test: () => true,    color: LOAD_ORANGE,
       label: `Under ${lo}×`,      tip: `↓ under ${lo}× — below the band` },
   ];
@@ -1973,20 +1976,21 @@ let _garminLoadDays = 56;                   // x-axis scope in days: 28 / 56 / 9
 // Garmin's flagged states, painted as washes behind BOTH load charts.
 const FLAG_STATES = ['RECOVERY', 'STRAINED'];
 
-// Chronic band — Garmin's own Chronic Load x 0.8 to x 1.2, i.e. Load Ratio (Acute /
-// Chronic) 0.8–1.2: exactly the green range. Garmin's two loads share one unit, so the
-// band goes straight onto the acute axis. Kept as separate constants from 7-Day Acute
-// EP's: this is Garmin's ratio, that one ours.
-const GARMIN_BAND_LO = 0.8;
-const GARMIN_BAND_HI = 1.2;
-const GARMIN_RED_OVER = 1.5;   // past this the dot turns red
+// Chronic band — Garmin's own Chronic Load x 0.8 to x 1.5, i.e. Load Ratio (Acute /
+// Chronic) 0.8–1.5: its top edge is the red threshold, and green dots are the narrower
+// 0.8–1.2 inside it. Deliberately wider than 7-Day Acute EP's 0.8–1.2 band. Garmin's two
+// loads share one unit, so the band goes straight onto the acute axis.
+const GARMIN_BAND_LO  = 0.8;
+const GARMIN_BAND_HI  = 1.2;              // green / orange edge
+const GARMIN_RED_OVER = 1.5;              // past this the dot turns red
+const GARMIN_BAND_TOP = GARMIN_RED_OVER;  // the band's top edge is the red threshold
 
 // Dot colour = which zone the day's Load Ratio falls in — the same zones, colours and
 // sizes as 7-Day Acute EP above it (loadZones), on Garmin's own thresholds.
-const GARMIN_ZONES = loadZones(GARMIN_BAND_LO, GARMIN_BAND_HI, GARMIN_RED_OVER);
+const GARMIN_ZONES = loadZones(GARMIN_BAND_LO, GARMIN_BAND_HI, GARMIN_RED_OVER, GARMIN_BAND_TOP);
 // Recomputed from the two loads rather than read from the sheet's Load Ratio column:
 // Garmin TRUNCATES that column to one decimal (308 of 313 rows match a floor), so a
-// 1.29 day reads "1.2" — inside the band — while plotted above its edge.
+// 1.29 day reads "1.2" — green — while its ratio is past the 1.2× edge.
 const garminRatio = d => (d.acute != null && d.chronic) ? d.acute / d.chronic : null;
 const garminZone  = r => r == null ? null : GARMIN_ZONES.find(z => z.test(r));
 
@@ -2007,7 +2011,7 @@ function renderGarminLoad() {
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   // Null-safe: a row with no Chronic Load leaves a gap in the band, never an invented one.
   const bandLo = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_LO);
-  const bandHi = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_HI);
+  const bandHi = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_TOP);
 
   const ov = loadOverlays(_garminOverlay, 'garminload', series.map(d => d.key),
                          { chronic: tl.some(d => d.chronic != null) });
@@ -2046,7 +2050,7 @@ function renderGarminLoad() {
   datasets.push(
     { label: 'upper', data: bandHi, borderColor: 'transparent', pointRadius: 0,
       pointHoverRadius: 0, fill: false, tension: 0.25, order: 4, spanGaps: false },
-    { label: `Chronic Band (${GARMIN_BAND_LO}–${GARMIN_BAND_HI}×)`, data: bandLo,
+    { label: `Chronic Band (${GARMIN_BAND_LO}–${GARMIN_BAND_TOP}×)`, data: bandLo,
       borderColor: 'transparent', backgroundColor: TH().band, pointRadius: 0,
       pointHoverRadius: 0, fill: '-1', tension: 0.25, order: 4, spanGaps: false },
   );
@@ -2463,8 +2467,9 @@ const glossOverlays = () => {
         ${sw(LOAD_ORANGE, '●')} under ${lo} or over ${hi} ·
         ${sw(LOAD_RED, '●')} over ${red}</dd>
       <dt>${sw('var(--muted)', '▮', ';opacity:.45')} Chronic band</dt>
-      <dd>Chronic Load × ${lo} to × ${hi}, the loads where Load Ratio (ACWR) is ${lo}–${hi}.
-        Above it is a spike (red past × ${red}), below it a drop in load.</dd>
+      <dd>Chronic Load × ${lo} to × ${GARMIN_BAND_TOP}, the loads where Load Ratio (ACWR) is
+        ${lo}–${GARMIN_BAND_TOP}; its top edge is where a dot turns red. Green is the ${lo}–${hi}
+        inside it. Above it is a spike, below it a drop in load.</dd>
       <dt>${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')} Background</dt>
       <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
       <dt>${glossRule(LOAD_REF, 'dashed', 1.5)} Chronic Load overlay</dt>
