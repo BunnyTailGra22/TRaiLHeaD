@@ -197,16 +197,20 @@ the same constants the chart draws with.
 **Chronic band** — Garmin's own `Chronic Load`, scaled:
 
 ```
-GARMIN_BAND_LO = 0.8
-GARMIN_BAND_HI = 1.2
-band = Chronic × 0.8  →  Chronic × 1.2        ⇔  Load Ratio (Acute / Chronic) 0.8–1.2
+GARMIN_BAND_LO  = 0.8
+GARMIN_BAND_HI  = 1.2                          green / orange edge, not the band's top
+GARMIN_BAND_TOP = GARMIN_RED_OVER = 1.5
+band = Chronic × 0.8  →  Chronic × 1.5        ⇔  Load Ratio (Acute / Chronic) 0.8–1.5
 ```
 
 Garmin's acute and chronic share one unit, so the band goes straight onto the acute axis —
-no ×7 rescale, which 7-Day Acute EP needs only because its chronic is a per-day EWMA. Both
-bands span 0.8–1.2 — exactly the green range — but they are separate constants: this one is
-Garmin's ratio, that one
-this repo's. Same grey fill and invisible-upper-bound construction as the Chronic band on
+no ×7 rescale, which 7-Day Acute EP needs only because its chronic is a per-day EWMA.
+
+**The two bands differ on purpose.** This one runs 0.8–1.5: its top edge is the red
+threshold, green dots are the narrower 0.8–1.2 inside it, and the 1.2–1.5 orange dots sit
+in its upper part. 7-Day Acute EP's band is 0.8–1.2, exactly its green range. The dot
+zones themselves are identical on both (`loadZones`); only the band's top edge
+(`loadZones`' `top` argument) and the tooltip wording that depends on it differ. Same grey fill and invisible-upper-bound construction as the Chronic band on
 7-Day Acute EP, and a row with no Chronic Load leaves a gap rather than a guessed band.
 
 **Dot colour — the day's Load Ratio:**
@@ -245,7 +249,7 @@ latest row, in the same order as the 7-Day Acute EP note above it; `chronic n/a`
 when that row has no Chronic Load.
 
 **Tooltip** — Acute Load, Chronic (28d), Load Ratio (ACWR) to two decimals, the band's
-range for that day, the zone (✓ in range, inside the band · ↑ 1.2–1.5×, above it · ↓ under 0.8×, below it · ⚠ over 1.5× chronic) and
+range for that day, the zone (✓ in range · ↑ 1.2–1.5×, upper part of the band · ↓ under 0.8×, below it · ⚠ over 1.5× chronic, above it) and
 Garmin's Training Status; VO₂ Max and HRV Status join it while their overlays are on.
 
 Garmin's Recovery and Strained stretches are painted as vertical washes behind the line by
