@@ -148,9 +148,10 @@ main { padding: 20px 24px; }
 .grid-2x2 .chart-box { height: 220px; }
 /* Training tab: paired rows share a height so each two-col row aligns */
 #cumul-box, #monthly-box, #box-box, #focus-box { height: 280px; }
-/* The two load charts are paired and BOTH now carry a shape key above the plot, so
-   they give back the same height and their plot areas stay level with each other. */
-#rolling-box, #garminload-box { height: 260px; }
+/* The two load charts each have a full-width row (7-Day Acute EP above Garmin 7-Day
+   Acute Load). Both carry the same overlay row above the plot, so one shared height
+   keeps the two plots the same size when they are read one above the other. */
+#rolling-box, #garminload-box { height: 300px; }
 /* Recovery row 2 pairs HRV with Vitals. Vitals carries an extra metric-pill row above
    its chart, so bio-box gets that height back to keep the two plot areas level. */
 #bio-box   { height: 330px; }
@@ -281,7 +282,7 @@ main { padding: 20px 24px; }
   .config-grid   { grid-template-columns: 1fr; }
   .config-cols   { grid-template-columns: repeat(2, 1fr); }
   .grid-2x2 .chart-box { height: 200px; }
-  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 240px; }
+  #cumul-box, #monthly-box, #rolling-box, #garminload-box, #box-box, #focus-box { height: 240px; }
   #bio-box   { height: 240px; }
   #vitals-box { height: 260px; }
 }
@@ -306,7 +307,7 @@ main { padding: 20px 24px; }
   .chart-card { padding: 14px; }
   .chart-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .grid-2x2 .chart-box { height: 180px; }
-  #cumul-box, #monthly-box, #rolling-box, #box-box, #focus-box { height: 220px; }
+  #cumul-box, #monthly-box, #rolling-box, #garminload-box, #box-box, #focus-box { height: 220px; }
   #bio-box   { height: 220px; }
   #vitals-box { height: 240px; }
 
@@ -473,9 +474,9 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 2: the two load models side by side — this dashboard's own ACWR over EP,
-       and Garmin's own Acute Load against its own Chronic Load. -->
-  <div class="two-col">
+  <!-- ROWS 2–3: the two load models, one per row and full width, so their 1-year views
+       have room — this dashboard's own ACWR over EP, then Garmin's own Acute Load
+       against its own Chronic Load. -->
     <div class="chart-card">
       <div class="chart-header">
         <div class="title-wrap">
@@ -543,9 +544,8 @@ main { padding: 20px 24px; }
       </div>
       <div class="chart-box" id="garminload-box"><canvas id="garminload-chart"></canvas></div>
     </div>
-  </div>
 
-  <!-- ROW 3: the weekly table, full width — it has eight columns and was scrolling
+  <!-- ROW 4: the weekly table, full width — it has eight columns and was scrolling
        sideways inside a half-width card. -->
   <div class="chart-card">
     <div class="chart-header">
@@ -556,7 +556,7 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 4: Distribution by Category | 專項訓練 Seasonality -->
+  <!-- ROW 5: Distribution by Category | 專項訓練 Seasonality -->
   <div class="two-col">
     <div class="chart-card">
       <div class="chart-header">
@@ -578,7 +578,7 @@ main { padding: 20px 24px; }
     </div>
   </div>
 
-  <!-- ROW 5: Long Runs | Course Heatmap. The square figure sets the row height and the
+  <!-- ROW 6: Long Runs | Course Heatmap. The square figure sets the row height and the
        table fills it, scrolling inside its own card. Stacks again at ≤ 1200px. -->
   <div class="two-col lr-pair">
   <!-- every >20 km session the Seasonality chart plots, newest first -->
@@ -609,7 +609,7 @@ main { padding: 20px 24px; }
            alt="Course Heatmap: slope % against EP, colour = total ascent, bubble size = distance, dashed lines = equal-distance guides">
     </a>
   </div>
-  </div><!-- /ROW 5 -->
+  </div><!-- /ROW 6 -->
 
   </div><!-- ══ /TRAINING TAB ══ -->
 
@@ -1979,7 +1979,7 @@ const GARMIN_BAND_HI = 1.2;
 const GARMIN_RED_OVER = 1.5;   // past this the dot turns red
 
 // Dot colour = which zone the day's Load Ratio falls in — the same zones, colours and
-// sizes as 7-Day Acute EP beside it (loadZones), on Garmin's own thresholds.
+// sizes as 7-Day Acute EP above it (loadZones), on Garmin's own thresholds.
 const GARMIN_ZONES = loadZones(GARMIN_BAND_LO, GARMIN_BAND_HI, GARMIN_RED_OVER);
 // Recomputed from the two loads rather than read from the sheet's Load Ratio column:
 // Garmin TRUNCATES that column to one decimal (308 of 313 rows match a floor), so a
@@ -1988,7 +1988,7 @@ const garminRatio = d => (d.acute != null && d.chronic) ? d.acute / d.chronic : 
 const garminZone  = r => r == null ? null : GARMIN_ZONES.find(z => z.test(r));
 
 // Overlay toggles for this chart (see LOAD-CHART OVERLAYS above). Chronic Load is an
-// overlay here as Chronic EP is beside it: the band is always drawn from it, the line —
+// overlay here as Chronic EP is on the chart above: the band is always drawn from it, the line —
 // the band's 1.0x middle — only on ask.
 const _garminOverlay = { chronic: false, vo2: false, hrv: false };
 
@@ -2014,7 +2014,7 @@ function renderGarminLoad() {
   const zones     = series.map(d => garminZone(garminRatio(d)));
   const dotColors = zones.map(z => z ? z.color : LOAD_REF);
 
-  // Ratio leads, the way the 7-Day Acute EP note beside it reads.
+  // Ratio leads, the way the 7-Day Acute EP note above it reads.
   const noteEl = document.getElementById('garminload-note');
   if (noteEl) {
     const t = series[series.length - 1], r = garminRatio(t), z = garminZone(r);
@@ -2031,7 +2031,7 @@ function renderGarminLoad() {
     spanGaps: false, fill: false, tension: 0.25, order: 1,
   }];
   // Chronic Load overlay — the line itself, drawn exactly like Chronic EP on the chart
-  // beside it: grey, dashed, no points, a gap wherever a row has no Chronic Load.
+  // above it: grey, dashed, no points, a gap wherever a row has no Chronic Load.
   if (showChronic) datasets.push({
     label: 'Chronic Load (28d)', data: series.map(d => d.chronic), borderColor: LOAD_REF,
     borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 0, fill: false,

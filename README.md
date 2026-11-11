@@ -40,7 +40,8 @@ same render path as real data.
 | | |
 |---|---|
 | Cumulative EP | Monthly EP, road vs trail |
-| 7-Day Acute EP | Garmin 7-Day Acute Load |
+| 7-Day Acute EP (full width) | |
+| Garmin 7-Day Acute Load (full width) | |
 | Recent 8 Weeks load table (full width) | |
 | Distribution by Category | 專項訓練 Seasonality |
 | 專項訓練 Long Runs — every session over 20 km | Course Heatmap — Slope % vs. EP, a static reference figure |
@@ -66,7 +67,7 @@ Two metrics carry most of the weight:
   spans 0.8–1.2× chronic; the Chronic EP line itself is an overlay, off by default. The two curves are computed independently, so the ratio is a
   genuine comparison against preparation — though being a ratio it stays scale-free and
   still cannot judge progression.
-- **Garmin 7-Day Acute Load** is the second opinion beside it — Garmin's own Acute Load
+- **Garmin 7-Day Acute Load** is the second opinion, in the row below it — Garmin's own Acute Load
   against a grey **Chronic band** (Garmin's Chronic Load × 0.8–1.2, i.e. Load Ratio
   0.8–1.2).
 

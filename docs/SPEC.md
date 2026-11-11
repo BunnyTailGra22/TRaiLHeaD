@@ -105,7 +105,7 @@ band gives it by position, and the tooltip names the zone. The zones come
 from `loadZones()`, the same builder Garmin 7-Day Acute Load uses, so colours, size and
 wording are identical across the pair — only the thresholds are each chart's own constants.
 
-The card carries **no static key**, like Garmin 7-Day Acute Load beside it. The zones and
+The card carries **no static key**, like Garmin 7-Day Acute Load below it. The zones and
 the Recovery / Strained washes are defined in the ⓘ panel and named in the tooltip; the row
 under the header holds only the overlay toggles, plus the HRV key while that overlay is on.
 
@@ -141,11 +141,11 @@ leave earlier days empty rather than guessing. The VO₂ Max pill hides itself w
 TrainingLoad tab; the HRV Status pill without an HRV column in Sleep.
 
 **Palette note.** Green, orange and red are the shared load constants `LOAD_IN`,
-`LOAD_ORANGE` and `LOAD_RED`, the same as on Garmin 7-Day Acute Load beside it. Orange and
+`LOAD_ORANGE` and `LOAD_RED`, the same as on Garmin 7-Day Acute Load below it. Orange and
 red are the DESIGN heat ramp's own `#c08552` and `#ab5a52`, not new hues. See DESIGN.md.
 
 **Garmin Recovery / Strained** are painted as vertical washes behind the curves, the same
-`_loadStatusBands` plugin and the same colours as on Garmin 7-Day Acute Load beside it — so a bad
+`_loadStatusBands` plugin and the same colours as on Garmin 7-Day Acute Load below it — so a bad
 stretch lines up visually across both models.
 
 They are joined **by date key, not by index**: this series starts with the first activity
@@ -183,8 +183,8 @@ carries information on its own.
 ### Garmin 7-Day Acute Load
 
 Garmin's own `Acute Load` (its 7-day exponentially weighted load) against Garmin's own
-`Chronic Load`. Nothing is derived from EP here — this is the second opinion, sitting
-beside 7-Day Acute EP.
+`Chronic Load`. Nothing is derived from EP here — this is the second opinion, in the
+row below 7-Day Acute EP.
 
 An **ⓘ** beside the title carries the owner's description of the model verbatim — Acute
 Load as the short-term fatigue indicator, built on EPOC and an exponentially weighted
@@ -238,7 +238,7 @@ column: Garmin **truncates** that to one decimal (308 of 313 rows match a floor,
 round), so a 1.29 day would read "1.2" — in band — while plotted above the 1.2× edge.
 
 **Header note** — `ACWR 0.83 — In band · acute 477 (7d) · chronic 575 (28d)`, for the
-latest row, in the same order as the 7-Day Acute EP note beside it; `chronic n/a`
+latest row, in the same order as the 7-Day Acute EP note above it; `chronic n/a`
 when that row has no Chronic Load.
 
 **Tooltip** — Acute Load, Chronic (28d), Load Ratio (ACWR) to two decimals, the band's
@@ -264,7 +264,7 @@ note and tooltip always give its value.
 
 | Overlay | Source | Drawn as |
 |---|---|---|
-| Chronic Load | TrainingLoad `Chronic Load` | dashed grey `#9d9488` line `[4,3]`, no points, styled like Chronic EP beside it; the band's 1.0× middle |
+| Chronic Load | TrainingLoad `Chronic Load` | dashed grey `#9d9488` line `[4,3]`, no points, styled like Chronic EP on the chart above; the band's 1.0× middle |
 | VO₂ Max | TrainingLoad `VO₂ Max` (`VO2 Max` accepted) | stepped line, `--vo2` steel blue, right axis in ml/kg/min; latest value in the legend |
 | HRV Status | Sleep `HRV Status`, joined on the date key | strip of status markers along the top, HRV Status chart's shapes and colours |
 
