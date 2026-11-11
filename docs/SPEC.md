@@ -91,15 +91,15 @@ numerically, and the check worth re-running if either constant is ever changed.
 | Ratio | Reading | Colour | Meaning |
 |---|---|---|---|
 | > 1.5 | Over 1.5× | red `#ab5a52` | sharp spike against 28-day preparation |
-| > 1.2 – 1.5 | Above band | orange `#c08552` | load running ahead of preparation |
-| 0.8 – 1.2 | **In band** | green `#7f9d78` | load matched to preparation |
-| < 0.8 | Below band | orange `#c08552` | load dropping below preparation |
+| > 1.2 – 1.5 | Over 1.2× | orange `#c08552` | load running ahead of preparation (upper part of the band) |
+| 0.8 – 1.2 | **In range** | green `#7f9d78` | load matched to preparation |
+| < 0.8 | Under 0.8× | orange `#c08552` | load dropping below preparation |
 | no chronic yet | not scored | grey `#9d9488` | fewer than 28 days of history |
 
 Every dot in a view is the same size, whatever its zone: `LOAD_DOT_R = 3` (5 on hover),
 or `LOAD_DOT_R_YEAR = 1.5` in the 1-year view, where 300+ days share ~570 px and r 3 dots
 would fuse into a band that hides the line (`loadDotR(days)`). Bounds are
-inclusive on the green side: exactly 0.8 and exactly 1.2 are in band, exactly 1.5 is
+inclusive on the green side: exactly 0.8 and exactly 1.2 are green, exactly 1.5 is
 orange. Green and orange share a lightness, so the reading does not rest on hue alone: the
 band gives it by position, and the tooltip names the zone. The zones come
 from `loadZones()`, the same builder Garmin 7-Day Acute Load uses, so colours, size and
@@ -107,23 +107,25 @@ wording are identical across the pair — only the thresholds are each chart's o
 
 The card carries **no static key**, like Garmin 7-Day Acute Load below it. The zones and
 the Recovery / Strained washes are defined in the ⓘ panel and named in the tooltip; the row
-under the header holds only the overlay toggles, plus the HRV key while that overlay is on.
+under the header holds only the HRV key, while that overlay is showing.
 
-**Drawn reference.** The shaded Chronic band, `0.8 × chronic` to `1.2 × chronic`, is the
-only reference drawn by default. It rides with chronic, so every question the chart asks is
+**Drawn reference.** The shaded Chronic band, `0.8 × chronic` to `1.5 × chronic`
+(`ACWR_LO` → `ACWR_SPIKE`), is the only reference drawn by default. Its top edge is where a
+dot turns red; green is the narrower 0.8–1.2 inside it, orange the 1.2–1.5 strip above. It rides with chronic, so every question the chart asks is
 "relative to your own recent preparation", never against a fixed target. There is no rule
 at 1.5×: the red dots carry that threshold on their own, as on Garmin 7-Day Acute Load.
 Chronic itself is a dashed grey line, but only as an **overlay** (below). Both use
 `spanGaps:false`, so nothing is drawn across the first 28 days.
 
-**Header note** — `ACWR 1.15 — In band · acute 88 · chronic 77 EP/wk (28 d EWMA)`. The
+**Header note** — `ACWR 1.15 — In range · acute 88 · chronic 77 EP/wk (28 d EWMA)`. The
 ratio leads because it *is* the reading.
 
 **Tooltip** — Acute EP, Chronic EP, ACWR to two decimals, the band in EP/wk for that day,
-the zone (✓ in band · ↑ above · ↓ below · ⚠ over 1.5× chronic), and the Garmin status if
+the zone (✓ in range · ↑ 1.2–1.5× · ↓ under 0.8× · ⚠ over 1.5× chronic), and the Garmin status if
 the day was flagged; VO₂ Max and HRV Status join it while their overlays are on.
 
-**Overlays** — three toggles, all off by default and independent:
+**Overlays** — three legend entries, hidden by default and independent (see the Garmin
+section for how the legend toggles them):
 
 | Overlay | Drawn as |
 |---|---|
@@ -195,14 +197,15 @@ the same constants the chart draws with.
 **Chronic band** — Garmin's own `Chronic Load`, scaled:
 
 ```
-GARMIN_BAND_LO = 0.8
-GARMIN_BAND_HI = 1.2
-band = Chronic × 0.8  →  Chronic × 1.2        ⇔  Load Ratio (Acute / Chronic) 0.8–1.2
+GARMIN_BAND_LO  = 0.8
+GARMIN_RED_OVER = 1.5
+band = Chronic × 0.8  →  Chronic × 1.5        ⇔  Load Ratio (Acute / Chronic) 0.8–1.5
 ```
 
 Garmin's acute and chronic share one unit, so the band goes straight onto the acute axis —
 no ×7 rescale, which 7-Day Acute EP needs only because its chronic is a per-day EWMA. Both
-bands span 0.8–1.2, but they are separate constants: this one is Garmin's ratio, that one
+bands span 0.8–1.5 — top edge at the red threshold, green the 0.8–1.2 inside — but they are
+separate constants: this one is Garmin's ratio, that one
 this repo's. Same grey fill and invisible-upper-bound construction as the Chronic band on
 7-Day Acute EP, and a row with no Chronic Load leaves a gap rather than a guessed band.
 
@@ -217,7 +220,7 @@ GARMIN_RED_OVER = 1.5
 |---|---|---|
 | > 1.5 | Over 1.5× | red `#ab5a52` |
 | > 1.2 – 1.5 | Above band | orange `#c08552` |
-| 0.8 – 1.2 | In band | green `#7f9d78` |
+| 0.8 – 1.2 | In range | green `#7f9d78` |
 | < 0.8 | Below band | orange `#c08552` |
 | no Chronic Load | not scored | grey `#9d9488` |
 
@@ -235,14 +238,14 @@ overlay toggles, plus the HRV key while that overlay is on.
 
 The ratio is recomputed as `Acute / Chronic`, not read from the sheet's `Load Ratio`
 column: Garmin **truncates** that to one decimal (308 of 313 rows match a floor, 158 a
-round), so a 1.29 day would read "1.2" — in band — while plotted above the 1.2× edge.
+round), so a 1.29 day would read "1.2" — green — while its ratio is past the 1.2× edge.
 
-**Header note** — `ACWR 0.83 — In band · acute 477 (7d) · chronic 575 (28d)`, for the
+**Header note** — `ACWR 0.83 — In range · acute 477 (7d) · chronic 575 (28d)`, for the
 latest row, in the same order as the 7-Day Acute EP note above it; `chronic n/a`
 when that row has no Chronic Load.
 
 **Tooltip** — Acute Load, Chronic (28d), Load Ratio (ACWR) to two decimals, the band's
-range for that day, the zone (✓ in band · ↑ above · ↓ below · ⚠ over 1.5× chronic) and
+range for that day, the zone (✓ in range · ↑ 1.2–1.5× · ↓ under 0.8× · ⚠ over 1.5× chronic) and
 Garmin's Training Status; VO₂ Max and HRV Status join it while their overlays are on.
 
 Garmin's Recovery and Strained stretches are painted as vertical washes behind the line by
@@ -254,10 +257,14 @@ its own `Config`, so a stray property on it never reaches the chart.
 (default 8 wk), panning the x-axis only. The TrainingLoad tab starts 2026-01, so until it
 holds a year of rows "1 year" simply shows all of it.
 
-**Overlays** — three toggles, all off by default and independent; each hides itself when
-its column has no data anywhere in history. VO₂ Max and HRV Status come from shared code
+**Overlays** — three **legend entries**, styled and toggled like Acute Load and the Chronic
+band: hidden (struck through) by default, a click shows or hides one. Unlike those two, an
+overlay click updates the chart's overlay state and re-renders (`overlayLegend`), so the VO₂
+axis and the HRV headroom follow, and the choice survives scope changes and theme flips. An
+overlay with no data anywhere in history gets no legend entry. VO₂ Max and HRV Status come from shared code
 (`loadOverlays`, `addLoadOverlays`) that draws them on 7-Day Acute EP too, joined by date
-key; each chart keeps its own on/off state. Chronic Load is this chart's own, passed to
+key; each chart keeps its own on/off state. Legend order: Acute · chronic line · VO₂ Max ·
+HRV Status · band. Chronic Load is this chart's own, passed to
 `loadOverlays` as `own` exactly as 7-Day Acute EP passes its Chronic EP: the toggle shows
 or hides the line only — the band is drawn from Chronic Load either way, and the header
 note and tooltip always give its value.
