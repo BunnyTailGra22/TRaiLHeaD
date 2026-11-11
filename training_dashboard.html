@@ -1807,6 +1807,7 @@ function renderRollingChart(sessions) {
   opts.plugins.legend.labels.filter = (item) => item.text !== 'upper';
   greenLegendSwatch(opts, 'Acute EP');
   overlayLegend(opts, _acuteEpOverlay, () => renderRollingChart(sessions));
+  alignLoadAxis(opts);
   opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute EP';
   opts.plugins.tooltip.callbacks = {
     title: (items) => series[items[0].dataIndex].date
@@ -1928,6 +1929,14 @@ function addLoadOverlays(ov, datasets, opts, loadVals) {
   }
 }
 
+// Both load charts share one date axis, so their plot areas must start at the same x as
+// well: the left axis is padded to one width ("1,200" on Garmin is wider than "120" on EP),
+// and a given date then sits at the same position on both.
+const LOAD_Y_WIDTH = () => isPhone() ? 40 : 64;
+function alignLoadAxis(opts) {
+  opts.scales.y.afterFit = s => { s.width = Math.max(s.width, LOAD_Y_WIDTH()); };
+}
+
 // Legend clicks: Acute and Chronic Band keep Chart.js's own show/hide; an overlay entry
 // flips that chart's overlay state and re-renders, so its axis, headroom and tooltip lines
 // follow, and the choice survives scope changes and theme flips. Overlays start hidden.
@@ -1999,6 +2008,15 @@ const garminZone  = r => r == null ? null : GARMIN_ZONES.find(z => z.test(r));
 // the band's 1.0x middle — only on ask.
 const _garminOverlay = { chronic: false, vo2: false, hrv: false };
 
+// The local day the 7-Day Acute EP grid ends on: today, or a later-dated session.
+// Garmin 7-Day Acute Load ends its axis here too, so the two charts share dates.
+function loadGridEnd() {
+  const dayOf = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  let end = dayOf(new Date());
+  _sessions.forEach(s => { const d = dayOf(s.date); if (d > end) end = d; });
+  return end;
+}
+
 function renderGarminLoad() {
   const card = document.getElementById('garminload-card');
   const tl = _trainingLoad;
@@ -2006,7 +2024,21 @@ function renderGarminLoad() {
   if (!tl.length) { if (card) card.style.display = 'none'; return; }
   if (card) card.style.display = '';
 
-  const series = tl.slice(Math.max(0, tl.length - _garminLoadDays));
+  // Same calendar-day axis as 7-Day Acute EP: the last N local days ending on the EP
+  // grid's end, joined BY DATE KEY. A day with no TrainingLoad row (before the tab
+  // starts in 2026-01, or a sync that hasn't landed yet) is an empty slot — a gap, never
+  // a guess — so both charts start and end on the same dates at every scope. Each slot
+  // carries its local date, which also keeps labels and tooltip titles off UTC midnight.
+  const tlByKey = {};
+  tl.forEach(d => { tlByKey[d.key] = d; });
+  const end = loadGridEnd();
+  const series = [];
+  for (let i = _garminLoadDays - 1; i >= 0; i--) {
+    const date = new Date(end.getFullYear(), end.getMonth(), end.getDate() - i);
+    const key = localDayKey(date), row = tlByKey[key];
+    series.push(row ? { ...row, date, key }
+      : { date, key, acute: null, chronic: null, ratio: null, vo2: null, status: '' });
+  }
   const acute  = series.map(d => d.acute);
   const labels = series.map(d => d.date.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
   // Null-safe: a row with no Chronic Load leaves a gap in the band, never an invented one.
@@ -2023,7 +2055,9 @@ function renderGarminLoad() {
   // Ratio leads, the way the 7-Day Acute EP note above it reads.
   const noteEl = document.getElementById('garminload-note');
   if (noteEl) {
-    const t = series[series.length - 1], r = garminRatio(t), z = garminZone(r);
+    // The latest day Garmin has reported, not the grid's last slot, which can be empty.
+    const t = [...series].reverse().find(d => d.acute != null) || tl[tl.length - 1];
+    const r = garminRatio(t), z = garminZone(r);
     const acuteTxt = `acute ${t.acute === null ? '—' : t.acute.toFixed(0)} (7d)`;
     noteEl.textContent = z
       ? `ACWR ${r.toFixed(2)} — ${z.label} · ${acuteTxt} · chronic ${t.chronic.toFixed(0)} (28d)`
@@ -2060,6 +2094,7 @@ function renderGarminLoad() {
   opts.plugins.legend.labels.filter = (item) => item.text !== 'upper';
   greenLegendSwatch(opts, 'Acute Load');
   overlayLegend(opts, _garminOverlay, renderGarminLoad);
+  alignLoadAxis(opts);
   opts.plugins.tooltip.filter = (item) => item.dataset.label === 'Acute Load';
   opts.plugins.tooltip.callbacks = {
     title: (items) => series[items[0].dataIndex].date

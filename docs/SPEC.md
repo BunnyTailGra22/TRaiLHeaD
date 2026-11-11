@@ -257,9 +257,15 @@ the `_loadStatusBands` plugin — Chart.js has no band primitive on a category a
 are passed as **plugin options**, not hung off the config object: Chart.js wraps that in
 its own `Config`, so a stray property on it never reaches the chart.
 
-**View scope** — 4 wk / 8 wk / 13 wk / 1 year pills, the last 28 / 56 / 91 / 365 rows
-(default 8 wk), panning the x-axis only. The TrainingLoad tab starts 2026-01, so until it
-holds a year of rows "1 year" simply shows all of it.
+**View scope** — 4 wk / 8 wk / 13 wk / 1 year pills (default 8 wk), panning the x-axis only.
+The axis is **the same calendar days as 7-Day Acute EP**: the last 28 / 56 / 91 / 365 local
+days ending where the EP grid ends (`loadGridEnd()` — today, or a later-dated session), not
+the last N sheet rows. TrainingLoad rows join onto it by date key; a day with no row is an
+empty slot, so the line gaps there. At 1 year that means the first weeks are empty until
+the tab's 2026-01 start, and today's slot is empty until the sync lands. The header note
+reads the latest day Garmin has reported. Both charts also pad their left axis to one width
+(`alignLoadAxis`), so a date sits at the same x on both and the Recovery / Strained washes
+line up vertically across the pair.
 
 **Overlays** — three **legend entries**, styled and toggled like Acute Load and the Chronic
 band: hidden (struck through) by default, a click shows or hides one. Unlike those two, an
