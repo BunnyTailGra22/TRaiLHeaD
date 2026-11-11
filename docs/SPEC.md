@@ -96,7 +96,9 @@ numerically, and the check worth re-running if either constant is ever changed.
 | < 0.8 | Below band | orange `#c08552` | load dropping below preparation |
 | no chronic yet | not scored | grey `#9d9488` | fewer than 28 days of history |
 
-Every dot is the same size, `LOAD_DOT_R = 3` (5 on hover), whatever its zone. Bounds are
+Every dot in a view is the same size, whatever its zone: `LOAD_DOT_R = 3` (5 on hover),
+or `LOAD_DOT_R_YEAR = 1.5` in the 1-year view, where 300+ days share ~570 px and r 3 dots
+would fuse into a band that hides the line (`loadDotR(days)`). Bounds are
 inclusive on the green side: exactly 0.8 and exactly 1.2 are in band, exactly 1.5 is
 orange. Green and orange share a lightness, so the reading does not rest on hue alone: the
 band gives it by position, and the tooltip names the zone. The zones come
@@ -219,7 +221,9 @@ GARMIN_RED_OVER = 1.5
 | < 0.8 | Below band | orange `#c08552` |
 | no Chronic Load | not scored | grey `#9d9488` |
 
-Every dot is the same size, `LOAD_DOT_R = 3` (5 on hover), whatever its zone. Edges are
+Every dot in a view is the same size, whatever its zone: `LOAD_DOT_R = 3` (5 on hover),
+or `LOAD_DOT_R_YEAR = 1.5` in the 1-year view, where 300+ days share ~570 px and r 3 dots
+would fuse into a band that hides the line (`loadDotR(days)`). Edges are
 inclusive of the band: 0.8 and 1.2 are green, 1.5 is orange. Orange and red are the
 dashboard's existing orange and red (HRV Unbalanced and Low), so they mean "drifting" and
 "alarm" here as well. Green and orange share a lightness, so in / out of range is also
@@ -250,13 +254,17 @@ its own `Config`, so a stray property on it never reaches the chart.
 (default 8 wk), panning the x-axis only. The TrainingLoad tab starts 2026-01, so until it
 holds a year of rows "1 year" simply shows all of it.
 
-**Overlays** — two toggles, both off by default and independent; each hides itself when
-its column has no data anywhere in history. The same shared code (`loadOverlays`,
-`addLoadOverlays`) draws them on 7-Day Acute EP, joined by date key; each chart keeps its
-own on/off state.
+**Overlays** — three toggles, all off by default and independent; each hides itself when
+its column has no data anywhere in history. VO₂ Max and HRV Status come from shared code
+(`loadOverlays`, `addLoadOverlays`) that draws them on 7-Day Acute EP too, joined by date
+key; each chart keeps its own on/off state. Chronic Load is this chart's own, passed to
+`loadOverlays` as `own` exactly as 7-Day Acute EP passes its Chronic EP: the toggle shows
+or hides the line only — the band is drawn from Chronic Load either way, and the header
+note and tooltip always give its value.
 
 | Overlay | Source | Drawn as |
 |---|---|---|
+| Chronic Load | TrainingLoad `Chronic Load` | dashed grey `#9d9488` line `[4,3]`, no points, styled like Chronic EP beside it; the band's 1.0× middle |
 | VO₂ Max | TrainingLoad `VO₂ Max` (`VO2 Max` accepted) | stepped line, `--vo2` steel blue, right axis in ml/kg/min; latest value in the legend |
 | HRV Status | Sleep `HRV Status`, joined on the date key | strip of status markers along the top, HRV Status chart's shapes and colours |
 

@@ -71,8 +71,9 @@ Two metrics carry most of the weight:
   0.8–1.2).
 
 Both charts colour each dot by that day's ratio the same way — green in band, orange under
-0.8× or over 1.2×, red over 1.5×, all one size — with every reference line grey. Neither
-card carries a static key: the zones and Garmin's washes are in the ⓘ panel and tooltip. On both, **VO₂ Max** and **HRV Status** can be overlaid from pills above the
+0.8× or over 1.2×, red over 1.5×, all one size in a view (smaller in the 1-year view) —
+with every reference line grey. Neither
+card carries a static key: the zones and Garmin's washes are in the ⓘ panel and tooltip. On both, the chronic line (**Chronic EP** / **Chronic Load**), **VO₂ Max** and **HRV Status** can be overlaid from pills above the
 chart, off by default, the scope runs from 4 wk to 1 year, and an ⓘ beside the title
 explains the model. Both shade Garmin's own Recovery and Strained
 stretches behind the curves, so a bad patch lines up across the two models at a glance.

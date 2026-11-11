@@ -536,6 +536,7 @@ main { padding: 20px 24px; }
         <!-- optional overlays, off by default; each hides itself when its column is absent -->
         <div class="overlay-pills" id="garminload-overlay-pills">
           <span class="mpill-hint">Overlay</span>
+          <button type="button" class="mpill" data-overlay="chronic" aria-pressed="false">Chronic Load</button>
           <button type="button" class="mpill" data-overlay="vo2" aria-pressed="false">VO₂ Max</button>
           <button type="button" class="mpill" data-overlay="hrv" aria-pressed="false">HRV Status</button>
         </div>
@@ -1681,6 +1682,11 @@ const LOAD_ORANGE = '#c08552';   // under 0.8x or over 1.2x
 const LOAD_RED    = '#ab5a52';   // over 1.5x
 const LOAD_REF    = '#9d9488';   // chronic reference line, not-scored dots — warm grey
 const LOAD_DOT_R  = 3;           // one radius for every dot, every zone, both charts
+// …per view. At 1 year a chart carries 300+ days in ~570 px, under 2 px a day, and r 3
+// dots fuse into a solid band that hides the line. Every dot in that view shares one
+// smaller radius instead; zones never change a dot's size.
+const LOAD_DOT_R_YEAR = 1.5;
+const loadDotR = days => days > 91 ? LOAD_DOT_R_YEAR : LOAD_DOT_R;
 
 // Build a gap-free DAILY EP series, then the acute + chronic curves over full history.
 function computeAcuteChronic(sessions) {
@@ -1796,7 +1802,7 @@ function renderRollingChart(sessions) {
       backgroundColor: TH().band, pointRadius: 0, pointHoverRadius: 0,   // light warm grey
       fill: '-1', tension: 0.35, order: 4, spanGaps: false },            // fills up to `upper`
     { label: 'Acute EP', data: acute, borderColor: LOAD_IN, borderWidth: 2,
-      pointRadius: LOAD_DOT_R, pointHoverRadius: LOAD_DOT_R + 2,
+      pointRadius: loadDotR(_overloadDays), pointHoverRadius: LOAD_DOT_R + 2,
       pointBackgroundColor: dotColors, pointBorderColor: dotColors,
       fill: false, tension: 0.25, order: 1 },
   ];
@@ -1981,8 +1987,10 @@ const GARMIN_ZONES = loadZones(GARMIN_BAND_LO, GARMIN_BAND_HI, GARMIN_RED_OVER);
 const garminRatio = d => (d.acute != null && d.chronic) ? d.acute / d.chronic : null;
 const garminZone  = r => r == null ? null : GARMIN_ZONES.find(z => z.test(r));
 
-// Overlay toggles for this chart (see LOAD-CHART OVERLAYS above).
-const _garminOverlay = { vo2: false, hrv: false };
+// Overlay toggles for this chart (see LOAD-CHART OVERLAYS above). Chronic Load is an
+// overlay here as Chronic EP is beside it: the band is always drawn from it, the line —
+// the band's 1.0x middle — only on ask.
+const _garminOverlay = { chronic: false, vo2: false, hrv: false };
 
 function renderGarminLoad() {
   const card = document.getElementById('garminload-card');
@@ -1998,7 +2006,9 @@ function renderGarminLoad() {
   const bandLo = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_LO);
   const bandHi = series.map(d => d.chronic == null ? null : d.chronic * GARMIN_BAND_HI);
 
-  const ov = loadOverlays(_garminOverlay, 'garminload', series.map(d => d.key));
+  const ov = loadOverlays(_garminOverlay, 'garminload', series.map(d => d.key),
+                         { chronic: tl.some(d => d.chronic != null) });
+  const showChronic = !!(_garminOverlay.chronic && ov.have.chronic);
 
   // A day with no Chronic Load can't be scored: a grey dot, as on 7-Day Acute EP.
   const zones     = series.map(d => garminZone(garminRatio(d)));
@@ -2016,10 +2026,17 @@ function renderGarminLoad() {
 
   const datasets = [{
     label: 'Acute Load', data: acute, borderColor: LOAD_IN, borderWidth: 2,
-    pointRadius: LOAD_DOT_R, pointHoverRadius: LOAD_DOT_R + 2,
+    pointRadius: loadDotR(_garminLoadDays), pointHoverRadius: LOAD_DOT_R + 2,
     pointBackgroundColor: dotColors, pointBorderColor: dotColors,
     spanGaps: false, fill: false, tension: 0.25, order: 1,
   }];
+  // Chronic Load overlay — the line itself, drawn exactly like Chronic EP on the chart
+  // beside it: grey, dashed, no points, a gap wherever a row has no Chronic Load.
+  if (showChronic) datasets.push({
+    label: 'Chronic Load (28d)', data: series.map(d => d.chronic), borderColor: LOAD_REF,
+    borderWidth: 1.5, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 0, fill: false,
+    tension: 0.25, order: 2, spanGaps: false,
+  });
   // Band last in the legend and drawn first: an invisible upper bound, then the lower
   // bound filled up to it — the same construction, grey and fill as the range band
   // on 7-Day Acute EP, so a grey band means one thing across the pair.
@@ -2364,9 +2381,9 @@ document.querySelectorAll('#garminload-scope-pills .rpill').forEach(p => {
   });
 });
 
-// Load-chart overlays — VO₂ Max and HRV Status toggle independently on each chart, both
-// off until asked for, and survive a scope change because the state lives in the chart's
-// own overlay object.
+// Load-chart overlays — each chart's chronic line (Chronic EP / Chronic Load), VO₂ Max and
+// HRV Status toggle independently, all off until asked for, and survive a scope change
+// because the state lives in the chart's own overlay object.
 [ ['overload',   _acuteEpOverlay, () => { if (_sessions.length) renderRollingChart(_sessions); }],
   ['garminload', _garminOverlay,  () => renderGarminLoad()],
 ].forEach(([prefix, state, render]) => {
@@ -2456,7 +2473,10 @@ const glossOverlays = () => {
       <dd>Chronic Load × ${lo} to × ${hi}, the loads where Load Ratio (ACWR) is ${lo}–${hi}.
         Above it is a spike, below it a drop in load.</dd>
       <dt>${sw('#b3746e', '▮', ';opacity:.5')} ${sw('#8f3f38', '▮', ';opacity:.7')} Background</dt>
-      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>${glossOverlays()}
+      <dd>Days Garmin flagged Recovery (light) or Strained (dark).</dd>
+      <dt>${glossRule(LOAD_REF, 'dashed', 1.5)} Chronic Load overlay</dt>
+      <dd>Garmin's ~28-day Chronic Load itself — the middle of the band, where Load Ratio
+        is exactly 1.0. The band is drawn from it whether the line is on or off.</dd>${glossOverlays()}
     </dl>`;
 })();
 
