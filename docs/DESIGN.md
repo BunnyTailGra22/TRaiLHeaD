@@ -69,9 +69,12 @@ mean "attention":
 | Over 1.5× | `LOAD_RED` | red `#ab5a52` |
 | Reference line, band fill, not-scored dot | `LOAD_REF` | grey `#9d9488` |
 
-The grey band runs 0.8–1.2× chronic — exactly the green range — so orange sits just
-outside it on either side and red is further above it, past 1.5×. Orange above 1.2 and
-under 0.8 means opposite things — spike risk and detraining. The tooltip names which, and the dot's
+The grey band differs between the two, on purpose. On 7-Day Acute EP it runs 0.8–1.2×
+chronic — exactly the green range — so orange sits just outside it on either side and red
+further above it. On Garmin 7-Day Acute Load it runs 0.8–1.5×, so its top edge is the red
+threshold: green sits in its lower part, orange 1.2–1.5 in its upper strip. The dot zones
+are identical on both. Orange above 1.2 and under 0.8 means opposite things — spike risk
+and detraining. The tooltip names which, and the dot's
 position against the band says it at a glance. Every dot in a view is one size
 (`LOAD_DOT_R` 3, or 1.5 in the dense 1-year view);
 green and orange share a lightness, so position against the band is what carries in / out
