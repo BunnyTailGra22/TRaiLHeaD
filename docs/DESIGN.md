@@ -71,7 +71,8 @@ mean "attention":
 
 On both load charts, *above* and *below* the band share orange though they mean
 opposite things — spike risk and detraining. The tooltip names which, and the dot's
-position against the band says it at a glance. Every dot is one size (`LOAD_DOT_R` 3);
+position against the band says it at a glance. Every dot in a view is one size
+(`LOAD_DOT_R` 3, or 1.5 in the dense 1-year view);
 green and orange share a lightness, so position against the band is what carries in / out
 of range in greyscale and for colour-blind eyes. Keeping every reference line grey is what makes
 it work: colour appears on the chart only where there is a reading to judge, never on the
@@ -226,8 +227,9 @@ Chart.js manages only the bitmap and DPR. Paired cards get their heights tuned s
   charts offer 4 wk · 8 wk · 13 wk · 1 year (28 / 56 / 91 / 365 days); the Recovery charts
   keep 26 wk as their longest.
 - `.mpill` — **metric**. Changes which series the chart plots. On both load charts the
-  `.overlay-pills` toggles (VO₂ Max, HRV Status, plus Chronic EP on 7-Day Acute EP — a
-  reference line, so it is grey and opt-in like the rest) sit at the right end of the shape-key
+  `.overlay-pills` toggles (the chart's chronic line — Chronic EP on 7-Day Acute EP,
+  Chronic Load on Garmin's, a reference line so grey and opt-in like the rest — then VO₂ Max
+  and HRV Status) sit at the right end of the shape-key
   row: each adds a series, off by default, independent of the other and of the other
   chart's, and hidden when its column has no data. The HRV key joins the shape-key only
   while that overlay is on. Both cards carry the same rows, so their plot areas stay level.
