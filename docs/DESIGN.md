@@ -180,8 +180,8 @@ same Excellent → Good → Fair → Poor order.
 2. 7-Day Acute EP *(full width)*
 3. Garmin 7-Day Acute Load *(full width)*
 4. Recent 8 Weeks — Load Summary *(full width)*
-5. Distribution by Category | 專項訓練 Seasonality
-6. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — the >20 km bubbles above it as a
+5. Distribution by Category | 專項訓練 Seasonality — EPH by season on the 劍 / 劍中劍 courses
+6. 專項訓練 Long Runs | Course Heatmap, Slope % vs. EP — every >20 km 專項 session as a
    table, beside a static PNG of the route plan (not a canvas)
 
 Row 6 is sized by the figure, not by a `.chart-box`: the square PNG sets the row height

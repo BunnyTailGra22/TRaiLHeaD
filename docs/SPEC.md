@@ -317,10 +317,29 @@ Total EP / Distance / Elevation / Sessions.
 ### Monthly EP — Road vs Trail
 Stacked bars, one year at a time, EP split by session type.
 
-### 專項訓練 Seasonality
-One bubble per qualifying session: x = date within the calendar year, y = EPH, bubble
-**area ∝ EP**, colour = category. Categories are matched **most-specific first**, so a
-session only ever lands in one:
+### 專項訓練 Seasonality — EPH by season
+Pace on the two **fixed courses**, grouped by season, one course at a time (pills:
+**劍** = the 劍% category, an 8.9 km / +235 m loop; **劍中劍** = the 18 km / +490 m double
+loop). On a fixed route EPH is a pace, so a seasonal shift is a heat or fitness signal.
+Races and other long runs are deliberately left out: each is a different course, so
+their EPH tracks terrain, not season — they are read in the Long Runs table below.
+
+- **x** = season, meteorological: Winter Dec–Feb, Spring Mar–May, Summer Jun–Aug,
+  Autumn Sep–Nov. December counts toward the **following** year's winter, so Winter '25
+  is Dec 2024 – Feb 2025, one continuous stretch.
+- Inside each season the years sit side by side, dodged and labelled `'24 '25 '26`
+  under the group, each in its `YEAR_COLORS` colour — position and label carry the year,
+  so it never rests on colour alone. Years are legend entries; hiding one drops it from
+  every median.
+- **Dot** = one session (EPH), jittered deterministically. **Bar** = that year's median
+  for the season.
+- **Above the plot**: the season's median across all visible years, and its n.
+- **Summer** sits on a light warm-grey wash (the heat season); the dashed grey line is
+  the all-season median, labelled in the right margin.
+
+Categories come from the shared resolver `FOCUS_CATS`, matched **most-specific first**,
+so a session only ever lands in one. The Distribution chart and the Long Runs table use
+the same resolver:
 
 | Category | Test |
 |---|---|
@@ -330,14 +349,18 @@ session only ever lands in one:
 | ≥50 km | distance ≥ 50 |
 | >20 km | distance > 20 |
 
+> **History.** Until 2026-11 this chart was a bubble plot of every 專項 session —
+> x = date within the calendar year, y = EPH, size = EP, colour = category. All years
+> shared one Jan–Dec axis, the ~130 near-identical 劍 bubbles overplotted, and EPH was
+> compared across courses of very different steepness. It was replaced by the view above.
+
 ### 專項訓練 Long Runs — sessions over 20 km
 
-A table of every session the Seasonality chart plots with **distance > 20 km**, newest
-first. It reuses the chart's own filter (runs only, positive moving time) and its
-category resolver, so a row here is always a bubble there, and the Category column is the
-chart's most-specific-first assignment — a 25 km 劍中劍 run is listed as 劍中劍, not as
-">20 km". The 20 km cut is `LONGRUN_MIN_KM`, strictly greater than, matching the chart's
-own ">20 km" test.
+A table of every 專項 session (any `FOCUS_CATS` category; runs only, positive moving
+time) with **distance > 20 km**, newest first — the races and long runs the Seasonality
+chart leaves out. The Category column is the resolver's most-specific-first assignment —
+a 25 km 劍中劍 run is listed as 劍中劍, not as ">20 km". The 20 km cut is
+`LONGRUN_MIN_KM`, strictly greater than, matching the ">20 km" category test.
 
 Columns in display order — the three effort measures lead, so they are what stays in
 view when the table scrolls sideways on a narrow screen:
@@ -347,7 +370,7 @@ view when the table scrolls sideways on a narrow screen:
 | EP | `dist + elev / 100` |
 | EPH | `EP / hrs` |
 | VAM | `elev / hrs` (vertical m per hour) |
-| Category | the Seasonality chart's category |
+| Category | the `FOCUS_CATS` category |
 | Date | session date, local |
 | Activity | name from the sheet |
 | Distance | `dist` (km) |
