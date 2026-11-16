@@ -556,8 +556,14 @@ main { padding: 20px 24px; }
 
     <div class="chart-card">
       <div class="chart-header">
-        <div class="section-title" style="margin:0">專項訓練 Seasonality — each bubble = one session</div>
-        <div id="focus-note" style="font-size:11px;color:var(--muted)">x = month · y = EPH · size = EP</div>
+        <div class="section-title" style="margin:0">專項訓練 Seasonality — EPH by season</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div id="focus-note" style="font-size:11px;color:var(--muted)"></div>
+          <div class="range-pills" id="season-course-pills">
+            <div class="rpill active" data-course="劍%">劍</div>
+            <div class="rpill" data-course="劍中劍">劍中劍</div>
+          </div>
+        </div>
       </div>
       <div class="chart-box" id="focus-box"><canvas id="focus-chart"></canvas></div>
     </div>
@@ -566,7 +572,7 @@ main { padding: 20px 24px; }
   <!-- ROW 6: Long Runs | Course Heatmap. The square figure sets the row height and the
        table fills it, scrolling inside its own card. Stacks again at ≤ 1200px. -->
   <div class="two-col lr-pair">
-  <!-- every >20 km session the Seasonality chart plots, newest first -->
+  <!-- every >20 km 專項 session, newest first -->
   <div class="chart-card">
     <div class="chart-header">
       <div class="section-title" style="margin:0">專項訓練 Long Runs — sessions over 20 km</div>
@@ -1320,10 +1326,9 @@ function renderAll(sessions, sleepMap) {
   renderSleepPerf(sleepMap);
 }
 
-// ── 專項訓練 SEASONALITY BUBBLES ───────────────────────────────────────────────
-// Each bubble = one qualifying session. x = calendar month (positioned by date),
-// y = EPH, bubble AREA ∝ EP, color = session category.
-// Category precedence: most-specific name first, then ultra, then long.
+// ── 專項訓練 SEASONALITY — EPH BY SEASON ───────────────────────────────────────
+// Category resolver shared by the Distribution box plot and the Long Runs table.
+// Precedence: most-specific name first, then ultra, then long.
 const FOCUS_CATS = [
   { key:'劍中劍', color:'#a5602a', test: s => (s.name||'').includes('劍中劍') },
   { key:'劍%',    color:'#bd9a4f', test: s => (s.name||'').includes('劍') },
@@ -1333,46 +1338,121 @@ const FOCUS_CATS = [
 ];
 const focusCatOf = s => FOCUS_CATS.find(c => c.test(s));
 
+// Only the two fixed courses are plotted: on a fixed route EPH is a pace, so a seasonal
+// shift is a fitness/heat signal. Races and long runs change course every time — their
+// EPH tracks terrain, not season — and are listed in the Long Runs table instead.
+const SEASON_COURSES = {
+  '劍%':   { label:'劍',    desc:'8.9 km · +235 m loop' },
+  '劍中劍': { label:'劍中劍', desc:'18 km · +490 m double loop' },
+};
+// Meteorological seasons. December belongs to the FOLLOWING year's winter, so
+// "Winter '25" is Dec 2024 – Feb 2025, one continuous stretch.
+const SEASONS = [
+  { name:'Winter', months:'Dec–Feb' },
+  { name:'Spring', months:'Mar–May' },
+  { name:'Summer', months:'Jun–Aug', hot:true },
+  { name:'Autumn', months:'Sep–Nov' },
+];
+const seasonOf     = d => { const m = d.getMonth(); return m === 11 || m <= 1 ? 0 : m <= 4 ? 1 : m <= 7 ? 2 : 3; };
+const seasonYearOf = d => d.getFullYear() + (d.getMonth() === 11 ? 1 : 0);
+const SEASON_BAND = 0.46;   // half-width of one season group on the x axis
+
+// Draws everything that is not a session dot: the summer wash, the all-season median,
+// each year's median bar, the per-season median + n above the plot, and the year
+// labels under each group. Hidden (legend-toggled) years drop out of all of it.
+const _seasonPlugin = {
+  id: 'seasonEPH',
+  beforeDatasetsDraw(chart, args, o) {
+    const { ctx, chartArea:{ top, bottom }, scales:{ x } } = chart;
+    ctx.save();
+    ctx.fillStyle = TH().band; ctx.globalAlpha = 0.55;   // a wash, lighter than a baseline band
+    SEASONS.forEach((s, i) => {
+      if (!s.hot) return;
+      const l = x.getPixelForValue(i - SEASON_BAND), r = x.getPixelForValue(i + SEASON_BAND);
+      ctx.fillRect(l, top - 30, r - l, bottom - top + 30);
+    });
+    ctx.restore();
+  },
+  afterDatasetsDraw(chart, args, o) {
+    const { ctx, chartArea:{ left, right, top, bottom }, scales:{ x, y } } = chart;
+    const t = TH(), phone = isPhone();
+    const font = (px, w = 400) => `${w} ${px}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
+    const live = chart.data.datasets.filter((d, i) => chart.isDatasetVisible(i));
+    const all  = live.flatMap(d => d.data.map(p => p.y));
+    ctx.save();
+    // all-season median — grey, dashed, labelled in the right margin (clear of the dots)
+    const m = median(all);
+    if (m !== null) {
+      const py = y.getPixelForValue(m);
+      ctx.strokeStyle = t.muted; ctx.globalAlpha = 0.6; ctx.lineWidth = 1; ctx.setLineDash([4, 3]);
+      ctx.beginPath(); ctx.moveTo(left, py); ctx.lineTo(right, py); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+      ctx.fillStyle = t.muted; ctx.font = font(phone ? 9 : 10); ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText('all', right + 4, py - 6); ctx.fillText(m.toFixed(1), right + 4, py + 6);
+    }
+    // each visible year's median bar, in that year's colour
+    live.forEach(d => {
+      SEASONS.forEach((s, i) => {
+        const v = d.data.filter(p => p._season === i).map(p => p.y);
+        if (!v.length) return;
+        const cx = x.getPixelForValue(i + d._offset), py = y.getPixelForValue(median(v));
+        const hw = Math.max(6, (x.getPixelForValue(d._width) - x.getPixelForValue(0)) * 0.4);
+        ctx.strokeStyle = d._color; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(cx - hw, py); ctx.lineTo(cx + hw, py); ctx.stroke();
+      });
+      // year label under each season group: position + label carry the year, not colour alone
+      ctx.fillStyle = t.muted; ctx.font = font(phone ? 9 : 10); ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      SEASONS.forEach((s, i) => ctx.fillText("'" + String(d._year).slice(2), x.getPixelForValue(i + d._offset), bottom + 4));
+    });
+    // per-season median across visible years, with n, above the plot
+    SEASONS.forEach((s, i) => {
+      const v = live.flatMap(d => d.data.filter(p => p._season === i).map(p => p.y));
+      const cx = x.getPixelForValue(i);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = t.text; ctx.font = font(phone ? 13 : 15, 700);
+      ctx.fillText(v.length ? median(v).toFixed(1) : '–', cx, top - 14);
+      ctx.fillStyle = t.muted; ctx.font = font(phone ? 9 : 10);
+      ctx.fillText('n=' + v.length, cx, top - 3);
+    });
+    ctx.restore();
+  },
+};
+
 let _focusChart = null;
+let _seasonCourse = '劍%';
 function renderFocusChart(sessions) {
-  const focus = sessions
-    .map(s => ({ ...s, eph: s.hrs > 0 ? s.ep / s.hrs : null }))
-    .filter(s => s.eph !== null && focusCatOf(s));
+  const course = SEASON_COURSES[_seasonCourse] ? _seasonCourse : '劍%';
+  const pts = sessions
+    .filter(s => s.hrs > 0 && focusCatOf(s) && focusCatOf(s).key === course)
+    .map(s => ({ s, eph: s.ep / s.hrs, season: seasonOf(s.date), year: seasonYearOf(s.date) }));
 
   const noteEl = document.getElementById('focus-note');
-  if (noteEl) noteEl.textContent = focus.length
-    ? `${focus.length} sessions · x = month · y = EPH · size = EP`
-    : 'No qualifying sessions';
+  if (noteEl) noteEl.textContent = pts.length
+    ? `${SEASON_COURSES[course].desc} · ${pts.length} sessions`
+    : 'No sessions on this course';
 
-  // Bubble radius: min–max normalized across the focus set for strong differentiation.
-  // Radius scales ~linearly with EP (so area grows ~quadratically) → the smallest-EP
-  // session (e.g. 劍中劍) is clearly the tiniest, the biggest efforts pop.
   const phone = isPhone();
-  const eps   = focus.map(s => s.ep);
-  const minEP = Math.min(...eps), maxEP = Math.max(...eps);
-  const rMin  = phone ? 3  : 4;
-  const rMax  = phone ? 18 : 28;
-  const rOf = ep => {
-    if (maxEP <= minEP) return (rMin + rMax) / 2;
-    const t = (ep - minEP) / (maxEP - minEP);   // 0 (smallest) … 1 (largest)
-    return rMin + t * (rMax - rMin);
-  };
-
-  const datasets = FOCUS_CATS.map(c => ({
-    label: c.key,
-    data: focus.filter(s => focusCatOf(s) === c).map(s => ({
-      x: s.month + (s.date.getDate() - 1) / 31,   // real date position within month
-      y: +s.eph.toFixed(2),
-      r: rOf(s.ep),
-      _s: s,
-    })),
-    backgroundColor: c.color + '99',
-    borderColor: c.color,
-    borderWidth: 1.5,
-  })).filter(d => d.data.length);
+  const years = [...new Set(pts.map(p => p.year))].sort();
+  const w = Math.min(0.26, (SEASON_BAND * 2 - 0.1) / Math.max(1, years.length));
+  const datasets = years.map((yr, j) => {
+    const color  = YEAR_COLORS[yr] || TH().muted;
+    const offset = (j - (years.length - 1) / 2) * w;
+    return {
+      label: String(yr), _year: yr, _color: color, _offset: offset, _width: w,
+      data: pts.filter(p => p.year === yr).map((p, k) => ({
+        // deterministic jitter (golden-ratio sequence) so dots don't move on re-render
+        x: p.season + offset + (((k * 0.618034) % 1) - 0.5) * w * 0.45,
+        y: +p.eph.toFixed(2), _season: p.season, _s: p.s,
+      })),
+      backgroundColor: rgba(color, 0.45), borderColor: rgba(color, 0.8), borderWidth: 1,
+      pointRadius: phone ? 2.5 : 3.5, pointHoverRadius: phone ? 4 : 5.5,
+    };
+  });
 
   const opts = chartOpts({ yLabel: 'EPH' });
-  opts.plugins.legend.display = true;
+  opts.plugins.legend.display = years.length > 1;
+  opts.plugins.legend.position = 'bottom';            // the top margin holds the season medians
+  opts.layout = { padding: { top: 34, right: phone ? 24 : 28 } };
   opts.interaction = { mode: 'nearest', intersect: true };
   opts.plugins.tooltip.callbacks = {
     title: (items) => {
@@ -1381,27 +1461,36 @@ function renderFocusChart(sessions) {
         s.date.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     },
     label: (item) => {
-      const s = item.raw._s;
+      const s = item.raw._s, se = SEASONS[item.raw._season];
       return [
-        'EP:  '  + s.ep.toFixed(1),
-        'EPH: '  + s.eph.toFixed(1),
+        'EPH: '  + item.raw.y.toFixed(1),
+        'Time: ' + _hm(s.hrs) + ' · EP ' + s.ep.toFixed(1),
         'Dist: ' + s.dist.toFixed(1) + ' km · ↑' + Math.round(s.elev) + ' m',
-        'Slope: '+ (s.dist > 0 ? (s.elev / s.dist / 10).toFixed(1) : '0.0') + '%',
+        `${se.name} '${String(item.dataset._year).slice(2)} (${se.months})`,
       ];
     },
   };
   opts.scales = {
-    x: { ...darkScale(), min: -0.3, max: 12,
-      afterBuildTicks: (axis) => { axis.ticks = Array.from({length:13}, (_,i)=>({value:i})); },
-      ticks: { color:TH().muted, font:{size: phone?10:11}, autoSkip:false, maxRotation:0,
-               callback:(v)=> v>=0&&v<12 ? MONTHS[v] : '' } },
-    y: { ...darkScale(), title:{display:!phone, text:'EPH', color:TH().muted, font:{size:11}} },
+    x: { ...darkScale(), type: 'linear', min: -0.5, max: SEASONS.length - 0.5,
+      grid: { display: false },
+      afterBuildTicks: (axis) => { axis.ticks = SEASONS.map((_, i) => ({ value: i })); },
+      ticks: { color: TH().muted, font: { size: phone ? 10 : 11 }, autoSkip: false, maxRotation: 0,
+               padding: 16, callback: (v) => SEASONS[v] ? [SEASONS[v].name, SEASONS[v].months] : '' } },
+    y: { ...darkScale(), title: { display: !phone, text: 'EPH', color: TH().muted, font: { size: 11 } } },
   };
 
   const ctx = document.getElementById('focus-chart').getContext('2d');
   if (_focusChart) _focusChart.destroy();
-  _focusChart = new Chart(ctx, { type:'bubble', data:{ datasets }, options: opts });
+  _focusChart = new Chart(ctx, { type:'scatter', data:{ datasets }, options: opts, plugins: [_seasonPlugin] });
 }
+document.querySelectorAll('#season-course-pills .rpill').forEach(p => {
+  p.addEventListener('click', () => {
+    document.querySelectorAll('#season-course-pills .rpill').forEach(x => x.classList.remove('active'));
+    p.classList.add('active');
+    _seasonCourse = p.dataset.course;
+    if (_sessions.length) renderFocusChart(_sessions);
+  });
+});
 
 // ── DISTRIBUTION BOX PLOT (by 專項 category) ──────────────────────────────────
 // Hand-rolled box-and-whisker (no external plugin) via a Chart.js custom plugin.
@@ -2217,9 +2306,9 @@ function renderLoadTable(sessions) {
 }
 
 // ── 專項 LONG RUNS TABLE ──────────────────────────────────────────────────────
-// Every session the Seasonality chart plots with distance > 20 km. It uses the chart's
-// own filter and category resolver, so a row here is always a bubble there — and a
-// 25 km 劍中劍 run is listed as 劍中劍 (most-specific-first), not as ">20 km".
+// Every 專項 run (any FOCUS_CATS category) with distance > 20 km. It uses the shared
+// category resolver, so a 25 km 劍中劍 run is listed as 劍中劍 (most-specific-first),
+// not as ">20 km". The races the Seasonality chart leaves out are read here.
 const LONGRUN_MIN_KM = 20;
 const _esc = t => String(t).replace(/[&<>"']/g,
   c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));

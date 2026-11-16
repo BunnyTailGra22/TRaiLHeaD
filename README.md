@@ -43,7 +43,7 @@ same render path as real data.
 | 7-Day Acute EP (full width) | |
 | Garmin 7-Day Acute Load (full width) | |
 | Recent 8 Weeks load table (full width) | |
-| Distribution by Category | 專項訓練 Seasonality |
+| Distribution by Category | 專項訓練 Seasonality — EPH by season on the 劍 / 劍中劍 courses |
 | 專項訓練 Long Runs — every session over 20 km | Course Heatmap — Slope % vs. EP, a static reference figure |
 
 **Recovery tab**
