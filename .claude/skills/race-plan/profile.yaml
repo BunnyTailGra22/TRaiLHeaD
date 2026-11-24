@@ -1,0 +1,56 @@
+# Personal parameters for the race-plan skill.
+# The method lives in SKILL.md and references/; everything that is *yours* lives here.
+# Update after every race with scripts/post_race.py (it prints suggested values).
+version: 0.1
+updated: 2026-11-24
+athlete:
+  weight_kg: 62.1
+  resting_hr: 47
+
+# Prediction rule: race EP/h = benchmark EP/h (劍中劍, last 6 weeks) x ratio
+benchmark:
+  name: 劍中劍
+  ratio_low: 0.70        # long races (Hmong50 2025, 54 km)
+  ratio_high: 0.73       # ~40 km races (FT40 2026, 39 km)
+  history:
+    - {race: Hmong50 2025, km: 54, benchmark_eph: 11.6, race_eph: 8.1, ratio: 0.70}
+    - {race: FT40 2026, km: 38.6, benchmark_eph: 12.3, race_eph: 9.02, ratio: 0.733}
+
+# Section time = section EP / (race EP/h x factor). Stops are added separately.
+# Calibrated: section moving EP/h / race EP/h (official time). Source: FT40 2026 only.
+terrain_factors:
+  road_open:            {default: 1.40, personal: 1.40}
+  road_end:             {default: 1.25, personal: 1.12}
+  steep_climb:          {default: 0.88, personal: 1.23}
+  reclimb:              {default: 0.90, personal: 1.10}
+  technical_mixed:      {default: 0.90, personal: 0.79}
+  descent_technical:    {default: 1.00, personal: 0.88}
+  descent_forest_road:  {default: 1.15, personal: 0.98}
+
+tiers:
+  stretch:  {uplift: 1.04, fade: 1.00}  # best day: target EP/h x 1.04 (assumed)
+  target:   {fade: 1.00}               # benchmark x ratio (interpolated by distance); factors already include FT40's fade
+  fallback: {fade: 0.90}               # benchmark x ratio_low, x0.90 after the decision point
+  # cutoff line is solved: slowest pace that clears the binding cutoff with zero buffer
+
+pacing:
+  default_stop_min: 5      # per aid station unless the checkpoint file says otherwise
+  hr_cap_opening: 155      # FT40 opening road averaged 154
+
+fueling:
+  targets:
+    carbs_g_h: [60, 70]          # 70 when race > 9 h
+    sodium_mg_h: [400, 500]
+    fluid_ml_h: [400, 800]
+    caffeine_mg_kg_max: 6
+  gel_interval_min: 45           # 40 when race > 9 h; shortened automatically until the carb target is met
+  electrolyte_interval_min: 65
+  kit:
+    caffeine_tablet: {name: 雙速咖啡因雙層錠, carbs: 0, sodium: 0, caffeine: 200, when: 30–60 min before start}
+    gel:        {name: Betery 能量果膠 PRO 沙士, grams: 45, kcal: 120, carbs: 30.0, sodium: 1.2, caffeine: 0, when: main fuel}
+    bar:        {name: UP 咖啡因能量棒 芒果可可, grams: 28, kcal: 104.9, carbs: 21.7, sodium: 12, caffeine: 75, when: on a climb, second half}
+    chew:       {name: UP FOCHEWS 能量軟糖, grams: 20, kcal: 83, carbs: 17.9, sodium: 5, caffeine: 0, when: technical trail}
+    electrolyte: {name: 水動能電解質液 PLUS 鋅, grams: 7, kcal: 22.4, carbs: 5.0, sodium: 442, caffeine: 0, water_ml: 500}
+    aid_stop:   {name: 補給站（香蕉＋水果＋可樂）, carbs: 70, sodium: 20, caffeine: 22, kcal: 300, estimate: true}
+  chews_per_race: 2
+  bars_per_race: 1

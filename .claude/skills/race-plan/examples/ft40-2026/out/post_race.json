@@ -1,0 +1,175 @@
+{
+ "course": {
+  "name": "福爾摩沙古道 40K",
+  "total_km": 38.6,
+  "gain": 2375,
+  "loss": 2374,
+  "ep": 62.3
+ },
+ "official_h": 6.918611111111112,
+ "race_eph": 9.0,
+ "ratio": 0.732,
+ "stops_min": 13.5,
+ "sections": [
+  {
+   "frm": "緣溪行 起點",
+   "to": "岔路 W",
+   "terrain": "road_open",
+   "ep": 8.42,
+   "mins": 40.1,
+   "eph": 12.6,
+   "factor": 1.4,
+   "hr": 154,
+   "clock": "06:10",
+   "dwell": 0
+  },
+  {
+   "frm": "岔路 W",
+   "to": "陡坡頂",
+   "terrain": "steep_climb",
+   "ep": 10.51,
+   "mins": 56.7,
+   "eph": 11.12,
+   "factor": 1.23,
+   "hr": 159,
+   "clock": "07:06",
+   "dwell": 0
+  },
+  {
+   "frm": "陡坡頂",
+   "to": "舊武界越",
+   "terrain": "reclimb",
+   "ep": 4.29,
+   "mins": 26.6,
+   "eph": 9.69,
+   "factor": 1.08,
+   "hr": 148,
+   "clock": "07:33",
+   "dwell": 0
+  },
+  {
+   "frm": "舊武界越",
+   "to": "cpA 茶園",
+   "terrain": "descent_technical",
+   "ep": 3.93,
+   "mins": 26.9,
+   "eph": 8.77,
+   "factor": 0.97,
+   "hr": 147,
+   "clock": "08:00",
+   "dwell": 5.1
+  },
+  {
+   "frm": "cpA 茶園",
+   "to": "岔路 X",
+   "terrain": "reclimb",
+   "ep": 5.1,
+   "mins": 33.1,
+   "eph": 9.24,
+   "factor": 1.03,
+   "hr": 123,
+   "clock": "08:38",
+   "dwell": 0
+  },
+  {
+   "frm": "岔路 X",
+   "to": "岔路 Y",
+   "terrain": "technical_mixed",
+   "ep": 10.37,
+   "mins": 86.9,
+   "eph": 7.16,
+   "factor": 0.79,
+   "hr": 141,
+   "clock": "10:05",
+   "dwell": 0
+  },
+  {
+   "frm": "岔路 Y",
+   "to": "cpB 武界橘子屋",
+   "terrain": "descent_technical",
+   "ep": 2.51,
+   "mins": 18.4,
+   "eph": 8.19,
+   "factor": 0.91,
+   "hr": 155,
+   "clock": "10:23",
+   "dwell": 8.4
+  },
+  {
+   "frm": "cpB 武界橘子屋",
+   "to": "岔路 Y（回）",
+   "terrain": "reclimb",
+   "ep": 5.16,
+   "mins": 30.8,
+   "eph": 10.07,
+   "factor": 1.12,
+   "hr": 143,
+   "clock": "11:03",
+   "dwell": 0
+  },
+  {
+   "frm": "岔路 Y（回）",
+   "to": "林道口",
+   "terrain": "descent_technical",
+   "ep": 1.53,
+   "mins": 13.2,
+   "eph": 6.98,
+   "factor": 0.78,
+   "hr": 132,
+   "clock": "11:16",
+   "dwell": 0
+  },
+  {
+   "frm": "林道口",
+   "to": "過橋",
+   "terrain": "descent_forest_road",
+   "ep": 7.01,
+   "mins": 47.8,
+   "eph": 8.81,
+   "factor": 0.98,
+   "hr": 150,
+   "clock": "12:04",
+   "dwell": 0
+  },
+  {
+   "frm": "過橋",
+   "to": "緣溪行 終點",
+   "terrain": "road_end",
+   "ep": 3.53,
+   "mins": 21.0,
+   "eph": 10.09,
+   "factor": 1.12,
+   "hr": 156,
+   "clock": "12:24",
+   "dwell": 0
+  }
+ ],
+ "factors_this_race": {
+  "road_open": 1.4,
+  "steep_climb": 1.24,
+  "reclimb": 1.07,
+  "descent_technical": 0.91,
+  "technical_mixed": 0.8,
+  "descent_forest_road": 0.98,
+  "road_end": 1.12
+ },
+ "factors_current": {
+  "road_open": 1.4,
+  "road_end": 1.12,
+  "steep_climb": 1.23,
+  "reclimb": 1.1,
+  "technical_mixed": 0.79,
+  "descent_technical": 0.88,
+  "descent_forest_road": 0.98
+ },
+ "factors_suggested": {
+  "road_open": 1.4,
+  "road_end": 1.12,
+  "steep_climb": 1.23,
+  "reclimb": 1.08,
+  "technical_mixed": 0.8,
+  "descent_technical": 0.9,
+  "descent_forest_road": 0.98
+ },
+ "unmatched": []
+}
