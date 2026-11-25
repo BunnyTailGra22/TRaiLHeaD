@@ -1,0 +1,13 @@
+name,km,lat,lon,cutoff,stop_min,aid,surface,terrain,decision
+Howard Beach Resort 起點,0,,,,,,,,
+緩坡頂,7.0,,,,,,trail,,
+CP2 Old House 老屋,9.57,,,08:30,5,1,trail,,
+大爬升頂,13.2,,,,,,trail,,
+小坡頂,16.1,,,,,,trail,,
+CP4 Menmaluo 門馬羅,21.23,,,11:00,5,1,trail,,1
+長坡頂,27.1,,,,,,trail,,
+CP7 Dongmen Creek 東門溪,29.51,,,13:30,5,1,trail,,
+CP8 Bonbolo 營地,36.58,,,15:30,8,1,trail,,
+後段雙坡頂,44.4,,,,,,trail,,
+CP1 Kenting Villa 2,47.15,,,,3,1,trail,,
+Howard Beach Resort 終點,50.64,,,19:15,,,road,,
