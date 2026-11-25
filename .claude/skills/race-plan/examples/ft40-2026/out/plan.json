@@ -385,7 +385,117 @@
   },
   "target_carbs": 60,
   "short_gels": 0,
-  "electrolyte_every": 65
+  "electrolyte_every": 65,
+  "rows": [
+   {
+    "kcal": 0.0,
+    "water": 0.0,
+    "gel": 0,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": false
+   },
+   {
+    "kcal": 120.0,
+    "water": 300,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": false
+   },
+   {
+    "kcal": 142.4,
+    "water": 400,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 1,
+    "aid": false
+   },
+   {
+    "kcal": 120.0,
+    "water": 200,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": false
+   },
+   {
+    "kcal": 442.4,
+    "water": 250,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 1,
+    "aid": true
+   },
+   {
+    "kcal": 120.0,
+    "water": 200,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": false
+   },
+   {
+    "kcal": 210.8,
+    "water": 650,
+    "gel": 0,
+    "bar": 0,
+    "chew": 2,
+    "electrolyte": 2,
+    "aid": false
+   },
+   {
+    "kcal": 420.0,
+    "water": 200,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": true
+   },
+   {
+    "kcal": 127.30000000000001,
+    "water": 250,
+    "gel": 0,
+    "bar": 1,
+    "chew": 0,
+    "electrolyte": 1,
+    "aid": false
+   },
+   {
+    "kcal": 0.0,
+    "water": 100,
+    "gel": 0,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": false
+   },
+   {
+    "kcal": 142.4,
+    "water": 350,
+    "gel": 1,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 1,
+    "aid": false
+   },
+   {
+    "kcal": 0.0,
+    "water": 150,
+    "gel": 0,
+    "bar": 0,
+    "chew": 0,
+    "electrolyte": 0,
+    "aid": false
+   }
+  ]
  },
  "course": {
   "name": "福爾摩沙古道 40K",
