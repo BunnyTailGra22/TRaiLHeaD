@@ -42,6 +42,9 @@ Run scripts with the skill path: `S=.claude/skills/race-plan` from the TRaiLHeaD
    - Four tiers: stretch (target ×1.04), target (benchmark × distance-interpolated ratio), fallback (ratio_low, ×0.90 after the decision point), cutoff line (solved: zero buffer at the binding cutoff).
    - Latest leave time per checkpoint and the binding cutoff.
    - Fuel schedule from the kit in `profile.yaml`: carbs every 45 min (shortened until ≥ 60 g/h, floor 30 min; 40 min / 70 g/h if > 9 h), moved to before long descents, bar on a second-half climb, chews on technical trail, electrolyte every 65 min, caffeine capped at 6 mg/kg. If the target still isn't met it says how many extra gels to carry.
+   - Single-plan table (one tier, the user's preferred hand-out format):
+     `python3 $S/scripts/section_table.py --sections sections.json --plan out/plan.json --out out/table.html --groups '1-5:<label>,6-8:<label>' --kcal-h 250 --water-h 500 --png`
+     (raise `--water-h` for hot races).
    - `--race-eph X` overrides the benchmark; `--default-factors` uses default instead of personal factors (use for a first race or a very different terrain type).
 5. **Review before handing over** — sanity-check against any past edition (own FIT or peers' splits). If the target finish differs from evidence by > 10%, say why or adjust `--race-eph`.
 6. **Label** — keep the plan's 標記 line; add the mandatory gear list and any race-specific notes (sunset, water-only stations, river crossings).
@@ -79,5 +82,5 @@ Python 3 with `pyyaml` and `fitdecode` (post-race only); Node with `playwright` 
 - `profile.yaml` — personal parameters (ratio, factors, tiers, kit, targets)
 - `references/framework.md` — the full framework (strategy, data, formulas, tiers, fueling)
 - `references/terrain-rules.md` — classification thresholds and factor definition
-- `scripts/` — `split_course.py`, `build_plan.py`, `post_race.py`, `render.js`, `png_dpi.py`, `common.py`
+- `scripts/` — `split_course.py`, `build_plan.py`, `section_table.py`, `post_race.py`, `render.js`, `png_dpi.py`, `common.py`
 - `examples/ft40-2026/` — course GPX, checkpoints, FIT and outputs (plan reproduces the 6:55 result: target 6:56)
