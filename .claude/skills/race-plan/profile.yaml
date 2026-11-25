@@ -1,8 +1,8 @@
 # Personal parameters for the race-plan skill.
 # The method lives in SKILL.md and references/; everything that is *yours* lives here.
 # Update after every race with scripts/post_race.py (it prints suggested values).
-version: 0.1
-updated: 2026-11-24
+version: 0.2
+updated: 2026-11-25
 athlete:
   weight_kg: 62.1
   resting_hr: 47

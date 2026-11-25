@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a four-tier race plan with cutoff check and fueling schedule.
+"""Build a race plan: four tiers (target shown per section), cutoff check, per-section EP/EPH, kcal and water.
 
     python3 build_plan.py --sections sections.json --start 05:30 --benchmark-eph 12.3 \
         --out-dir out/ [--race-eph 9.0] [--date 2026-11-21] [--profile profile.yaml] [--png]
@@ -138,6 +138,34 @@ def fuel_schedule(S, sim, p, stops, total_min):
                 electrolyte_every=F['electrolyte_interval_min'])
 
 
+def row_fuel(sim, fuel, p, aid, total_min):
+    """Allocate kcal and water to table rows. Row i (i >= 1) covers [dep[i-1], dep[i]):
+    section i-1 plus the stop at checkpoint i, so aid-station food counts on its own row."""
+    kit = p['fueling']['kit']; dep = sim['dep']; n = len(dep)
+    rows = [dict(kcal=0.0, water=0.0, gel=0, bar=0, chew=0, electrolyte=0, aid=bool(aid[i]) and i > 0) for i in range(n)]
+    def row_of(t):
+        for i in range(1, n):
+            if t < dep[i]: return i
+        return n - 1
+    for it in fuel['items']:
+        r = rows[row_of(it['t'])]; r[it['type']] += 1; r['kcal'] += kit[it['type']]['kcal']
+    every = fuel['electrolyte_every']
+    for e in range(1, fuel['counts']['electrolyte'] + 1):
+        r = rows[row_of(min(e * every, total_min - 1))]; r['electrolyte'] += 1; r['kcal'] += kit['electrolyte']['kcal']
+    rate = fuel['per_h']['fluid']
+    for i in range(1, n):
+        r = rows[i]
+        if r['aid']: r['kcal'] += kit['aid_stop']['kcal']
+        r['water'] = round((dep[i] - dep[i - 1]) / 60 * rate / 50) * 50
+    return rows
+
+
+def items_zh(r):
+    parts = [f'{ITEM_ZH[k]} {r[k]}' for k in ('gel', 'bar', 'chew', 'electrolyte') if r[k]]
+    if r['aid']: parts.append('補給站')
+    return '・'.join(parts)
+
+
 # ------------------------------------------------------------------ main
 def main():
     ap = argparse.ArgumentParser()
@@ -188,6 +216,7 @@ def main():
                  key=lambda i: tiers['cutoff']['buffers'][i])
         binding = dict(idx=bi, name=cps[bi]['name'], target_buffer=tgt['buffers'][bi])
     fuel = fuel_schedule(S, tgt['sim'], p, stops, tgt['finish'])
+    fuel['rows'] = row_fuel(tgt['sim'], fuel, p, [c['aid'] for c in cps], tgt['finish'])
 
     os.makedirs(a.out_dir, exist_ok=True)
     title = a.title or S['course']['name']
@@ -209,7 +238,7 @@ def main():
 
 
 TIER_ZH = dict(stretch='衝刺', target='目標', fallback='保守', cutoff='關門線')
-ITEM_ZH = dict(gel='凝膠', bar='能量棒', chew='軟糖')
+ITEM_ZH = dict(gel='凝膠', bar='能量棒', chew='軟糖', electrolyte='電解質')
 
 
 def render_md(S, R, p, start):
@@ -223,25 +252,32 @@ def render_md(S, R, p, start):
         L.append(f"- **最先卡關的關門：** {R['binding']['name']}（目標餘裕 {min_to_hm(R['binding']['target_buffer'])}）")
     for k, t in R['tiers'].items():
         if t['misses']: L.append(f"- ⚠ {TIER_ZH[k]}會錯過關門：{'、'.join(t['misses'])}")
-    L += ['', '## 分段與四級抵達時間', '',
-          '| # | 檢查點 | km | 路段 | 地形 | 目標用時 | 衝刺 | 目標 | 保守 | 關門線 | 關門 | 最晚離站 |',
-          '|---|---|---|---|---|---|---|---|---|---|---|---|']
+    rf = F['rows']
+    L += ['', '## 分段', '',
+          'EPH = 段 EP ÷ 移動時間（合計含停留）；熱量含該段隨身補給與抵達站補給；飲水以 '
+          f"{F['per_h']['fluid']:.0f} ml/h 估", '',
+          '| # | 檢查點 | km | 段 km | 爬/降 m | 地形 | EP | EPH | 用時 | 抵達 | 熱量 kcal | 飲水 ml | 補給 | 關門 | 最晚離站 |',
+          '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|']
     for i, cp in enumerate(cps):
         s = secs[i - 1] if i else None
-        seg = f"{s['dist']:.1f} km +{s['gain']}/−{s['loss']}" if s else '—'
-        ter = TERRAIN_ZH[s['terrain']] if s else '—'
-        mins = f"{tg['mins'][i - 1]:.0f}′" if s else '—'
-        arr = [clock(start + R['tiers'][k]['arr'][i]) if k in R['tiers'] else '—' for k in ('stretch', 'target', 'fallback', 'cutoff')]
-        cut = cp['cutoff'] or ''
         ll = clock(start + R['latest_leave'][i]) if R['latest_leave'][i] is not None and i < len(cps) - 1 else ''
         stop = f"（停 {R['stops'][i]:.0f}′）" if R['stops'][i] else ''
-        L.append(f"| {i} | {cp['name']}{stop} | {cp['km']:.1f} | {seg} | {ter} | {mins} | {' | '.join(arr)} | {cut} | {ll} |")
+        if s:
+            m = tg['mins'][i - 1]
+            seg = (f"{s['dist']:.1f} | +{s['gain']}/−{s['loss']} | {TERRAIN_ZH[s['terrain']]} | {s['ep']:.1f} | "
+                   f"{s['ep'] / m * 60:.1f} | {m:.0f}′")
+            fu = f"{rf[i]['kcal']:.0f} | {rf[i]['water']:.0f} | {items_zh(rf[i])}"
+        else:
+            seg, fu = '— | — | — | — | — | —', '— | — | —'
+        L.append(f"| {i} | {cp['name']}{stop} | {cp['km']:.1f} | {seg} | {clock(start + tg['arr'][i])} | {fu} | {cp['cutoff'] or ''} | {ll} |")
+    L.append(f"| | **合計** | {c['total_km']} | | +{c['gain']} | | {c['ep']} | {c['ep'] / tg['finish'] * 60:.2f} | {min_to_hm(tg['finish'])} | "
+             f"{clock(start + tg['finish'])} | {sum(r['kcal'] for r in rf):.0f} | {sum(r['water'] for r in rf):.0f} | | | |")
+    L += ['', '其他配速完賽：' + '・'.join(f"{TIER_ZH[k]} {min_to_hm(R['tiers'][k]['finish'])}" for k in ('stretch', 'fallback', 'cutoff') if k in R['tiers'])]
     L += ['', '## 補給', '',
-          f"- **節奏：** 每 {F['interval']} 分一份碳水；電解質每 {F['electrolyte_every']} 分一包；起跑前 30–60 分咖啡因錠",
-          '- **時間表：** ' + '、'.join(f"{clock(start + it['t'])} {ITEM_ZH[it['type']]}" + (f"（{it['note']}）" if it['note'] else '') for it in F['items']),
+          f"- **節奏：** 每 {F['interval']} 分一份碳水，長下坡前提前吃；電解質每 {F['electrolyte_every']} 分一包；起跑前 30–60 分咖啡因錠",
           f"- **數量：** 凝膠 {F['counts']['gel']}・能量棒 {F['counts']['bar']}・軟糖 {F['counts']['chew']}・電解質 {F['counts']['electrolyte']}・補給站 {F['counts']['aid_stop']} 站・咖啡因錠 1",
           *([f"- ⚠ 碳水未達目標：補給站多拿或另帶 {F['short_gels']} 條凝膠"] if F['short_gels'] else []),
-          f"- **每小時：** 碳水 {F['per_h']['carbs']:.0f} g/h（目標 ≥{F['target_carbs']}）・鈉 {F['per_h']['sodium']:.0f} mg/h・水 {F['per_h']['fluid']:.0f} ml/h・咖啡因 {F['per_h']['caffeine_mg_kg']:.1f} mg/kg",
+          f"- **每小時：** 熱量 {sum(r['kcal'] for r in F['rows']) / (R['tiers']['target']['finish'] / 60):.0f} kcal・碳水 {F['per_h']['carbs']:.0f} g/h（目標 ≥{F['target_carbs']}）・鈉 {F['per_h']['sodium']:.0f} mg/h・水 {F['per_h']['fluid']:.0f} ml/h・咖啡因 {F['per_h']['caffeine_mg_kg']:.1f} mg/kg",
           '', '## 賽中提示', '',
           f"- **心率上限：** 開場柏油 ≤ {p['pacing']['hr_cap_opening']}",
           f"- **決策點：** {R['decision']}，比對目標與保守的抵達時間，落後就切換保守計畫",
@@ -274,19 +310,28 @@ def render_html(S, R, p, start):
     eticks = ''.join(f'<text x="{padL - 6}" y="{Y(v) + 4:.1f}" text-anchor="end" font-size="12" fill="#7B848F">{v}</text><line x1="{padL}" x2="{W - padR}" y1="{Y(v):.1f}" y2="{Y(v):.1f}" stroke="#E6EAEE"/>'
                      for v in range(int(math.ceil(y0 / 500) * 500), int(y1) + 1, 500))
     svg = f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}">{eticks}<path d="{area}" fill="#EAF3FA"/><polyline points="{poly}" fill="none" stroke="#1170AA" stroke-width="2"/>{marks}{ticks}</svg>'
-    rows = ''
+    rows = ''; rf = F['rows']
     for i, cp in enumerate(cps):
         s = secs[i - 1] if i else None
-        arr = ''.join(f'<td class="m{" tg" if k == "target" else ""}">{clock(start + R["tiers"][k]["arr"][i]) if k in R["tiers"] else "—"}</td>'
-                      for k in ('stretch', 'target', 'fallback', 'cutoff'))
         ll = clock(start + R['latest_leave'][i]) if R['latest_leave'][i] is not None and i < len(cps) - 1 else ''
         stop = f'<small>停 {R["stops"][i]:.0f}′</small>' if R['stops'][i] else ''
-        seg = (f'<td class="m">{s["dist"]:.1f}</td><td class="m">+{s["gain"]}/−{s["loss"]}</td><td><span class="tt {s["terrain"]}">{TERRAIN_ZH[s["terrain"]]}</span></td>'
-               f'<td class="m">{tg["mins"][i - 1]:.0f}′</td>') if s else '<td></td><td></td><td></td><td></td>'
+        if s:
+            m = tg['mins'][i - 1]
+            seg = (f'<td class="m">{s["dist"]:.1f}</td><td class="m">+{s["gain"]}/−{s["loss"]}</td>'
+                   f'<td><span class="tt {s["terrain"]}">{TERRAIN_ZH[s["terrain"]]}</span></td>'
+                   f'<td class="m">{s["ep"]:.1f}</td><td class="m">{s["ep"] / m * 60:.1f}</td><td class="m">{m:.0f}′</td>')
+            fu = (f'<td class="m fu">{rf[i]["kcal"]:.0f}<small>{esc(items_zh(rf[i]))}</small></td>'
+                  f'<td class="m">{rf[i]["water"]:.0f}</td>')
+        else:
+            seg, fu = '<td></td>' * 6, '<td></td>' * 2
         cls = ' class="cut"' if cp['cutoff'] else ''
         rows += (f'<tr{cls}><td><span class="no">{i}</span></td><td class="nm"><b>{esc(cp["name"])}</b>{stop}</td><td class="m">{cp["km"]:.1f}</td>'
-                 f'{seg}{arr}<td class="m c">{cp["cutoff"] or ""}</td><td class="m">{ll}</td></tr>')
-    chips = ''.join(f'<span class="chip {it["type"]}"><b>{clock(start + it["t"])}</b>{ITEM_ZH[it["type"]]}{"・" + esc(it["note"]) if it["note"] else ""}</span>' for it in F['items'])
+                 f'{seg}<td class="m tg">{clock(start + tg["arr"][i])}</td>{fu}<td class="m c">{cp["cutoff"] or ""}</td><td class="m">{ll}</td></tr>')
+    kc = sum(r['kcal'] for r in rf); wa = sum(r['water'] for r in rf)
+    rows += (f'<tr class="tot"><td></td><td class="nm"><b>合計</b></td><td class="m">{c["total_km"]:.1f}</td><td></td>'
+             f'<td class="m">+{c["gain"]}</td><td></td><td class="m">{c["ep"]:.1f}</td><td class="m">{c["ep"] / tg["finish"] * 60:.2f}</td>'
+             f'<td class="m">{min_to_hm(tg["finish"])}</td><td class="m tg">{clock(start + tg["finish"])}</td>'
+             f'<td class="m">{kc:.0f}</td><td class="m">{wa:.0f}</td><td></td><td></td></tr>')
     bind = (f'{esc(R["binding"]["name"])} 餘裕 {min_to_hm(R["binding"]["target_buffer"])}' if R['binding'] else '無關門')
     warn = ''.join(f'<div class="warn">⚠ {TIER_ZH[k]}會錯過關門：{esc("、".join(t["misses"]))}</div>' for k, t in R['tiers'].items() if t['misses'])
     if F['short_gels']:
@@ -297,7 +342,7 @@ def render_html(S, R, p, start):
 --g1:#57606C;--g2:#7B848F;--g3:#A3ACB9;--grid:#C8D0D9;--card:#F4F6F8;--t:#2E333B;--bdark:#0B3A57;--odark:#4A2500}}
 *{{box-sizing:border-box;margin:0;padding:0}} html,body{{background:#fff}}
 body{{width:1080px;padding:44px 48px 36px;font-family:"Segoe UI","Noto Sans TC",sans-serif;color:var(--t);font-size:18px;line-height:1.4}}
-.m,.kv,.chip b{{font-family:"Roboto Mono","Noto Sans TC",monospace}}
+.m,.kv{{font-family:"Roboto Mono","Noto Sans TC",monospace}}
 h1{{font-size:34px;line-height:1.3}} .sub{{color:var(--g1);font-size:18px;margin-top:6px}}
 .kpis{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}}
 .k{{background:var(--card);border-radius:14px;padding:12px 16px}} .k.hl{{background:var(--btint)}}
@@ -313,8 +358,8 @@ tr.cut td.nm b{{color:var(--odark)}}
 tr.cut .no{{background:var(--ox)}}
 .tt{{font-size:13px;border-radius:6px;padding:1px 7px;background:var(--card);color:var(--g1);white-space:nowrap}}
 .tt.steep_climb,.tt.reclimb{{background:var(--blue);color:#fff}} .tt.descent_technical,.tt.descent_forest_road{{background:var(--otint);color:var(--odark)}}
-.chips{{display:flex;flex-wrap:wrap;gap:8px}} .chip{{font-size:14.5px;border-radius:8px;padding:4px 10px;background:var(--btint);color:var(--bdark)}}
-.chip b{{margin-right:6px}} .chip.bar{{background:var(--blue);color:#fff}} .chip.chew{{background:var(--card);color:var(--g1)}}
+td.fu small{{display:block;font-family:"Noto Sans TC",sans-serif;font-size:11.5px;color:var(--g2);font-weight:400}}
+tr.tot td{{border-top:1.5px solid var(--grid);border-bottom:none;font-weight:700}}
 .fl{{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}} .bx{{background:var(--card);border-radius:12px;padding:10px 16px;font-size:15.5px;color:var(--g1)}}
 .bx b{{color:var(--t)}} .bx li{{list-style:none;padding:3px 0}}
 .warn{{margin-top:10px;background:var(--otint);color:var(--odark);border-radius:10px;padding:8px 14px;font-weight:700}}
@@ -330,16 +375,15 @@ tr.cut .no{{background:var(--ox)}}
  <div class="k"><div class="kl">碳水</div><div class="kv">{F["per_h"]["carbs"]:.0f}</div><div class="ks">g/h・鈉 {F["per_h"]["sodium"]:.0f} mg/h</div></div>
 </div>{warn}
 <h2>剖面與檢查點<span>橘色 = 有關門</span></h2>{svg}
-<h2>分段與四級抵達時間<span>目標欄為主計畫；最晚離站 = 以目標配速仍趕得上所有後續關門</span></h2>
-<table><thead><tr><th class="l">#</th><th class="l">檢查點</th><th>km</th><th>段 km</th><th>爬／降 m</th><th class="l">地形</th><th>目標用時</th><th>衝刺</th><th>目標</th><th>保守</th><th>關門線</th><th>關門</th><th>最晚離站</th></tr></thead><tbody>{rows}</tbody></table>
-<h2>補給時間表<span>每 {F["interval"]} 分一份碳水；長下坡前提前吃</span></h2>
-<div class="chips">{chips}</div>
+<h2>分段<span>EPH = 段 EP ÷ 移動時間（合計含停留）；熱量含該段隨身補給與抵達站補給；飲水 {F["per_h"]["fluid"]:.0f} ml/h</span></h2>
+<table><thead><tr><th class="l">#</th><th class="l">檢查點</th><th>km</th><th>段 km</th><th>爬／降 m</th><th class="l">地形</th><th>EP</th><th>EPH</th><th>用時</th><th>抵達</th><th>熱量 kcal</th><th>飲水 ml</th><th>關門</th><th>最晚離站</th></tr></thead><tbody>{rows}</tbody></table>
 <div class="fl">
  <div class="bx"><ul><li><b>數量：</b>凝膠 {k["gel"]}・能量棒 {k["bar"]}・軟糖 {k["chew"]}・電解質 {k["electrolyte"]} 包・咖啡因錠 1・補給站 {k["aid_stop"]} 站</li>
- <li><b>每小時：</b>碳水 {F["per_h"]["carbs"]:.0f} g・鈉 {F["per_h"]["sodium"]:.0f} mg・水 {F["per_h"]["fluid"]:.0f} ml・咖啡因 {F["per_h"]["caffeine_mg_kg"]:.1f} mg/kg</li></ul></div>
+ <li><b>每小時：</b>熱量 {kc / (tg["finish"] / 60):.0f} kcal・碳水 {F["per_h"]["carbs"]:.0f} g・鈉 {F["per_h"]["sodium"]:.0f} mg・水 {F["per_h"]["fluid"]:.0f} ml・咖啡因 {F["per_h"]["caffeine_mg_kg"]:.1f} mg/kg</li></ul></div>
  <div class="bx"><ul><li><b>心率上限：</b>開場柏油 ≤ {p["pacing"]["hr_cap_opening"]}</li>
  <li><b>決策點：</b>{esc(R["decision"])}；落後目標就切換保守</li>
- <li><b>電解質：</b>每 {F["electrolyte_every"]} 分一包；起跑前 30–60 分咖啡因錠</li></ul></div>
+ <li><b>節奏：</b>每 {F["interval"]} 分一份碳水，長下坡前提前吃；電解質每 {F["electrolyte_every"]} 分一包；起跑前 30–60 分咖啡因錠</li>
+ <li><b>其他配速：</b>{"・".join(f"{TIER_ZH[t]} {min_to_hm(R['tiers'][t]['finish'])}" for t in ("stretch", "fallback", "cutoff") if t in R["tiers"])}</li></ul></div>
 </div>
 <div class="foot"><b>標記：</b>資料依據＝賽道 GPX、基準換算（{len(p["benchmark"]["history"])} 場）、個人地形係數、營養標示；假設＝停留時間、保守衰退 0.90、補給站碳水、坡度規則分類。必帶裝備依大會規定另列。</div>
 <div class="src">race-plan skill v{p.get("version", "0.1")}｜地形係數：{"個人" if R["factor_set"] == "personal" else "預設"}｜EP = km + 爬升 m ÷ 100</div>

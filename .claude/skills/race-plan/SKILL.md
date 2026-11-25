@@ -3,7 +3,7 @@ name: race-plan
 description: Build a trail-race pacing and fueling plan from the runner's own data (course GPX + checkpoints/cutoffs, 劍中劍 benchmark EP/h, readiness, personal terrain factors, tested fuel kit), and calibrate it after the race from the FIT file. Use when the user asks for a race plan, 比賽計畫, 配速計畫, 完賽時間預估, 關門/cutoff check, 補給計畫, or 賽後分析/校準 for a trail or mountain race.
 ---
 
-# Race plan (v0.1)
+# Race plan (v0.2)
 
 Turns the Race plan framework (`references/framework.md`) into a repeatable procedure.
 Method is generic; everything personal lives in `profile.yaml`.
@@ -39,9 +39,10 @@ Run scripts with the skill path: `S=.claude/skills/race-plan` from the TRaiLHeaD
    python3 $S/scripts/build_plan.py --sections sections.json --start 05:30 --benchmark-eph <EPH> --date <YYYY-MM-DD> --out-dir out --png
    ```
    Outputs `plan.md`, `plan.html`, `plan.png` (1080 px wide ×2, 240 DPI), `plan.json`.
-   - Four tiers: stretch (target ×1.04), target (benchmark × distance-interpolated ratio), fallback (ratio_low, ×0.90 after the decision point), cutoff line (solved: zero buffer at the binding cutoff).
+   - Four tiers: stretch (target ×1.04), target (benchmark × distance-interpolated ratio), fallback (ratio_low, ×0.90 after the decision point), cutoff line (solved: zero buffer at the binding cutoff). Only the target arrives in the section table; the others appear as finish times (KPI card and 其他配速).
+   - Section table (lean): km, section km, climb/descent, terrain, **EP**, **EPH** (section EP ÷ moving time; the total row includes stops, so it matches the target EPH), time, target arrival, **熱量 kcal** (carried items eaten on the section + food at the aid station it arrives at, with the items listed under the number), **飲水 ml** (plan fluid rate × section time incl. the stop), cutoff, latest leave.
    - Latest leave time per checkpoint and the binding cutoff.
-   - Fuel schedule from the kit in `profile.yaml`: carbs every 45 min (shortened until ≥ 60 g/h, floor 30 min; 40 min / 70 g/h if > 9 h), moved to before long descents, bar on a second-half climb, chews on technical trail, electrolyte every 65 min, caffeine capped at 6 mg/kg. If the target still isn't met it says how many extra gels to carry.
+   - Fuelling from the kit (no separate time list; it is folded into the table's 熱量 column) in `profile.yaml`: carbs every 45 min (shortened until ≥ 60 g/h, floor 30 min; 40 min / 70 g/h if > 9 h), moved to before long descents, bar on a second-half climb, chews on technical trail, electrolyte every 65 min, caffeine capped at 6 mg/kg. If the target still isn't met it says how many extra gels to carry.
    - `--race-eph X` overrides the benchmark; `--default-factors` uses default instead of personal factors (use for a first race or a very different terrain type).
 5. **Review before handing over** — sanity-check against any past edition (own FIT or peers' splits). If the target finish differs from evidence by > 10%, say why or adjust `--race-eph`.
 6. **Label** — keep the plan's 標記 line; add the mandatory gear list and any race-specific notes (sunset, water-only stations, river crossings).
@@ -66,7 +67,7 @@ White background, flat fills, Tableau colour-blind palette (blue #1170AA primary
 
 Python 3 with `pyyaml` and `fitdecode` (post-race only); Node with `playwright` and Chromium for PNG output.
 
-## Limits of v0.1
+## Limits of v0.2
 
 - Ratio rule: 2 races (40 km and 54 km); interpolated by distance, extrapolation outside 30–60 km is a guess.
 - Terrain factors: one race (FT40 2026, run 6 days after a big mountain day). Treat as provisional.
