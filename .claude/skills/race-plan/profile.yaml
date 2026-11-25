@@ -43,6 +43,7 @@ fueling:
     sodium_mg_h: [400, 500]
     fluid_ml_h: [400, 800]
     caffeine_mg_kg_max: 6
+  section_table: {kcal_h: 250, water_ml_h: 500}   # per moving hour, for the plan table; raise water for hot races
   gel_interval_min: 45           # 40 when race > 9 h; shortened automatically until the carb target is met
   electrolyte_interval_min: 65
   kit:

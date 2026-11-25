@@ -1,5 +1,5 @@
 {
- "title": "Xtrail Kenting 50K 2027",
+ "title": "Xtrail Kenting 50K 2027 · v1 (default factors)",
  "date": "2027-03-06",
  "start": "05:30",
  "basis": "劍中劍 EPH 12.3 × 0.70–0.73（本場 0.707）",
@@ -387,5 +387,10 @@
   "gain": 1437,
   "loss": 1439,
   "ep": 65.0
+ },
+ "table": {
+  "groups": "1-5:大爬升,6-8:起伏,9-11:雙坡",
+  "kcal_h": 250,
+  "water_ml_h": 600.0
  }
 }

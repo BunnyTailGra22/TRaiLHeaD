@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Build a four-tier race plan with cutoff check and fueling schedule.
+"""Build a race plan with cutoff check and fueling schedule.
 
     python3 build_plan.py --sections sections.json --start 05:30 --benchmark-eph 12.3 \
-        --out-dir out/ [--race-eph 9.0] [--date 2026-11-21] [--profile profile.yaml] [--png]
+        --out-dir out/ [--race-eph 9.0] [--date 2026-11-21] [--profile profile.yaml] \
+        [--groups '1-5:爬升,6-8:稜線'] [--kcal-h 250] [--water-h 500] [--png]
 
 Writes plan.json, plan.md and plan.html (+ plan.png with --png) to --out-dir.
+The hand-out shows one plan (the target tier) as a section table (section_table.py).
+Stretch, fallback and cutoff-line tiers are still computed and kept in plan.json:
+the cutoff line finds the binding cutoff, the fallback sets the decision-point cue.
 """
 import argparse, html, json, math, os, subprocess, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import SKILL, TERRAIN_ZH, load_profile, hm_to_min, min_to_hm, clock, dump
+import section_table as ST
 
 esc = html.escape
 
@@ -147,6 +152,9 @@ def main():
     ap.add_argument('--default-factors', action='store_true', help='use default instead of personal factors')
     ap.add_argument('--date', default=''); ap.add_argument('--title', default='')
     ap.add_argument('--out-dir', required=True); ap.add_argument('--png', action='store_true')
+    ap.add_argument('--groups', default='', help="row brackets, e.g. '1-5:爬升,6-8:稜線' (checkpoint index)")
+    ap.add_argument('--kcal-h', type=float, help='table kcal per moving hour (default: profile)')
+    ap.add_argument('--water-h', type=float, help='table water ml per moving hour (default: profile; raise for heat)')
     a = ap.parse_args()
     if not (a.benchmark_eph or a.race_eph):
         raise SystemExit('give --benchmark-eph (劍中劍 EP/h, last 6 weeks) or --race-eph')
@@ -196,7 +204,10 @@ def main():
                tiers={k: dict(eph=v['eph'], fade=v['fade'], finish=v['finish'], misses=v['misses'],
                               arr=v['sim']['arr'], dep=v['sim']['dep'], mins=v['sim']['mins'], buffers=v['buffers'])
                       for k, v in tiers.items()},
-               fuel=fuel, course=S['course'])
+               fuel=fuel, course=S['course'],
+               table=dict(groups=a.groups,
+                          kcal_h=a.kcal_h or p['fueling'].get('section_table', {}).get('kcal_h', 250),
+                          water_ml_h=a.water_h or p['fueling'].get('section_table', {}).get('water_ml_h', 500)))
     dump(res, os.path.join(a.out_dir, 'plan.json'))
     md = render_md(S, res, p, start)
     open(os.path.join(a.out_dir, 'plan.md'), 'w', encoding='utf-8').write(md)
@@ -208,8 +219,14 @@ def main():
         subprocess.run([sys.executable, os.path.join(SKILL, 'scripts', 'png_dpi.py'), out], check=True)
 
 
-TIER_ZH = dict(stretch='衝刺', target='目標', fallback='保守', cutoff='關門線')
 ITEM_ZH = dict(gel='凝膠', bar='能量棒', chew='軟糖')
+
+
+def decision_cue(S, R, start):
+    di = next(i for i, c in enumerate(S['checkpoints']) if c['name'] == R['decision'])
+    tg, fb = R['tiers']['target'], R['tiers']['fallback']
+    return (f"{R['decision']} 目標 {clock(start + tg['arr'][di])} 抵達；晚於 {clock(start + fb['arr'][di])} "
+            f"→ 後段降速（EPH ×{fb['fade']:.2f}），預估 {min_to_hm(fb['finish'])} 完賽")
 
 
 def render_md(S, R, p, start):
@@ -221,34 +238,23 @@ def render_md(S, R, p, start):
          f"- **決策點：** {R['decision']}"]
     if R['binding']:
         L.append(f"- **最先卡關的關門：** {R['binding']['name']}（目標餘裕 {min_to_hm(R['binding']['target_buffer'])}）")
-    for k, t in R['tiers'].items():
-        if t['misses']: L.append(f"- ⚠ {TIER_ZH[k]}會錯過關門：{'、'.join(t['misses'])}")
-    L += ['', '## 分段與四級抵達時間', '',
-          '| # | 檢查點 | km | 路段 | 地形 | 目標用時 | 衝刺 | 目標 | 保守 | 關門線 | 關門 | 最晚離站 |',
-          '|---|---|---|---|---|---|---|---|---|---|---|---|']
-    for i, cp in enumerate(cps):
-        s = secs[i - 1] if i else None
-        seg = f"{s['dist']:.1f} km +{s['gain']}/−{s['loss']}" if s else '—'
-        ter = TERRAIN_ZH[s['terrain']] if s else '—'
-        mins = f"{tg['mins'][i - 1]:.0f}′" if s else '—'
-        arr = [clock(start + R['tiers'][k]['arr'][i]) if k in R['tiers'] else '—' for k in ('stretch', 'target', 'fallback', 'cutoff')]
-        cut = cp['cutoff'] or ''
-        ll = clock(start + R['latest_leave'][i]) if R['latest_leave'][i] is not None and i < len(cps) - 1 else ''
-        stop = f"（停 {R['stops'][i]:.0f}′）" if R['stops'][i] else ''
-        L.append(f"| {i} | {cp['name']}{stop} | {cp['km']:.1f} | {seg} | {ter} | {mins} | {' | '.join(arr)} | {cut} | {ll} |")
+    if tg['misses']: L.append(f"- ⚠ 計畫配速會錯過關門：{'、'.join(tg['misses'])}")
+    tb = R['table']
+    L += ['', '## 分段計畫', '', ST.md_table(S, R, tb['kcal_h'], tb['water_ml_h'], tb['groups']), '',
+          ST.note(tb['kcal_h'], tb['water_ml_h'])]
     L += ['', '## 補給', '',
           f"- **節奏：** 每 {F['interval']} 分一份碳水；電解質每 {F['electrolyte_every']} 分一包；起跑前 30–60 分咖啡因錠",
           '- **時間表：** ' + '、'.join(f"{clock(start + it['t'])} {ITEM_ZH[it['type']]}" + (f"（{it['note']}）" if it['note'] else '') for it in F['items']),
           f"- **數量：** 凝膠 {F['counts']['gel']}・能量棒 {F['counts']['bar']}・軟糖 {F['counts']['chew']}・電解質 {F['counts']['electrolyte']}・補給站 {F['counts']['aid_stop']} 站・咖啡因錠 1",
           *([f"- ⚠ 碳水未達目標：補給站多拿或另帶 {F['short_gels']} 條凝膠"] if F['short_gels'] else []),
-          f"- **每小時：** 碳水 {F['per_h']['carbs']:.0f} g/h（目標 ≥{F['target_carbs']}）・鈉 {F['per_h']['sodium']:.0f} mg/h・水 {F['per_h']['fluid']:.0f} ml/h・咖啡因 {F['per_h']['caffeine_mg_kg']:.1f} mg/kg",
+          f"- **每小時：** 碳水 {F['per_h']['carbs']:.0f} g/h（目標 ≥{F['target_carbs']}）・鈉 {F['per_h']['sodium']:.0f} mg/h・電解質水 {F['per_h']['fluid']:.0f} ml/h・咖啡因 {F['per_h']['caffeine_mg_kg']:.1f} mg/kg",
           '', '## 賽中提示', '',
           f"- **心率上限：** 開場柏油 ≤ {p['pacing']['hr_cap_opening']}",
-          f"- **決策點：** {R['decision']}，比對目標與保守的抵達時間，落後就切換保守計畫",
+          f"- **決策點：** {decision_cue(S, R, start)}",
           '- **停留上限：** ' + '、'.join(f"{cps[i]['name']} {R['stops'][i]:.0f} 分" for i in range(len(cps)) if R['stops'][i]),
           '', '## 數字標記', '',
           f"- **有資料依據：** 賽道 GPX、基準換算比例（{len(p['benchmark']['history'])} 場）、個人地形係數（FT40 2026）、補給商品營養標示",
-          '- **假設：** 停留時間、保守計畫衰退 0.90、補給站碳水、地形分類（坡度規則，可在 checkpoints.csv 覆寫）',
+          '- **假設：** 停留時間、決策點後降速 0.90、補給站碳水、每小時熱量與飲水、地形分類（坡度規則，可在 checkpoints.csv 覆寫）',
           '- **必帶裝備：** 依大會規定另列（此腳本不產生）']
     return '\n'.join(L) + '\n'
 
@@ -274,21 +280,12 @@ def render_html(S, R, p, start):
     eticks = ''.join(f'<text x="{padL - 6}" y="{Y(v) + 4:.1f}" text-anchor="end" font-size="12" fill="#7B848F">{v}</text><line x1="{padL}" x2="{W - padR}" y1="{Y(v):.1f}" y2="{Y(v):.1f}" stroke="#E6EAEE"/>'
                      for v in range(int(math.ceil(y0 / 500) * 500), int(y1) + 1, 500))
     svg = f'<svg width="{W}" height="{H}" viewBox="0 0 {W} {H}">{eticks}<path d="{area}" fill="#EAF3FA"/><polyline points="{poly}" fill="none" stroke="#1170AA" stroke-width="2"/>{marks}{ticks}</svg>'
-    rows = ''
-    for i, cp in enumerate(cps):
-        s = secs[i - 1] if i else None
-        arr = ''.join(f'<td class="m{" tg" if k == "target" else ""}">{clock(start + R["tiers"][k]["arr"][i]) if k in R["tiers"] else "—"}</td>'
-                      for k in ('stretch', 'target', 'fallback', 'cutoff'))
-        ll = clock(start + R['latest_leave'][i]) if R['latest_leave'][i] is not None and i < len(cps) - 1 else ''
-        stop = f'<small>停 {R["stops"][i]:.0f}′</small>' if R['stops'][i] else ''
-        seg = (f'<td class="m">{s["dist"]:.1f}</td><td class="m">+{s["gain"]}/−{s["loss"]}</td><td><span class="tt {s["terrain"]}">{TERRAIN_ZH[s["terrain"]]}</span></td>'
-               f'<td class="m">{tg["mins"][i - 1]:.0f}′</td>') if s else '<td></td><td></td><td></td><td></td>'
-        cls = ' class="cut"' if cp['cutoff'] else ''
-        rows += (f'<tr{cls}><td><span class="no">{i}</span></td><td class="nm"><b>{esc(cp["name"])}</b>{stop}</td><td class="m">{cp["km"]:.1f}</td>'
-                 f'{seg}{arr}<td class="m c">{cp["cutoff"] or ""}</td><td class="m">{ll}</td></tr>')
+    tb = R['table']
+    table = ST.html_table(S, R, tb['kcal_h'], tb['water_ml_h'], tb['groups'])
+    moving = sum(tg['mins'])
     chips = ''.join(f'<span class="chip {it["type"]}"><b>{clock(start + it["t"])}</b>{ITEM_ZH[it["type"]]}{"・" + esc(it["note"]) if it["note"] else ""}</span>' for it in F['items'])
     bind = (f'{esc(R["binding"]["name"])} 餘裕 {min_to_hm(R["binding"]["target_buffer"])}' if R['binding'] else '無關門')
-    warn = ''.join(f'<div class="warn">⚠ {TIER_ZH[k]}會錯過關門：{esc("、".join(t["misses"]))}</div>' for k, t in R['tiers'].items() if t['misses'])
+    warn = f'<div class="warn">⚠ 計畫配速會錯過關門：{esc("、".join(tg["misses"]))}</div>' if tg['misses'] else ''
     if F['short_gels']:
         warn += f'<div class="warn">⚠ 碳水未達 {F["target_carbs"]} g/h：補給站多拿或另帶 {F["short_gels"]} 條凝膠</div>'
     k = F['counts']
@@ -320,28 +317,28 @@ tr.cut .no{{background:var(--ox)}}
 .warn{{margin-top:10px;background:var(--otint);color:var(--odark);border-radius:10px;padding:8px 14px;font-weight:700}}
 .foot{{margin-top:18px;border-top:1.5px solid var(--grid);padding-top:10px;font-size:17px;color:var(--g1)}} .foot b{{color:var(--t)}}
 .src{{font-size:13.5px;color:var(--g3);margin-top:6px}}
+{ST.CSS}
 </style></head><body>
 <h1>{esc(R["title"])}・目標 {min_to_hm(tg["finish"])} 完賽計畫</h1>
 <div class="sub">{esc(R["date"])}　{R["start"]} 起跑｜{c["total_km"]} km・+{c["gain"]} m・EP {c["ep"]}｜{esc(R["basis"])}</div>
 <div class="kpis">
  <div class="k hl"><div class="kl">目標完賽</div><div class="kv">{min_to_hm(tg["finish"])}</div><div class="ks">抵達 {clock(start + tg["finish"])}</div></div>
- <div class="k"><div class="kl">目標 EPH</div><div class="kv">{tg["eph"]:.2f}</div><div class="ks">衝刺 {R["tiers"]["stretch"]["eph"]:.2f}・保守 {R["tiers"]["fallback"]["eph"]:.2f}</div></div>
+ <div class="k"><div class="kl">目標 EPH</div><div class="kv">{tg["eph"]:.2f}</div><div class="ks">移動 EPH {c["ep"] / (moving / 60):.1f}・移動 {min_to_hm(moving)}</div></div>
  <div class="k"><div class="kl">最先卡關</div><div class="kv">{min_to_hm(R["binding"]["target_buffer"]) if R["binding"] else "—"}</div><div class="ks">{bind}</div></div>
  <div class="k"><div class="kl">碳水</div><div class="kv">{F["per_h"]["carbs"]:.0f}</div><div class="ks">g/h・鈉 {F["per_h"]["sodium"]:.0f} mg/h</div></div>
 </div>{warn}
 <h2>剖面與檢查點<span>橘色 = 有關門</span></h2>{svg}
-<h2>分段與四級抵達時間<span>目標欄為主計畫；最晚離站 = 以目標配速仍趕得上所有後續關門</span></h2>
-<table><thead><tr><th class="l">#</th><th class="l">檢查點</th><th>km</th><th>段 km</th><th>爬／降 m</th><th class="l">地形</th><th>目標用時</th><th>衝刺</th><th>目標</th><th>保守</th><th>關門線</th><th>關門</th><th>最晚離站</th></tr></thead><tbody>{rows}</tbody></table>
+<h2>分段計畫</h2>{table}<div class="stnote">{ST.note(tb["kcal_h"], tb["water_ml_h"])}</div>
 <h2>補給時間表<span>每 {F["interval"]} 分一份碳水；長下坡前提前吃</span></h2>
 <div class="chips">{chips}</div>
 <div class="fl">
  <div class="bx"><ul><li><b>數量：</b>凝膠 {k["gel"]}・能量棒 {k["bar"]}・軟糖 {k["chew"]}・電解質 {k["electrolyte"]} 包・咖啡因錠 1・補給站 {k["aid_stop"]} 站</li>
- <li><b>每小時：</b>碳水 {F["per_h"]["carbs"]:.0f} g・鈉 {F["per_h"]["sodium"]:.0f} mg・水 {F["per_h"]["fluid"]:.0f} ml・咖啡因 {F["per_h"]["caffeine_mg_kg"]:.1f} mg/kg</li></ul></div>
+ <li><b>每小時：</b>碳水 {F["per_h"]["carbs"]:.0f} g・鈉 {F["per_h"]["sodium"]:.0f} mg・電解質水 {F["per_h"]["fluid"]:.0f} ml・咖啡因 {F["per_h"]["caffeine_mg_kg"]:.1f} mg/kg</li></ul></div>
  <div class="bx"><ul><li><b>心率上限：</b>開場柏油 ≤ {p["pacing"]["hr_cap_opening"]}</li>
- <li><b>決策點：</b>{esc(R["decision"])}；落後目標就切換保守</li>
+ <li><b>決策點：</b>{esc(decision_cue(S, R, start))}</li>
  <li><b>電解質：</b>每 {F["electrolyte_every"]} 分一包；起跑前 30–60 分咖啡因錠</li></ul></div>
 </div>
-<div class="foot"><b>標記：</b>資料依據＝賽道 GPX、基準換算（{len(p["benchmark"]["history"])} 場）、個人地形係數、營養標示；假設＝停留時間、保守衰退 0.90、補給站碳水、坡度規則分類。必帶裝備依大會規定另列。</div>
+<div class="foot"><b>標記：</b>資料依據＝賽道 GPX、基準換算（{len(p["benchmark"]["history"])} 場）、個人地形係數、營養標示；假設＝停留時間、決策點後降速 0.90、補給站碳水、每小時熱量與飲水、坡度規則分類。必帶裝備依大會規定另列。</div>
 <div class="src">race-plan skill v{p.get("version", "0.1")}｜地形係數：{"個人" if R["factor_set"] == "personal" else "預設"}｜EP = km + 爬升 m ÷ 100</div>
 </body></html>'''
 

@@ -36,15 +36,13 @@ Run scripts with the skill path: `S=.claude/skills/race-plan` from the TRaiLHeaD
 3. **Readiness gate** — load ratio 0.7–0.9 and HRV in baseline → start on target. Outside the band → say so in the plan and start on the fallback tier.
 4. **Plan** (section shape, second half, tiers, fueling):
    ```
-   python3 $S/scripts/build_plan.py --sections sections.json --start 05:30 --benchmark-eph <EPH> --date <YYYY-MM-DD> --out-dir out --png
+   python3 $S/scripts/build_plan.py --sections sections.json --start 05:30 --benchmark-eph <EPH> --date <YYYY-MM-DD> --groups '1-3:<label>,5-6:<label>' --out-dir out --png
    ```
-   Outputs `plan.md`, `plan.html`, `plan.png` (1080 px wide ×2, 240 DPI), `plan.json`.
-   - Four tiers: stretch (target ×1.04), target (benchmark × distance-interpolated ratio), fallback (ratio_low, ×0.90 after the decision point), cutoff line (solved: zero buffer at the binding cutoff).
+   Outputs `plan.md`, `plan.html`, `plan.png` (1080 px wide ×2, 240 DPI), `plan.json`. `section_table.py` re-renders just the table from a `plan.json`.
+   - **Section table — one plan, no tier columns** (the user's hand-out format): 區段 · 里程 · 爬升 · 下降 · EP · 耗時 · EPH · 抵達 · 停留 · 最晚離開 · 熱量 · 飲水, with a totals row. Binding-cutoff row orange, aid rows blue, finish bold; `--groups` draws phase brackets (row numbers = checkpoint index, e.g. 爬升 / 稜線 / 下山). kcal and water are per moving hour from `profile.yaml` `fueling.section_table` (250 kcal/h, 500 ml/h); pass `--water-h 600`+ for hot races, `--kcal-h` to override.
+   - Tiers are still computed and kept in `plan.json`, not shown as columns: stretch (target ×1.04), target (benchmark × distance-interpolated ratio — the plan shown), fallback (ratio_low, ×0.90 after the decision point — used for the decision-point cue), cutoff line (solved: zero buffer — finds the binding cutoff).
    - Latest leave time per checkpoint and the binding cutoff.
    - Fuel schedule from the kit in `profile.yaml`: carbs every 45 min (shortened until ≥ 60 g/h, floor 30 min; 40 min / 70 g/h if > 9 h), moved to before long descents, bar on a second-half climb, chews on technical trail, electrolyte every 65 min, caffeine capped at 6 mg/kg. If the target still isn't met it says how many extra gels to carry.
-   - Single-plan table (one tier, the user's preferred hand-out format):
-     `python3 $S/scripts/section_table.py --sections sections.json --plan out/plan.json --out out/table.html --groups '1-5:<label>,6-8:<label>' --kcal-h 250 --water-h 500 --png`
-     (raise `--water-h` for hot races).
    - `--race-eph X` overrides the benchmark; `--default-factors` uses default instead of personal factors (use for a first race or a very different terrain type).
 5. **Review before handing over** — sanity-check against any past edition (own FIT or peers' splits). If the target finish differs from evidence by > 10%, say why or adjust `--race-eph`.
 6. **Label** — keep the plan's 標記 line; add the mandatory gear list and any race-specific notes (sunset, water-only stations, river crossings).
@@ -82,5 +80,5 @@ Python 3 with `pyyaml` and `fitdecode` (post-race only); Node with `playwright` 
 - `profile.yaml` — personal parameters (ratio, factors, tiers, kit, targets)
 - `references/framework.md` — the full framework (strategy, data, formulas, tiers, fueling)
 - `references/terrain-rules.md` — classification thresholds and factor definition
-- `scripts/` — `split_course.py`, `build_plan.py`, `section_table.py`, `post_race.py`, `render.js`, `png_dpi.py`, `common.py`
+- `scripts/` — `split_course.py`, `build_plan.py`, `section_table.py` (plan table; also standalone), `post_race.py`, `render.js`, `png_dpi.py`, `common.py`
 - `examples/ft40-2026/` — course GPX, checkpoints, FIT and outputs (plan reproduces the 6:55 result: target 6:56)
